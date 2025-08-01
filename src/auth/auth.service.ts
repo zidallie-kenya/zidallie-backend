@@ -22,12 +22,13 @@ import { JwtRefreshPayloadType } from './strategies/types/jwt-refresh-payload.ty
 import { JwtPayloadType } from './strategies/types/jwt-payload.type';
 import { UsersService } from '../users/users.service';
 import { AllConfigType } from '../config/config.type';
-import { MailService } from '../mail/mail.service';
+// import { MailService } from '../mail/mail.service';
 import { RoleEnum } from '../roles/roles.enum';
 import { Session } from '../session/domain/session';
 import { SessionService } from '../session/session.service';
 import { StatusEnum } from '../statuses/statuses.enum';
 import { User } from '../users/domain/user';
+import { BrevoMailService } from '../mail/brevo-mail.service';
 
 @Injectable()
 export class AuthService {
@@ -35,7 +36,8 @@ export class AuthService {
     private jwtService: JwtService,
     private usersService: UsersService,
     private sessionService: SessionService,
-    private mailService: MailService,
+    private brevoService: BrevoMailService,
+    // private mailService: MailService,
     private configService: ConfigService<AllConfigType>,
   ) {}
 
@@ -219,7 +221,7 @@ export class AuthService {
       },
     );
 
-    await this.mailService.userSignUp({
+    await this.brevoService.userSignUp({
       to: dto.email,
       data: {
         hash,
@@ -340,7 +342,7 @@ export class AuthService {
       },
     );
 
-    await this.mailService.forgotPassword({
+    await this.brevoService.forgotPassword({
       to: email,
       data: {
         hash,
@@ -476,7 +478,7 @@ export class AuthService {
         },
       );
 
-      await this.mailService.confirmNewEmail({
+      await this.brevoService.confirmNewEmail({
         to: userDto.email,
         data: {
           hash,

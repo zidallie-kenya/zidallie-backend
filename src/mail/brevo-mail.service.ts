@@ -3,7 +3,6 @@ import { ConfigService } from '@nestjs/config';
 import { I18nContext } from 'nestjs-i18n';
 import { MailData } from './interfaces/mail-data.interface';
 import { MaybeType } from '../utils/types/maybe.type';
-// import { MailerService } from '../mailer/mailer.service';
 import { AllConfigType } from '../config/config.type';
 import { BrevoMailerService } from '../mailer/brevo.service';
 

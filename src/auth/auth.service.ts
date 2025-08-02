@@ -22,7 +22,6 @@ import { JwtRefreshPayloadType } from './strategies/types/jwt-refresh-payload.ty
 import { JwtPayloadType } from './strategies/types/jwt-payload.type';
 import { UsersService } from '../users/users.service';
 import { AllConfigType } from '../config/config.type';
-// import { MailService } from '../mail/mail.service';
 import { RoleEnum } from '../roles/roles.enum';
 import { Session } from '../session/domain/session';
 import { SessionService } from '../session/session.service';
@@ -37,7 +36,6 @@ export class AuthService {
     private usersService: UsersService,
     private sessionService: SessionService,
     private brevoService: BrevoMailService,
-    // private mailService: MailService,
     private configService: ConfigService<AllConfigType>,
   ) {}
 

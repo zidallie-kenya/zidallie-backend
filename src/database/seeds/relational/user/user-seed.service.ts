@@ -32,6 +32,8 @@ export class UserSeedService {
           firstName: 'Super',
           lastName: 'Admin',
           email: 'admin@example.com',
+          kind: 'Driver',
+          phone_number: '+254712345678',
           password,
           role: {
             id: RoleEnum.admin,

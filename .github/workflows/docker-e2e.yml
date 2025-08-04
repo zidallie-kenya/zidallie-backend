@@ -13,18 +13,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # <database-relational-block>
+      # 🔨 Build the Docker containers without cache to avoid old `maildev` reference
+      - name: Build Docker containers (no cache)
+        run: |
+          docker compose -f docker-compose.relational.ci.yaml \
+            --env-file env-example-relational \
+            -p ci-relational build --no-cache
+
+      # 🚀 Run E2E tests
       - name: Run e2e tests for NestJS with TypeORM
         id: relational
-        run: docker compose -f docker-compose.relational.ci.yaml --env-file env-example-relational -p ci-relational up --build --exit-code-from api
+        run: |
+          docker compose -f docker-compose.relational.ci.yaml \
+            --env-file env-example-relational \
+            -p ci-relational up --exit-code-from api
 
+      # 🧪 Copy logs if test failed
       - name: Copy prod.log from container to host
         if: ${{ failure() && steps.relational.conclusion == 'failure' }}
         run: docker cp ci-relational-api-1:/usr/src/app/prod.log .
-      # </database-relational-block>
 
-      
-
+      # 🪵 Upload logs
       - name: Upload prod.log to artifacts for debugging
         if: failure()
         uses: actions/upload-artifact@v4

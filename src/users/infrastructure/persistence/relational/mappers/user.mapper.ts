@@ -15,6 +15,13 @@ export class UserMapper {
     domainEntity.socialId = raw.socialId;
     domainEntity.firstName = raw.firstName;
     domainEntity.lastName = raw.lastName;
+    domainEntity.name = raw.name;
+    domainEntity.phone_number = raw.phone_number;
+    domainEntity.kind = raw.kind;
+    domainEntity.meta = raw.meta;
+    domainEntity.wallet_balance = raw.wallet_balance;
+    domainEntity.is_kyc_verified = raw.is_kyc_verified;
+
     if (raw.photo) {
       domainEntity.photo = FileMapper.toDomain(raw.photo);
     }
@@ -64,6 +71,12 @@ export class UserMapper {
     persistenceEntity.photo = photo;
     persistenceEntity.role = role;
     persistenceEntity.status = status;
+    persistenceEntity.name = domainEntity.name;
+    persistenceEntity.phone_number = domainEntity.phone_number;
+    persistenceEntity.kind = domainEntity.kind;
+    persistenceEntity.meta = domainEntity.meta;
+    persistenceEntity.wallet_balance = domainEntity.wallet_balance;
+    persistenceEntity.is_kyc_verified = domainEntity.is_kyc_verified;
     persistenceEntity.createdAt = domainEntity.createdAt;
     persistenceEntity.updatedAt = domainEntity.updatedAt;
     persistenceEntity.deletedAt = domainEntity.deletedAt;

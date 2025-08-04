@@ -150,6 +150,11 @@ export class AuthService {
         provider: authProvider,
         role,
         status,
+        kind: 'Parent',
+        phone_number: null,
+        meta: null,
+        wallet_balance: 0,
+        is_kyc_verified: false,
       });
 
       user = await this.usersService.findById(user.id);
@@ -195,14 +200,18 @@ export class AuthService {
 
   async register(dto: AuthRegisterLoginDto): Promise<void> {
     const user = await this.usersService.create({
-      ...dto,
       email: dto.email,
-      role: {
-        id: RoleEnum.user,
-      },
-      status: {
-        id: StatusEnum.inactive,
-      },
+      password: dto.password,
+      firstName: dto.firstName,
+      lastName: dto.lastName,
+      kind: dto.kind,
+      phone_number: dto.phone_number,
+      meta: dto.meta ?? null,
+      wallet_balance: 0, // default value
+      is_kyc_verified: false, // default value
+      provider: AuthProvidersEnum.email,
+      role: { id: RoleEnum.user },
+      status: { id: StatusEnum.inactive },
     });
 
     const hash = await this.jwtService.signAsync(

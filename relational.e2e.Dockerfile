@@ -3,25 +3,24 @@ FROM node:22.17.1-alpine
 RUN apk add --no-cache bash
 RUN npm i -g @nestjs/cli typescript ts-node
 
-# COPY package*.json /tmp/app/
-# RUN cd /tmp/app && npm install
-# COPY . /usr/src/app
-# RUN cp -a /tmp/app/node_modules /usr/src/app
-
-COPY . /usr/src/app
 WORKDIR /usr/src/app
 
+# Copy the full app before installing
+COPY . .
+
+# Copy and fix permissions for scripts
+RUN chmod +x /opt/wait-for-it.sh
+RUN chmod +x /opt/startup.relational.dev.sh
+RUN sed -i 's/\r//g' /opt/wait-for-it.sh
+RUN sed -i 's/\r//g' /opt/startup.relational.dev.sh
+
+# Install deps after code copy to bust cache
 RUN npm install
 
-COPY ./wait-for-it.sh /opt/wait-for-it.sh
-RUN chmod +x /opt/wait-for-it.sh
-COPY ./startup.relational.ci.sh /opt/startup.relational.ci.sh
-RUN chmod +x /opt/startup.relational.ci.sh
-RUN sed -i 's/\r//g' /opt/wait-for-it.sh
-RUN sed -i 's/\r//g' /opt/startup.relational.ci.sh
-
-WORKDIR /usr/src/app
-RUN echo "" > .env
+# Build the app
 RUN npm run build
 
-CMD ["/opt/startup.relational.ci.sh"]
+# Add the startup script log marker
+RUN echo "✅ Dockerfile layer built with latest startup.relational.dev.sh"
+
+CMD ["/opt/startup.relational.dev.sh"]

@@ -19,6 +19,15 @@ import { SessionModule } from './session/session.module';
 import { MailerModule } from './mailer/mailer.module';
 import brevoConfig from './mail/config/brevo.config';
 
+//Tracking Modules
+import { RedisPubSubService } from './redis/redis-pubsub.service';
+import { RedisModule } from '@nestjs-modules/ioredis';
+import { DriverGateway } from './gateways/driver.gateway';
+import { ParentGateway } from './gateways/parent.gateway';
+import { AdminGateway } from './gateways/admin.gateway';
+import { LocationModule } from './location/location.module';
+import { EventEmitterModule } from '@nestjs/event-emitter';
+
 const infrastructureDatabaseModule = TypeOrmModule.forRootAsync({
   useClass: TypeOrmConfigService,
   dataSourceFactory: async (options: DataSourceOptions) => {
@@ -57,6 +66,11 @@ const infrastructureDatabaseModule = TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
     }),
+    EventEmitterModule.forRoot(),
+    RedisModule.forRoot({
+      type: 'single',
+      url: 'redis://zidallie-redis:6379',
+    }),
     UsersModule,
     FilesModule,
     AuthModule,
@@ -64,6 +78,15 @@ const infrastructureDatabaseModule = TypeOrmModule.forRootAsync({
     MailModule,
     MailerModule,
     HomeModule,
+    LocationModule,
+    RedisModule,
+  ],
+  providers: [
+    // 🚀 Tracking providers
+    DriverGateway,
+    ParentGateway,
+    AdminGateway,
+    RedisPubSubService,
   ],
 })
 export class AppModule {}

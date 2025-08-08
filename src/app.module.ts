@@ -17,6 +17,7 @@ import { DataSource, DataSourceOptions } from 'typeorm';
 import { AllConfigType } from './config/config.type';
 import { SessionModule } from './session/session.module';
 import { MailerModule } from './mailer/mailer.module';
+import { KycModule } from './kyc/kyc.module';
 import brevoConfig from './mail/config/brevo.config';
 
 const infrastructureDatabaseModule = TypeOrmModule.forRootAsync({
@@ -64,6 +65,7 @@ const infrastructureDatabaseModule = TypeOrmModule.forRootAsync({
     MailModule,
     MailerModule,
     HomeModule,
+    KycModule,
   ],
 })
 export class AppModule {}

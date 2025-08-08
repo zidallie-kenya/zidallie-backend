@@ -198,7 +198,7 @@ export class AuthService {
     };
   }
 
-  async register(dto: AuthRegisterLoginDto): Promise<void> {
+  async register(dto: AuthRegisterLoginDto): Promise<{ message: string }> {
     const user = await this.usersService.create({
       email: dto.email,
       password: dto.password,
@@ -234,6 +234,11 @@ export class AuthService {
         hash,
       },
     });
+
+    return {
+      message:
+        'User registered successfully. Please check your email to confirm your account.',
+    };
   }
 
   async confirmEmail(hash: string): Promise<void> {

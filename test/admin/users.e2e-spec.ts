@@ -29,14 +29,18 @@ describe('Users Module', () => {
         .send({
           email: newUserEmail,
           password: newUserPassword,
+          kind: 'Driver',
           firstName: `First${Date.now()}`,
+          phone_number: '+254712345678',
           lastName: 'E2E',
+          status: { id: StatusEnum.active }, // ✅ Ensure active status
         });
 
       await request(app)
         .post('/api/v1/auth/email/login')
         .send({ email: newUserEmail, password: newUserPassword })
         .then(({ body }) => {
+          console.log(body);
           newUser = body.user;
         });
     });
@@ -45,9 +49,7 @@ describe('Users Module', () => {
       it('should change password for existing user: /api/v1/users/:id (PATCH)', () => {
         return request(app)
           .patch(`/api/v1/users/${newUser.id}`)
-          .auth(apiToken, {
-            type: 'bearer',
-          })
+          .auth(apiToken, { type: 'bearer' })
           .send({
             email: newUserChangedEmail,
             password: newUserChangedPassword,
@@ -80,9 +82,7 @@ describe('Users Module', () => {
       it('should fail to create new user with invalid email: /api/v1/users (POST)', () => {
         return request(app)
           .post(`/api/v1/users`)
-          .auth(apiToken, {
-            type: 'bearer',
-          })
+          .auth(apiToken, { type: 'bearer' })
           .send({ email: 'fail-data' })
           .expect(422);
       });
@@ -90,26 +90,22 @@ describe('Users Module', () => {
       it('should successfully create new user: /api/v1/users (POST)', () => {
         return request(app)
           .post(`/api/v1/users`)
-          .auth(apiToken, {
-            type: 'bearer',
-          })
+          .auth(apiToken, { type: 'bearer' })
           .send({
             email: newUserByAdminEmail,
             password: newUserByAdminPassword,
             firstName: `UserByAdmin${Date.now()}`,
+            kind: 'Driver',
+            phone_number: '+254712345678',
             lastName: 'E2E',
-            role: {
-              id: RoleEnum.user,
-            },
-            status: {
-              id: StatusEnum.active,
-            },
+            role: { id: RoleEnum.user },
+            status: { id: StatusEnum.active }, // ✅ Ensure active status
           })
           .expect(201);
       });
 
       describe('Guest', () => {
-        it('should successfully login via created by admin user: /api/v1/auth/email/login (GET)', () => {
+        it('should successfully login via created by admin user: /api/v1/auth/email/login (POST)', () => {
           return request(app)
             .post('/api/v1/auth/email/login')
             .send({
@@ -130,11 +126,8 @@ describe('Users Module', () => {
       it('should get list of users: /api/v1/users (GET)', () => {
         return request(app)
           .get(`/api/v1/users`)
-          .auth(apiToken, {
-            type: 'bearer',
-          })
+          .auth(apiToken, { type: 'bearer' })
           .expect(200)
-          .send()
           .expect(({ body }) => {
             expect(body.data[0].provider).toBeDefined();
             expect(body.data[0].email).toBeDefined();

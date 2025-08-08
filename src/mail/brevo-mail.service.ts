@@ -2,16 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { I18nContext } from 'nestjs-i18n';
 import { MailData } from './interfaces/mail-data.interface';
-
 import { MaybeType } from '../utils/types/maybe.type';
-import { MailerService } from '../mailer/mailer.service';
-import path from 'path';
 import { AllConfigType } from '../config/config.type';
+import { BrevoMailerService } from '../mailer/brevo.service';
 
 @Injectable()
-export class MailService {
+export class BrevoMailService {
   constructor(
-    private readonly mailerService: MailerService,
+    private readonly brevoMailerService: BrevoMailerService,
     private readonly configService: ConfigService<AllConfigType>,
   ) {}
 
@@ -32,34 +30,22 @@ export class MailService {
     }
 
     const url = new URL(
-      this.configService.getOrThrow('app.frontendDomain', {
-        infer: true,
-      }) + '/confirm-email',
+      this.configService.getOrThrow('app.frontendDomain', { infer: true }) +
+        '/confirm-email',
     );
     url.searchParams.set('hash', mailData.data.hash);
 
-    await this.mailerService.sendMail({
+    await this.brevoMailerService.sendMail({
       to: mailData.to,
-      subject: emailConfirmTitle,
-      text: `${url.toString()} ${emailConfirmTitle}`,
-      templatePath: path.join(
-        this.configService.getOrThrow('app.workingDirectory', {
-          infer: true,
-        }),
-        'src',
-        'mail',
-        'mail-templates',
-        'activation.hbs',
-      ),
-      context: {
-        title: emailConfirmTitle,
-        url: url.toString(),
-        actionTitle: emailConfirmTitle,
-        app_name: this.configService.get('app.name', { infer: true }),
-        text1,
-        text2,
-        text3,
-      },
+      subject: emailConfirmTitle ?? 'Confirm Your Email',
+      htmlContent: `
+        <h1>${emailConfirmTitle}</h1>
+        <p>${text1}</p>
+        <p><a href="${url.toString()}">${url.toString()}</a></p>
+        <p>${text2}</p>
+        <p>${text3}</p>
+      `,
+      textContent: `${emailConfirmTitle} - ${url.toString()}`,
     });
   }
 
@@ -84,38 +70,24 @@ export class MailService {
     }
 
     const url = new URL(
-      this.configService.getOrThrow('app.frontendDomain', {
-        infer: true,
-      }) + '/password-change',
+      this.configService.getOrThrow('app.frontendDomain', { infer: true }) +
+        '/password-change',
     );
     url.searchParams.set('hash', mailData.data.hash);
     url.searchParams.set('expires', mailData.data.tokenExpires.toString());
 
-    await this.mailerService.sendMail({
+    await this.brevoMailerService.sendMail({
       to: mailData.to,
-      subject: resetPasswordTitle,
-      text: `${url.toString()} ${resetPasswordTitle}`,
-      templatePath: path.join(
-        this.configService.getOrThrow('app.workingDirectory', {
-          infer: true,
-        }),
-        'src',
-        'mail',
-        'mail-templates',
-        'reset-password.hbs',
-      ),
-      context: {
-        title: resetPasswordTitle,
-        url: url.toString(),
-        actionTitle: resetPasswordTitle,
-        app_name: this.configService.get('app.name', {
-          infer: true,
-        }),
-        text1,
-        text2,
-        text3,
-        text4,
-      },
+      subject: resetPasswordTitle ?? 'Reset Your Password',
+      htmlContent: `
+        <h1>${resetPasswordTitle}</h1>
+        <p>${text1}</p>
+        <p><a href="${url.toString()}">${url.toString()}</a></p>
+        <p>${text2}</p>
+        <p>${text3}</p>
+        <p>${text4}</p>
+      `,
+      textContent: `${resetPasswordTitle} - ${url.toString()}`,
     });
   }
 
@@ -136,34 +108,22 @@ export class MailService {
     }
 
     const url = new URL(
-      this.configService.getOrThrow('app.frontendDomain', {
-        infer: true,
-      }) + '/confirm-new-email',
+      this.configService.getOrThrow('app.frontendDomain', { infer: true }) +
+        '/confirm-new-email',
     );
     url.searchParams.set('hash', mailData.data.hash);
 
-    await this.mailerService.sendMail({
+    await this.brevoMailerService.sendMail({
       to: mailData.to,
-      subject: emailConfirmTitle,
-      text: `${url.toString()} ${emailConfirmTitle}`,
-      templatePath: path.join(
-        this.configService.getOrThrow('app.workingDirectory', {
-          infer: true,
-        }),
-        'src',
-        'mail',
-        'mail-templates',
-        'confirm-new-email.hbs',
-      ),
-      context: {
-        title: emailConfirmTitle,
-        url: url.toString(),
-        actionTitle: emailConfirmTitle,
-        app_name: this.configService.get('app.name', { infer: true }),
-        text1,
-        text2,
-        text3,
-      },
+      subject: emailConfirmTitle ?? 'Confirm New Email',
+      htmlContent: `
+        <h1>${emailConfirmTitle}</h1>
+        <p>${text1}</p>
+        <p><a href="${url.toString()}">${url.toString()}</a></p>
+        <p>${text2}</p>
+        <p>${text3}</p>
+      `,
+      textContent: `${emailConfirmTitle} - ${url.toString()}`,
     });
   }
 }

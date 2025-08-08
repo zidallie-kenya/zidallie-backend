@@ -1,5 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  IsBoolean,
+  IsEnum,
   IsNumber,
   IsOptional,
   IsString,
@@ -8,6 +10,9 @@ import {
 import { Transform, Type, plainToInstance } from 'class-transformer';
 import { User } from '../domain/user';
 import { RoleDto } from '../../roles/dto/role.dto';
+import { StatusDto } from '../../statuses/dto/status.dto';
+
+export type UserKind = 'Parent' | 'Driver';
 
 export class FilterUserDto {
   @ApiPropertyOptional({ type: RoleDto })
@@ -15,6 +20,42 @@ export class FilterUserDto {
   @ValidateNested({ each: true })
   @Type(() => RoleDto)
   roles?: RoleDto[] | null;
+
+  @ApiPropertyOptional({ type: StatusDto })
+  @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => StatusDto)
+  statuses?: StatusDto[] | null;
+
+  @ApiPropertyOptional({ type: String, example: 'john.doe@example.com' })
+  @IsOptional()
+  @IsString()
+  email?: string;
+
+  @ApiPropertyOptional({ type: String, example: 'John' })
+  @IsOptional()
+  @IsString()
+  firstName?: string;
+
+  @ApiPropertyOptional({ type: String, example: 'Doe' })
+  @IsOptional()
+  @IsString()
+  lastName?: string;
+
+  @ApiPropertyOptional({ type: String, example: '+254712345678' })
+  @IsOptional()
+  @IsString()
+  phone_number?: string;
+
+  @ApiPropertyOptional({ enum: ['Parent', 'Driver'] })
+  @IsOptional()
+  @IsEnum(['Parent', 'Driver'])
+  kind?: UserKind;
+
+  @ApiPropertyOptional({ type: Boolean })
+  @IsOptional()
+  @IsBoolean()
+  is_kyc_verified?: boolean;
 }
 
 export class SortUserDto {
@@ -25,7 +66,7 @@ export class SortUserDto {
 
   @ApiProperty()
   @IsString()
-  order: string;
+  order: 'asc' | 'desc';
 }
 
 export class QueryUserDto {

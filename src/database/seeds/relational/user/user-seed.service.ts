@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-
 import { Repository } from 'typeorm';
 import bcrypt from 'bcryptjs';
+
 import { RoleEnum } from '../../../../roles/roles.enum';
 import { StatusEnum } from '../../../../statuses/statuses.enum';
 import { UserEntity } from '../../../../users/infrastructure/persistence/relational/entities/user.entity';
@@ -15,17 +15,14 @@ export class UserSeedService {
   ) {}
 
   async run() {
-    const countAdmin = await this.repository.count({
+    const adminCount = await this.repository.count({
       where: {
-        role: {
-          id: RoleEnum.admin,
-        },
+        role: { id: RoleEnum.admin },
       },
     });
 
-    if (!countAdmin) {
-      const salt = await bcrypt.genSalt();
-      const password = await bcrypt.hash('secret', salt);
+    if (adminCount === 0) {
+      const password = await bcrypt.hash('secret', 10);
 
       await this.repository.save(
         this.repository.create({
@@ -33,29 +30,22 @@ export class UserSeedService {
           lastName: 'Admin',
           email: 'admin@example.com',
           password,
-          role: {
-            id: RoleEnum.admin,
-            name: 'Admin',
-          },
-          status: {
-            id: StatusEnum.active,
-            name: 'Active',
-          },
+          kind: 'Driver',
+          phone_number: '+254712345678',
+          role: { id: RoleEnum.admin },
+          status: { id: StatusEnum.active },
         }),
       );
     }
 
-    const countUser = await this.repository.count({
+    const userCount = await this.repository.count({
       where: {
-        role: {
-          id: RoleEnum.user,
-        },
+        role: { id: RoleEnum.user },
       },
     });
 
-    if (!countUser) {
-      const salt = await bcrypt.genSalt();
-      const password = await bcrypt.hash('secret', salt);
+    if (userCount === 0) {
+      const password = await bcrypt.hash('secret', 10);
 
       await this.repository.save(
         this.repository.create({
@@ -63,14 +53,10 @@ export class UserSeedService {
           lastName: 'Doe',
           email: 'john.doe@example.com',
           password,
-          role: {
-            id: RoleEnum.user,
-            name: 'Admin',
-          },
-          status: {
-            id: StatusEnum.active,
-            name: 'Active',
-          },
+          kind: 'Parent',
+          phone_number: '+254799999999',
+          role: { id: RoleEnum.user },
+          status: { id: StatusEnum.active },
         }),
       );
     }

@@ -40,10 +40,11 @@ export class UsersService {
     let email: string | null = null;
 
     if (createUserDto.email) {
-      const userObject = await this.usersRepository.findByEmail(
+      const existing = await this.usersRepository.findByEmail(
         createUserDto.email,
       );
-      if (userObject) {
+
+      if (existing) {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
           errors: {
@@ -57,10 +58,8 @@ export class UsersService {
     let photo: FileType | null | undefined = undefined;
 
     if (createUserDto.photo?.id) {
-      const fileObject = await this.filesService.findById(
-        createUserDto.photo.id,
-      );
-      if (!fileObject) {
+      const file = await this.filesService.findById(createUserDto.photo.id);
+      if (!file) {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
           errors: {
@@ -68,7 +67,7 @@ export class UsersService {
           },
         });
       }
-      photo = fileObject;
+      photo = file;
     } else if (createUserDto.photo === null) {
       photo = null;
     }
@@ -76,10 +75,10 @@ export class UsersService {
     let role: Role | undefined = undefined;
 
     if (createUserDto.role?.id) {
-      const roleObject = Object.values(RoleEnum)
+      const valid = Object.values(RoleEnum)
         .map(String)
         .includes(String(createUserDto.role.id));
-      if (!roleObject) {
+      if (!valid) {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
           errors: {
@@ -96,10 +95,10 @@ export class UsersService {
     let status: Status | undefined = undefined;
 
     if (createUserDto.status?.id) {
-      const statusObject = Object.values(StatusEnum)
+      const valid = Object.values(StatusEnum)
         .map(String)
         .includes(String(createUserDto.status.id));
-      if (!statusObject) {
+      if (!valid) {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
           errors: {
@@ -114,17 +113,21 @@ export class UsersService {
     }
 
     return this.usersRepository.create({
-      // Do not remove comment below.
-      // <creating-property-payload />
       firstName: createUserDto.firstName,
       lastName: createUserDto.lastName,
-      email: email,
-      password: password,
-      photo: photo,
-      role: role,
-      status: status,
+      phone_number: createUserDto.phone_number ?? null,
+      kind: createUserDto.kind,
+      meta: createUserDto.meta ?? null,
+      wallet_balance: createUserDto.wallet_balance ?? 0,
+      is_kyc_verified: createUserDto.is_kyc_verified ?? false,
+      name: `${createUserDto.firstName ?? ''} ${createUserDto.lastName ?? ''}`.trim(),
+      email,
+      password,
       provider: createUserDto.provider ?? AuthProvidersEnum.email,
       socialId: createUserDto.socialId,
+      photo,
+      role,
+      status,
     });
   }
 
@@ -179,9 +182,9 @@ export class UsersService {
     let password: string | undefined = undefined;
 
     if (updateUserDto.password) {
-      const userObject = await this.usersRepository.findById(id);
+      const user = await this.usersRepository.findById(id);
 
-      if (userObject && userObject?.password !== updateUserDto.password) {
+      if (user && user?.password !== updateUserDto.password) {
         const salt = await bcrypt.genSalt();
         password = await bcrypt.hash(updateUserDto.password, salt);
       }
@@ -190,11 +193,11 @@ export class UsersService {
     let email: string | null | undefined = undefined;
 
     if (updateUserDto.email) {
-      const userObject = await this.usersRepository.findByEmail(
+      const existing = await this.usersRepository.findByEmail(
         updateUserDto.email,
       );
 
-      if (userObject && userObject.id !== id) {
+      if (existing && existing.id !== id) {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
           errors: {
@@ -211,10 +214,8 @@ export class UsersService {
     let photo: FileType | null | undefined = undefined;
 
     if (updateUserDto.photo?.id) {
-      const fileObject = await this.filesService.findById(
-        updateUserDto.photo.id,
-      );
-      if (!fileObject) {
+      const file = await this.filesService.findById(updateUserDto.photo.id);
+      if (!file) {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
           errors: {
@@ -222,7 +223,7 @@ export class UsersService {
           },
         });
       }
-      photo = fileObject;
+      photo = file;
     } else if (updateUserDto.photo === null) {
       photo = null;
     }
@@ -230,10 +231,10 @@ export class UsersService {
     let role: Role | undefined = undefined;
 
     if (updateUserDto.role?.id) {
-      const roleObject = Object.values(RoleEnum)
+      const valid = Object.values(RoleEnum)
         .map(String)
         .includes(String(updateUserDto.role.id));
-      if (!roleObject) {
+      if (!valid) {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
           errors: {
@@ -250,10 +251,10 @@ export class UsersService {
     let status: Status | undefined = undefined;
 
     if (updateUserDto.status?.id) {
-      const statusObject = Object.values(StatusEnum)
+      const valid = Object.values(StatusEnum)
         .map(String)
         .includes(String(updateUserDto.status.id));
-      if (!statusObject) {
+      if (!valid) {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
           errors: {
@@ -268,17 +269,21 @@ export class UsersService {
     }
 
     return this.usersRepository.update(id, {
-      // Do not remove comment below.
-      // <updating-property-payload />
       firstName: updateUserDto.firstName,
       lastName: updateUserDto.lastName,
+      phone_number: updateUserDto.phone_number,
+      kind: updateUserDto.kind,
+      meta: updateUserDto.meta,
+      wallet_balance: updateUserDto.wallet_balance,
+      is_kyc_verified: updateUserDto.is_kyc_verified,
       email,
       password,
+      provider: updateUserDto.provider,
+      socialId: updateUserDto.socialId,
+      name: `${updateUserDto.firstName ?? ''} ${updateUserDto.lastName ?? ''}`.trim(), // required
       photo,
       role,
       status,
-      provider: updateUserDto.provider,
-      socialId: updateUserDto.socialId,
     });
   }
 

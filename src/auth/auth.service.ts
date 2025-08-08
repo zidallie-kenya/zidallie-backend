@@ -22,12 +22,12 @@ import { JwtRefreshPayloadType } from './strategies/types/jwt-refresh-payload.ty
 import { JwtPayloadType } from './strategies/types/jwt-payload.type';
 import { UsersService } from '../users/users.service';
 import { AllConfigType } from '../config/config.type';
-import { MailService } from '../mail/mail.service';
 import { RoleEnum } from '../roles/roles.enum';
 import { Session } from '../session/domain/session';
 import { SessionService } from '../session/session.service';
 import { StatusEnum } from '../statuses/statuses.enum';
 import { User } from '../users/domain/user';
+import { BrevoMailService } from '../mail/brevo-mail.service';
 
 @Injectable()
 export class AuthService {
@@ -35,7 +35,7 @@ export class AuthService {
     private jwtService: JwtService,
     private usersService: UsersService,
     private sessionService: SessionService,
-    private mailService: MailService,
+    private brevoService: BrevoMailService,
     private configService: ConfigService<AllConfigType>,
   ) {}
 
@@ -150,6 +150,11 @@ export class AuthService {
         provider: authProvider,
         role,
         status,
+        kind: 'Parent',
+        phone_number: null,
+        meta: null,
+        wallet_balance: 0,
+        is_kyc_verified: false,
       });
 
       user = await this.usersService.findById(user.id);
@@ -195,14 +200,18 @@ export class AuthService {
 
   async register(dto: AuthRegisterLoginDto): Promise<void> {
     const user = await this.usersService.create({
-      ...dto,
       email: dto.email,
-      role: {
-        id: RoleEnum.user,
-      },
-      status: {
-        id: StatusEnum.inactive,
-      },
+      password: dto.password,
+      firstName: dto.firstName,
+      lastName: dto.lastName,
+      kind: dto.kind,
+      phone_number: dto.phone_number,
+      meta: dto.meta ?? null,
+      wallet_balance: 0, // default value
+      is_kyc_verified: false, // default value
+      provider: AuthProvidersEnum.email,
+      role: { id: RoleEnum.user },
+      status: { id: StatusEnum.inactive },
     });
 
     const hash = await this.jwtService.signAsync(
@@ -219,7 +228,7 @@ export class AuthService {
       },
     );
 
-    await this.mailService.userSignUp({
+    await this.brevoService.userSignUp({
       to: dto.email,
       data: {
         hash,
@@ -340,7 +349,7 @@ export class AuthService {
       },
     );
 
-    await this.mailService.forgotPassword({
+    await this.brevoService.forgotPassword({
       to: email,
       data: {
         hash,
@@ -476,7 +485,7 @@ export class AuthService {
         },
       );
 
-      await this.mailService.confirmNewEmail({
+      await this.brevoService.confirmNewEmail({
         to: userDto.email,
         data: {
           hash,

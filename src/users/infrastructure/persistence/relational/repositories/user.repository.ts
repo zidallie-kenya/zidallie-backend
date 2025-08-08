@@ -35,10 +35,24 @@ export class UsersRelationalRepository implements UserRepository {
     paginationOptions: IPaginationOptions;
   }): Promise<User[]> {
     const where: FindOptionsWhere<UserEntity> = {};
+
     if (filterOptions?.roles?.length) {
       where.role = filterOptions.roles.map((role) => ({
         id: Number(role.id),
       }));
+    }
+
+    if (filterOptions?.email) {
+      where.email = filterOptions.email;
+    }
+    if (filterOptions?.kind) {
+      where.kind = filterOptions.kind;
+    }
+    if (filterOptions?.phone_number) {
+      where.phone_number = filterOptions.phone_number;
+    }
+    if (filterOptions?.is_kyc_verified !== undefined) {
+      where.is_kyc_verified = filterOptions.is_kyc_verified;
     }
 
     const entities = await this.usersRepository.find({

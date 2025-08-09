@@ -77,12 +77,14 @@ export class KYCRelationalRepository implements KYCRepository {
     return entity ? KYCMapper.toDomain(entity) : null;
   }
 
-  async findByUserId(userId: KYC['user']): Promise<NullableType<KYC>> {
+  async findByUserId(user: KYC['user']): Promise<NullableType<KYC>> {
+    if (!user || !user.id) {
+      return null;
+    }
     const entity = await this.kycRepository.findOne({
-      where: { user: { id: Number(userId) } },
+      where: { user: { id: Number(user.id) } },
       relations: ['user'],
     });
-
     return entity ? KYCMapper.toDomain(entity) : null;
   }
 
@@ -96,16 +98,15 @@ export class KYCRelationalRepository implements KYCRepository {
       throw new Error('KYC record not found');
     }
 
-    const updatedEntity = await this.kycRepository.save(
-      this.kycRepository.create(
-        KYCMapper.toPersistence({
-          ...KYCMapper.toDomain(entity),
-          ...payload,
-        }),
-      ),
+    const updatedModel = KYCMapper.toPersistence({
+      ...KYCMapper.toDomain(entity),
+      ...payload,
+    });
+    const savedEntity = await this.kycRepository.save(
+      this.kycRepository.create(updatedModel),
     );
 
-    return KYCMapper.toDomain(updatedEntity);
+    return KYCMapper.toDomain(savedEntity);
   }
 
   async remove(id: KYC['id']): Promise<void> {

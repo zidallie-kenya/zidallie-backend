@@ -15,20 +15,20 @@ export class KYCEntity extends EntityRelationalHelper {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ type: String })
-  national_id_front: string;
+  @Column({ type: 'varchar', nullable: true })
+  national_id_front: string | null;
 
-  @Column({ type: String })
-  national_id_back: string;
+  @Column({ type: 'varchar', nullable: true })
+  national_id_back: string | null;
 
-  @Column({ type: String })
-  passport_photo: string;
+  @Column({ type: 'varchar', nullable: true })
+  passport_photo: string | null;
 
-  @Column({ type: String })
-  driving_license: string;
+  @Column({ type: 'varchar', nullable: true })
+  driving_license: string | null;
 
-  @Column({ type: String })
-  certificate_of_good_conduct: string;
+  @Column({ type: 'varchar', nullable: true })
+  certificate_of_good_conduct: string | null;
 
   @CreateDateColumn()
   created_at: Date;
@@ -36,13 +36,13 @@ export class KYCEntity extends EntityRelationalHelper {
   @UpdateDateColumn()
   updated_at: Date;
 
-  @Column({ type: String })
+  @Column({ type: 'varchar', nullable: true })
   comments: string;
 
   @Column({ type: 'boolean', default: false })
   is_verified: boolean;
 
-  @OneToOne(() => UserEntity, (user) => user.id, {
+  @OneToOne(() => UserEntity, (user) => user.kyc, {
     eager: true,
     nullable: true,
   })

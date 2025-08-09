@@ -18,6 +18,7 @@ import { FileType } from '../files/domain/file';
 import { Role } from '../roles/domain/role';
 import { Status } from '../statuses/domain/status';
 import { UpdateUserDto } from './dto/update-user.dto';
+// import { UserMeta } from './infrastructure/persistence/relational/entities/user.entity';
 
 @Injectable()
 export class UsersService {
@@ -290,4 +291,50 @@ export class UsersService {
   async remove(id: User['id']): Promise<void> {
     await this.usersRepository.remove(id);
   }
+
+  // async updateNotifications(
+  //   userId: number,
+  //   notifications: UserMeta['notifications'],
+  // ): Promise<User | null> {
+  //   const user = await this.findById(userId);
+
+  //   if (!user) throw new NotFoundException('User not found');
+
+  //   const currentMeta = user.meta ?? {
+  //     payments: {
+  //       kind: 'Bank',
+  //       bank: null,
+  //       account_number: null,
+  //       account_name: null,
+  //     },
+  //     notifications: {
+  //       when_bus_leaves: false,
+  //       when_bus_makes_home_drop_off: false,
+  //       when_bus_make_home_pickup: false,
+  //       when_bus_arrives: false,
+  //       when_bus_is_1km_away: false,
+  //       when_bus_is_0_5km_away: false,
+  //     },
+  //     county: null,
+  //     neighborhood: null,
+  //   };
+
+  //   return this.update(userId, {
+  //     meta: {
+  //       ...currentMeta,
+  //       payments: currentMeta.payments ?? {
+  //         kind: 'Bank',
+  //         bank: null,
+  //         account_number: null,
+  //         account_name: null,
+  //       },
+  //       notifications: {
+  //         ...currentMeta.notifications,
+  //         ...notifications,
+  //       },
+  //       county: currentMeta.county ?? null,
+  //       neighborhood: currentMeta.neighborhood ?? null,
+  //     },
+  //   });
+  // }
 }

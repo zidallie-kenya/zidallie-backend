@@ -72,13 +72,13 @@ export class User {
 
   @ApiProperty()
   @Expose({ groups: ['me', 'admin'] })
-  createdAt: Date;
+  created_at: Date;
 
   @ApiProperty()
   @Expose({ groups: ['me', 'admin'] })
-  updatedAt: Date;
+  updated_at: Date;
 
   @ApiProperty()
   @Expose({ groups: ['me', 'admin'] })
-  deletedAt: Date;
+  deleted_at: Date;
 }

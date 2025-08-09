@@ -7,7 +7,7 @@ import { FilterUserDto, SortUserDto } from '../../dto/query-user.dto';
 
 export abstract class UserRepository {
   abstract create(
-    data: Omit<User, 'id' | 'createdAt' | 'deletedAt' | 'updatedAt'>,
+    data: Omit<User, 'id' | 'created_at' | 'deleted_at' | 'updated_at'>,
   ): Promise<User>;
 
   abstract findManyWithPagination({

@@ -330,6 +330,7 @@ export class AuthService {
         },
       });
     }
+    console.log(user);
 
     const tokenExpiresIn = this.configService.getOrThrow('auth.forgotExpires', {
       infer: true,
@@ -348,6 +349,7 @@ export class AuthService {
         expiresIn: tokenExpiresIn,
       },
     );
+    console.log(hash);
 
     await this.brevoService.forgotPassword({
       to: email,
@@ -598,5 +600,45 @@ export class AuthService {
       refreshToken,
       tokenExpires,
     };
+  }
+
+  async verifyBearerToken(
+    token: string,
+  ): Promise<NullableType<JwtPayloadType>> {
+    try {
+      const payload = await this.jwtService.verifyAsync<JwtPayloadType>(token, {
+        secret: this.configService.getOrThrow('auth.secret', { infer: true }),
+      });
+
+      const user = await this.usersService.findById(payload.id);
+      if (!user) {
+        throw new UnauthorizedException({
+          status: HttpStatus.UNAUTHORIZED,
+          errors: {
+            auth: 'userNotFound',
+          },
+        });
+      }
+
+      const session = await this.sessionService.findById(payload.sessionId);
+      if (!session || session.user.id !== user.id) {
+        throw new UnauthorizedException({
+          status: HttpStatus.UNAUTHORIZED,
+          errors: {
+            auth: 'invalidSession',
+          },
+        });
+      }
+
+      return payload;
+    } catch (error) {
+      console.log(error);
+      throw new UnauthorizedException({
+        status: HttpStatus.UNAUTHORIZED,
+        errors: {
+          auth: 'invalidToken',
+        },
+      });
+    }
   }
 }

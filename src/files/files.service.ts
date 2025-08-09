@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-
 import { FileRepository } from './infrastructure/persistence/file.repository';
 import { FileType } from './domain/file';
 import { NullableType } from '../utils/types/nullable.type';
@@ -14,5 +13,9 @@ export class FilesService {
 
   findByIds(ids: FileType['id'][]): Promise<FileType[]> {
     return this.fileRepository.findByIds(ids);
+  }
+
+  findByPath(path: string): Promise<NullableType<FileType>> {
+    return this.fileRepository.findByPath(path);
   }
 }

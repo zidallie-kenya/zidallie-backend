@@ -33,12 +33,13 @@ export class KYCMapper {
     if (domainEntity.id && typeof domainEntity.id === 'number') {
       persistenceEntity.id = domainEntity.id;
     }
-    persistenceEntity.national_id_front = domainEntity.national_id_front ?? '';
-    persistenceEntity.national_id_back = domainEntity.national_id_back ?? '';
-    persistenceEntity.passport_photo = domainEntity.passport_photo ?? '';
-    persistenceEntity.driving_license = domainEntity.driving_license ?? '';
+    persistenceEntity.national_id_front =
+      domainEntity.national_id_front ?? null;
+    persistenceEntity.national_id_back = domainEntity.national_id_back ?? null;
+    persistenceEntity.passport_photo = domainEntity.passport_photo ?? null;
+    persistenceEntity.driving_license = domainEntity.driving_license ?? null;
     persistenceEntity.certificate_of_good_conduct =
-      domainEntity.certificate_of_good_conduct ?? '';
+      domainEntity.certificate_of_good_conduct ?? null;
     persistenceEntity.created_at = domainEntity.created_at ?? new Date();
     persistenceEntity.updated_at = domainEntity.updated_at ?? new Date();
     persistenceEntity.comments = domainEntity.comments ?? '';

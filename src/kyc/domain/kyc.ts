@@ -6,25 +6,25 @@ export class KYC {
   @ApiProperty({ type: Number })
   id: number;
 
-  @ApiProperty({ type: String })
+  @ApiProperty({ type: String, nullable: true })
   @Expose({ groups: ['me', 'admin'] })
-  national_id_front: string;
+  national_id_front: string | null;
 
-  @ApiProperty({ type: String })
+  @ApiProperty({ type: String, nullable: true })
   @Expose({ groups: ['me', 'admin'] })
-  national_id_back: string;
+  national_id_back: string | null;
 
-  @ApiProperty({ type: String })
+  @ApiProperty({ type: String, nullable: true })
   @Expose({ groups: ['me', 'admin'] })
-  passport_photo: string;
+  passport_photo: string | null;
 
-  @ApiProperty({ type: String })
+  @ApiProperty({ type: String, nullable: true })
   @Expose({ groups: ['me', 'admin'] })
-  driving_license: string;
+  driving_license: string | null;
 
-  @ApiProperty({ type: String })
+  @ApiProperty({ type: String, nullable: true })
   @Expose({ groups: ['me', 'admin'] })
-  certificate_of_good_conduct: string;
+  certificate_of_good_conduct: string | null;
 
   @ApiProperty()
   @Expose({ groups: ['me', 'admin'] })

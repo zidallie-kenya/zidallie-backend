@@ -1,42 +1,122 @@
 import {
-  Controller,
-  Get,
-  Post,
   Body,
-  Patch,
-  Param,
+  Controller,
   Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+  Request,
+  SerializeOptions,
+  UseGuards,
 } from '@nestjs/common';
 import { KycService } from './kyc.service';
+import { ApiBearerAuth, ApiOkResponse } from '@nestjs/swagger';
+import { AuthGuard } from '@nestjs/passport';
+import { KYC } from './domain/kyc';
 import { CreateKYCDto } from './dto/create-kyc.dto';
+import { NullableType } from '../utils/types/nullable.type';
 import { UpdateKycDto } from './dto/update-kyc.dto';
+import { FilterKYCDto } from './dto/query-kyc.dto';
+import { SortKYCDto } from './dto/sort-kyc.dto';
+import { IPaginationOptions } from '../utils/types/pagination-options';
 
 @Controller('kyc')
 export class KycController {
   constructor(private readonly kycService: KycService) {}
 
+  @ApiBearerAuth()
+  @SerializeOptions({
+    groups: ['me'],
+  })
   @Post()
-  create(@Body() createKycDto: CreateKYCDto) {
-    return this.kycService.create(createKycDto);
+  @UseGuards(AuthGuard('jwt'))
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOkResponse({
+    type: KYC,
+  })
+  async create(
+    @Body() createKycDto: CreateKYCDto,
+    @Request() request,
+  ): Promise<KYC> {
+    const token = request.headers.authorization?.replace('Bearer ', '');
+    return this.kycService.create(createKycDto, token);
   }
 
-  @Get()
-  findAll() {
-    return this.kycService.findAll();
-  }
-
+  @ApiBearerAuth()
+  @SerializeOptions({
+    groups: ['me'],
+  })
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.kycService.findOne(+id);
+  @UseGuards(AuthGuard('jwt'))
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({
+    type: KYC,
+  })
+  async findById(
+    @Param('id') id: string,
+    @Request() request,
+  ): Promise<NullableType<KYC>> {
+    const token = request.headers.authorization?.replace('Bearer ', '');
+    return this.kycService.findById(parseInt(id, 10), token);
   }
 
+  @ApiBearerAuth()
+  @SerializeOptions({
+    groups: ['me'],
+  })
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateKycDto: UpdateKycDto) {
-    return this.kycService.update(+id, updateKycDto);
+  @UseGuards(AuthGuard('jwt'))
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({
+    type: KYC,
+  })
+  async update(
+    @Param('id') id: string,
+    @Body() updateKycDto: UpdateKycDto,
+    @Request() request,
+  ): Promise<NullableType<KYC>> {
+    const token = request.headers.authorization?.replace('Bearer ', '');
+    return this.kycService.update(parseInt(id, 10), updateKycDto, token);
   }
 
+  @ApiBearerAuth()
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.kycService.remove(+id);
+  @UseGuards(AuthGuard('jwt'))
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOkResponse()
+  async remove(@Param('id') id: string, @Request() request): Promise<void> {
+    const token = request.headers.authorization?.replace('Bearer ', '');
+    return this.kycService.remove(parseInt(id, 10), token);
+  }
+
+  @ApiBearerAuth()
+  @SerializeOptions({
+    groups: ['me'],
+  })
+  @Get()
+  @UseGuards(AuthGuard('jwt'))
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({
+    type: [KYC],
+  })
+  async findManyWithPagination(
+    @Body()
+    body: {
+      filterOptions?: FilterKYCDto;
+      sortOptions?: SortKYCDto[];
+      paginationOptions: IPaginationOptions;
+    },
+    @Request() request,
+  ): Promise<KYC[]> {
+    const token = request.headers.authorization?.replace('Bearer ', '');
+    return this.kycService.findManyWithPagination({
+      filterOptions: body.filterOptions,
+      sortOptions: body.sortOptions,
+      paginationOptions: body.paginationOptions,
+      bearerToken: token,
+    });
   }
 }

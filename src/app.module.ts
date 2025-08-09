@@ -18,7 +18,25 @@ import { AllConfigType } from './config/config.type';
 import { SessionModule } from './session/session.module';
 import { MailerModule } from './mailer/mailer.module';
 import { KycModule } from './kyc/kyc.module';
+import { SchoolsModule } from './schools/schools.module';
+import { StudentsModule } from './students/students.module';
+import { VehiclesModule } from './vehicles/vehicles.module';
+import { RidesModule } from './rides/rides.module';
+import { DailyRidesModule } from './daily_rides/daily_rides.module';
+import { PaymentsModule } from './payments/payments.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { OnboardingModule } from './onboarding/onboarding.module';
 import brevoConfig from './mail/config/brevo.config';
+
+//Tracking Modules
+import { RedisPubSubService } from './redis/redis.service';
+import { RedisModule } from '@nestjs-modules/ioredis';
+import { DriverGateway } from './gateways/driver.gateway';
+import { ParentGateway } from './gateways/parent.gateway';
+import { AdminGateway } from './gateways/admin.gateway';
+import { LocationModule } from './location/location.module';
+import { EventEmitterModule } from '@nestjs/event-emitter';
+import { AppConfigModule } from './config/appconfig.module';
 
 const infrastructureDatabaseModule = TypeOrmModule.forRootAsync({
   useClass: TypeOrmConfigService,
@@ -58,6 +76,12 @@ const infrastructureDatabaseModule = TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
     }),
+    EventEmitterModule.forRoot(),
+    RedisModule.forRoot({
+      type: 'single',
+      url: process.env.REDIS_URL || 'redis://localhost:6379',
+    }),
+
     UsersModule,
     FilesModule,
     AuthModule,
@@ -66,6 +90,24 @@ const infrastructureDatabaseModule = TypeOrmModule.forRootAsync({
     MailerModule,
     HomeModule,
     KycModule,
+    SchoolsModule,
+    StudentsModule,
+    VehiclesModule,
+    RidesModule,
+    DailyRidesModule,
+    PaymentsModule,
+    NotificationsModule,
+    OnboardingModule,
+    LocationModule,
+    RedisModule,
+    AppConfigModule,
+  ],
+  providers: [
+    // 🚀 Tracking providers
+    DriverGateway,
+    ParentGateway,
+    AdminGateway,
+    RedisPubSubService,
   ],
 })
 export class AppModule {}

@@ -1,6 +1,5 @@
 //This service listens to Redis Pub/Sub messages and forwards them to WebSocket clients.
-import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
-import { InjectRedis } from '@nestjs-modules/ioredis';
+import { Injectable, OnModuleInit, Logger, Inject } from '@nestjs/common';
 import Redis from 'ioredis';
 
 @Injectable()
@@ -9,7 +8,8 @@ export class RedisPubSubService implements OnModuleInit {
   private _server: any;
   private readonly logger = new Logger(RedisPubSubService.name);
 
-  constructor(@InjectRedis() private readonly redis: Redis) {}
+  // constructor(@InjectRedis() private readonly redis: Redis) {}
+  constructor(@Inject('REDIS_CLIENT') private readonly redis: Redis) {}
 
   async onModuleInit() {
     try {

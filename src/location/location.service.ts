@@ -3,14 +3,14 @@ The service processes location updates from drivers, stores them efficiently, an
 */
 
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
-import { InjectRedis } from '@nestjs-modules/ioredis';
-import Redis from 'ioredis';
+// import { InjectRedis } from '@nestjs-modules/ioredis';
+// import Redis from 'ioredis';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EventEmitter2 } from '@nestjs/event-emitter';
+// import { EventEmitter2 } from '@nestjs/event-emitter';
 import { LocationEntity } from './infrastructure/persistence/relational/entities/location.entity';
 import { LocationPayloadDto } from '../gateways/dto/location.dto';
-import { LocationUpdatedEvent } from './location.events';
+// import { LocationUpdatedEvent } from './location.events';
 
 const RATE_LIMITS = {
   LOCATION_UPDATE_MS: 1000, // 1 second
@@ -22,10 +22,10 @@ export class LocationService {
   private lastLocationUpdate = new Map<string, number>();
 
   constructor(
-    @InjectRedis() private readonly redis: Redis,
+    // @InjectRedis() private readonly redis: Redis,
     @InjectRepository(LocationEntity)
     private readonly locationRepo: Repository<LocationEntity>,
-    private readonly eventEmitter: EventEmitter2,
+    // private readonly eventEmitter: EventEmitter2,
   ) {}
 
   // Validate latitude and longitude to ensure they are within valid ranges
@@ -77,24 +77,24 @@ export class LocationService {
       }
 
       // Save to Redis for quick access (with pipeline for atomicity)
-      const pipeline = this.redis.pipeline();
-      pipeline.set(
-        `driver:${driverId}:location`,
-        JSON.stringify(location),
-        'EX',
-        3600, // 1 hour TTL
-      );
-      pipeline.xadd(
-        `stream:ride:${rideId}`,
-        '*',
-        'driverId',
-        driverId,
-        'location',
-        JSON.stringify(location),
-        'timestamp',
-        Date.now(),
-      );
-      await pipeline.exec();
+      // const pipeline = this.redis.pipeline();
+      // pipeline.set(
+      //   `driver:${driverId}:location`,
+      //   JSON.stringify(location),
+      //   'EX',
+      //   3600, // 1 hour TTL
+      // );
+      // pipeline.xadd(
+      //   `stream:ride:${rideId}`,
+      //   '*',
+      //   'driverId',
+      //   driverId,
+      //   'location',
+      //   JSON.stringify(location),
+      //   'timestamp',
+      //   Date.now(),
+      // );
+      // await pipeline.exec();
 
       // Save to PostgreSQL (FIXED: using proper entity relationships)
       await this.locationRepo.save({
@@ -106,10 +106,10 @@ export class LocationService {
       });
 
       // Emit event for real-time updates
-      this.eventEmitter.emit(
-        'location.updated',
-        new LocationUpdatedEvent(driverId, rideId, location),
-      );
+      // this.eventEmitter.emit(
+      //   'location.updated',
+      //   new LocationUpdatedEvent(driverId, rideId, location),
+      // );
 
       this.logger.debug('Location update processed successfully');
     } catch (error) {
@@ -120,16 +120,16 @@ export class LocationService {
 
   // Retrieves the latest location for a specific driver from Redis
   // Returns null if no location is found
-  async getLatestLocation(driverId: string) {
-    try {
-      const locationData = await this.redis.get(`driver:${driverId}:location`);
-      return locationData ? JSON.parse(locationData) : null;
-    } catch (error) {
-      this.logger.error(
-        `Failed to get latest location for driver ${driverId}:`,
-        error,
-      );
-      return null;
-    }
-  }
+  // async getLatestLocation(driverId: string) {
+  //   try {
+  //     const locationData = await this.redis.get(`driver:${driverId}:location`);
+  //     return locationData ? JSON.parse(locationData) : null;
+  //   } catch (error) {
+  //     this.logger.error(
+  //       `Failed to get latest location for driver ${driverId}:`,
+  //       error,
+  //     );
+  //     return null;
+  //   }
+  // }
 }

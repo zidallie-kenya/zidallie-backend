@@ -11,6 +11,7 @@ import {
   Delete,
   SerializeOptions,
   Query,
+  Redirect,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
@@ -61,11 +62,16 @@ export class AuthController {
   }
 
   @Get('email/confirm')
+  @Redirect()
   @HttpCode(HttpStatus.NO_CONTENT)
   async confirmEmailByQuery(
     @Query() confirmEmailDto: AuthConfirmEmailDto,
-  ): Promise<{ success: boolean }> {
-    return this.service.confirmEmailByQuery(confirmEmailDto.hash);
+  ): Promise<{ url: string; statusCode: number }> {
+    await this.service.confirmEmailByQuery(confirmEmailDto.hash);
+    return {
+      url: 'https://www.zidallie.co.ke',
+      statusCode: HttpStatus.FOUND, // 302 redirect
+    };
   }
 
   @Post('email/confirm/new')

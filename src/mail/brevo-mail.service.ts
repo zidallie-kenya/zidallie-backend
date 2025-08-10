@@ -30,8 +30,8 @@ export class BrevoMailService {
     }
 
     const url = new URL(
-      this.configService.getOrThrow('app.frontendDomain', { infer: true }) +
-        '/confirm-email',
+      this.configService.getOrThrow('app.backendDomain', { infer: true }) +
+        '/api/v1/auth/email/confirm',
     );
     url.searchParams.set('hash', mailData.data.hash);
 

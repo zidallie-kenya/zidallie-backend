@@ -77,14 +77,12 @@ const infrastructureDatabaseModule = TypeOrmModule.forRootAsync({
       inject: [ConfigService],
     }),
     EventEmitterModule.forRoot(),
-    RedisModule.forRootAsync({
-      useFactory: () => {
-        const isTls = process.env.REDIS_URL?.startsWith('rediss://');
-        return {
-          type: 'single',
-          url: process.env.REDIS_URL || 'redis://localhost:6379',
-          options: isTls ? { tls: {} } : {},
-        };
+    RedisModule.forRoot({
+      type: 'single',
+      url: process.env.REDIS_URL,
+      options: {
+        maxRetriesPerRequest: null, // disables the limit
+        enableReadyCheck: true, // let ioredis confirm connection before using
       },
     }),
 

@@ -277,6 +277,12 @@ export class AuthService {
     await this.usersService.update(user.id, user);
   }
 
+  async confirmEmailByQuery(hash: string): Promise<{ success: boolean }> {
+    console.log('confirmEmailByQuery', hash);
+    await this.confirmEmail(hash);
+    return { success: true };
+  }
+
   async confirmNewEmail(hash: string): Promise<void> {
     let userId: User['id'];
     let newEmail: User['email'];

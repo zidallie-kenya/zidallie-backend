@@ -10,6 +10,8 @@ import {
   Patch,
   Delete,
   SerializeOptions,
+  Query,
+  Redirect,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
@@ -57,6 +59,19 @@ export class AuthController {
     @Body() confirmEmailDto: AuthConfirmEmailDto,
   ): Promise<void> {
     return this.service.confirmEmail(confirmEmailDto.hash);
+  }
+
+  @Get('email/confirm')
+  @Redirect()
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async confirmEmailByQuery(
+    @Query() confirmEmailDto: AuthConfirmEmailDto,
+  ): Promise<{ url: string; statusCode: number }> {
+    await this.service.confirmEmailByQuery(confirmEmailDto.hash);
+    return {
+      url: 'https://www.zidallie.co.ke',
+      statusCode: HttpStatus.FOUND, // 302 redirect
+    };
   }
 
   @Post('email/confirm/new')

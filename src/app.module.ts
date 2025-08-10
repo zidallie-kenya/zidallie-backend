@@ -77,13 +77,29 @@ const infrastructureDatabaseModule = TypeOrmModule.forRootAsync({
       inject: [ConfigService],
     }),
     EventEmitterModule.forRoot(),
-    RedisModule.forRoot({
-      type: 'single',
-      url: process.env.REDIS_URL,
-      options: {
-        maxRetriesPerRequest: null, // disables the limit
-        enableReadyCheck: true, // let ioredis confirm connection before using
-      },
+    RedisModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        type: 'single',
+        options: {
+          host: config.get<string>('REDIS_HOST'),
+          port: config.get<number>('REDIS_PORT'),
+          password: config.get<string>('REDIS_PASSWORD'),
+          maxRetriesPerRequest: null,
+          enableReadyCheck: true,
+          keepAlive: 5000, // TCP keep-alive interval (ms)
+          reconnectOnError: (err) => {
+            console.error('🔁 Reconnecting due to error:', err);
+            return true; // always reconnect
+          },
+          retryStrategy: (times) => {
+            const delay = Math.min(times * 500, 5000);
+            console.log(`🔁 Retry attempt #${times}, waiting ${delay}ms`);
+            return delay;
+          },
+        },
+      }),
     }),
 
     UsersModule,

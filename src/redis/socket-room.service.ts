@@ -1,8 +1,7 @@
 /*
 This service manages socket rooms for rides and drivers, allowing parents to join rides and track their children in real-time.
 */
-import { Injectable, Logger } from '@nestjs/common';
-import { InjectRedis } from '@nestjs-modules/ioredis';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import Redis from 'ioredis';
 
 const REDIS_TTL = {
@@ -14,7 +13,8 @@ const REDIS_TTL = {
 export class SocketRoomService {
   private readonly logger = new Logger(SocketRoomService.name);
 
-  constructor(@InjectRedis() private readonly redis: Redis) {}
+  // constructor(@InjectRedis() private readonly redis: Redis) {}
+  constructor(@Inject('REDIS_CLIENT') private readonly redis: Redis) {}
 
   // Adds a parent socket to a ride, allowing them to track their child in real-time
   async addParentToRide(rideId: string, socketId: string): Promise<void> {

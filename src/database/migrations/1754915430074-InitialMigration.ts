@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class InitialMigration1754758518668 implements MigrationInterface {
-  name = 'InitialMigration1754758518668';
+export class InitialMigration1754915430074 implements MigrationInterface {
+  name = 'InitialMigration1754915430074';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
@@ -32,7 +32,7 @@ export class InitialMigration1754758518668 implements MigrationInterface {
       `CREATE TABLE "school" ("id" SERIAL NOT NULL, "name" text NOT NULL, "location" text, "comments" text, "url" text, "meta" jsonb, "created_at" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_57836c3fe2f2c7734b20911755e" PRIMARY KEY ("id"))`,
     );
     await queryRunner.query(
-      `CREATE TABLE "student" ("id" SERIAL NOT NULL, "name" text NOT NULL, "profile_picture" text, "gender" character varying(6) NOT NULL, "address" text, "comments" text, "meta" jsonb, "created_at" TIMESTAMP NOT NULL DEFAULT now(), "parentId" integer, CONSTRAINT "PK_3d8016e1cb58429474a3c041904" PRIMARY KEY ("id"))`,
+      `CREATE TABLE "student" ("id" SERIAL NOT NULL, "name" text NOT NULL, "profile_picture" text, "gender" character varying(6) NOT NULL, "address" text, "comments" text, "meta" jsonb, "created_at" TIMESTAMP NOT NULL DEFAULT now(), "schoolId" integer, "parentId" integer, CONSTRAINT "PK_3d8016e1cb58429474a3c041904" PRIMARY KEY ("id"))`,
     );
     await queryRunner.query(
       `CREATE TABLE "payment" ("id" SERIAL NOT NULL, "amount" double precision NOT NULL, "kind" character varying(10) NOT NULL, "transaction_type" character varying(20) NOT NULL, "comments" text, "transaction_id" text, "created_at" TIMESTAMP NOT NULL DEFAULT now(), "updated_at" TIMESTAMP NOT NULL DEFAULT now(), "userId" integer NOT NULL, CONSTRAINT "PK_fcaec7df5adf9cac408c686b2ab" PRIMARY KEY ("id"))`,
@@ -98,6 +98,9 @@ export class InitialMigration1754758518668 implements MigrationInterface {
       `ALTER TABLE "onboarding" ADD CONSTRAINT "FK_c8afe559ad8a06471e3242beed8" FOREIGN KEY ("schoolId") REFERENCES "school"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
     );
     await queryRunner.query(
+      `ALTER TABLE "student" ADD CONSTRAINT "FK_c375f35160f921f4fab5f515d30" FOREIGN KEY ("schoolId") REFERENCES "school"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
       `ALTER TABLE "student" ADD CONSTRAINT "FK_d728e971c60c58a818dd9e614ab" FOREIGN KEY ("parentId") REFERENCES "user"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
     );
     await queryRunner.query(
@@ -147,6 +150,9 @@ export class InitialMigration1754758518668 implements MigrationInterface {
     );
     await queryRunner.query(
       `ALTER TABLE "student" DROP CONSTRAINT "FK_d728e971c60c58a818dd9e614ab"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "student" DROP CONSTRAINT "FK_c375f35160f921f4fab5f515d30"`,
     );
     await queryRunner.query(
       `ALTER TABLE "onboarding" DROP CONSTRAINT "FK_c8afe559ad8a06471e3242beed8"`,

@@ -36,7 +36,7 @@ import { infinityPagination } from '../utils/infinity-pagination';
 import { QueryPaymentDto } from './dto/query-payment.dto';
 
 @ApiBearerAuth()
-@Roles(RoleEnum.admin)
+@Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 @ApiTags('Payments')
 @Controller({

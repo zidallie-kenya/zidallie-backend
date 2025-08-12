@@ -56,7 +56,7 @@ export class RidesController {
     groups: ['admin'],
   })
   @Post()
-  @Roles(RoleEnum.admin, RoleEnum.user)
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @HttpCode(HttpStatus.CREATED)
   create(@Body() createRideDto: CreateRideDto): Promise<Ride> {
     return this.ridesService.create(createRideDto);
@@ -69,7 +69,7 @@ export class RidesController {
     groups: ['admin'],
   })
   @Get()
-  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user)
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @HttpCode(HttpStatus.OK)
   @ApiQuery({ name: 'vehicleId', required: false })
   @ApiQuery({ name: 'driverId', required: false })
@@ -115,7 +115,7 @@ export class RidesController {
     groups: ['admin'],
   })
   @Get('by-status/:status')
-  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user)
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @HttpCode(HttpStatus.OK)
   @ApiParam({ name: 'status', enum: RideStatus })
   async findByStatus(@Param('status') status: RideStatus): Promise<Ride[]> {
@@ -129,7 +129,7 @@ export class RidesController {
     groups: ['admin'],
   })
   @Get('by-student/:studentId')
-  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user)
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @HttpCode(HttpStatus.OK)
   @ApiParam({ name: 'studentId', type: 'number' })
   async findByStudentId(
@@ -145,7 +145,7 @@ export class RidesController {
     groups: ['admin'],
   })
   @Get('by-parent/:parentId')
-  @Roles(RoleEnum.admin, RoleEnum.user)
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @HttpCode(HttpStatus.OK)
   @ApiParam({ name: 'parentId', type: 'number' })
   async findByParentId(
@@ -161,7 +161,7 @@ export class RidesController {
     groups: ['admin'],
   })
   @Get('by-driver/:driverId')
-  @Roles(RoleEnum.admin, RoleEnum.driver)
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @HttpCode(HttpStatus.OK)
   @ApiParam({ name: 'driverId', type: 'number' })
   async findByDriverId(
@@ -177,7 +177,7 @@ export class RidesController {
     groups: ['admin'],
   })
   @Get('recent-by-driver/:driverId')
-  @Roles(RoleEnum.admin, RoleEnum.driver)
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @HttpCode(HttpStatus.OK)
   @ApiParam({ name: 'driverId', type: 'number' })
   @ApiQuery({ name: 'limit', required: false, type: 'number' })
@@ -195,7 +195,7 @@ export class RidesController {
     groups: ['admin'],
   })
   @Get(':id')
-  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user)
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @HttpCode(HttpStatus.OK)
   @ApiParam({
     name: 'id',
@@ -213,7 +213,7 @@ export class RidesController {
     groups: ['admin'],
   })
   @Patch(':id')
-  @Roles(RoleEnum.admin, RoleEnum.user)
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @HttpCode(HttpStatus.OK)
   @ApiParam({
     name: 'id',
@@ -251,7 +251,7 @@ export class RidesController {
     groups: ['admin'],
   })
   @Patch(':id/reject')
-  @Roles(RoleEnum.admin)
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @HttpCode(HttpStatus.OK)
   @ApiParam({ name: 'id', type: 'number' })
   async rejectRide(
@@ -268,7 +268,7 @@ export class RidesController {
     groups: ['admin'],
   })
   @Patch(':id/cancel')
-  @Roles(RoleEnum.admin, RoleEnum.user)
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @HttpCode(HttpStatus.OK)
   @ApiParam({ name: 'id', type: 'number' })
   async cancelRide(
@@ -285,7 +285,7 @@ export class RidesController {
     groups: ['admin'],
   })
   @Patch(':id/activate')
-  @Roles(RoleEnum.admin)
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @HttpCode(HttpStatus.OK)
   @ApiParam({ name: 'id', type: 'number' })
   async activateRide(
@@ -295,7 +295,7 @@ export class RidesController {
   }
 
   @Delete(':id')
-  @Roles(RoleEnum.admin)
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @ApiParam({
     name: 'id',
     type: 'number',

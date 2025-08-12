@@ -66,7 +66,7 @@ export class OnboardingController {
   @SerializeOptions({
     groups: ['admin'],
   })
-  @Roles(RoleEnum.admin)
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Get()
   @HttpCode(HttpStatus.OK)
@@ -98,7 +98,7 @@ export class OnboardingController {
   @SerializeOptions({
     groups: ['admin'],
   })
-  @Roles(RoleEnum.admin)
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Get(':id')
   @HttpCode(HttpStatus.OK)
@@ -119,7 +119,7 @@ export class OnboardingController {
   @SerializeOptions({
     groups: ['admin'],
   })
-  @Roles(RoleEnum.admin)
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Get('parent/email/:email')
   @HttpCode(HttpStatus.OK)
@@ -138,7 +138,7 @@ export class OnboardingController {
   @SerializeOptions({
     groups: ['admin'],
   })
-  @Roles(RoleEnum.admin)
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Get('parent/phone/:phone')
   @HttpCode(HttpStatus.OK)
@@ -157,7 +157,7 @@ export class OnboardingController {
   @SerializeOptions({
     groups: ['admin'],
   })
-  @Roles(RoleEnum.admin)
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Get('school/:schoolId')
   @HttpCode(HttpStatus.OK)
@@ -176,7 +176,7 @@ export class OnboardingController {
   @SerializeOptions({
     groups: ['admin'],
   })
-  @Roles(RoleEnum.admin)
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Get('date-range')
   @HttpCode(HttpStatus.OK)
@@ -208,7 +208,7 @@ export class OnboardingController {
   @SerializeOptions({
     groups: ['admin'],
   })
-  @Roles(RoleEnum.admin)
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Patch(':id')
   @HttpCode(HttpStatus.OK)
@@ -224,7 +224,7 @@ export class OnboardingController {
     return this.onboardingService.update(id, updateOnboardingDto);
   }
 
-  @Roles(RoleEnum.admin)
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Delete(':id')
   @ApiParam({

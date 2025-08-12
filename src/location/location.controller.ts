@@ -36,7 +36,7 @@ import { LocationsService } from './location.service';
 import { QueryLocationDto } from './dto/query-location.dto';
 
 @ApiBearerAuth()
-@Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user)
+@Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 @ApiTags('Locations')
 @Controller({

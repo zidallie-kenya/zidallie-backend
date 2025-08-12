@@ -18,7 +18,7 @@ import { StatusDto } from '../../statuses/dto/status.dto';
 import { lowerCaseTransformer } from '../../utils/transformers/lower-case.transformer';
 import { UserMetaDto } from './user.dto'; // adjust path if needed
 
-export type UserKind = 'Parent' | 'Driver';
+export type UserKind = 'Parent' | 'Driver' | 'Admin';
 
 export class CreateUserDto {
   @ApiProperty({ example: 'test1@example.com', type: String })
@@ -52,9 +52,9 @@ export class CreateUserDto {
   @IsString()
   phone_number?: string | null;
 
-  @ApiProperty({ enum: ['Parent', 'Driver'] })
+  @ApiProperty({ enum: ['Parent', 'Driver', 'Admin'] })
   @IsNotEmpty()
-  @IsEnum(['Parent', 'Driver'])
+  @IsEnum(['Parent', 'Driver', 'Admin'])
   kind: UserKind;
 
   @ApiPropertyOptional({ type: () => UserMetaDto })

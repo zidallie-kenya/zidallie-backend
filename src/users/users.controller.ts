@@ -37,7 +37,7 @@ import { RolesGuard } from '../roles/roles.guard';
 import { infinityPagination } from '../utils/infinity-pagination';
 
 @ApiBearerAuth()
-@Roles(RoleEnum.admin, RoleEnum.user)
+@Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 @ApiTags('Users')
 @Controller({
@@ -95,16 +95,19 @@ export class UsersController {
   @SerializeOptions({
     groups: ['admin'],
   })
-  @Get(':id')
+  @Get(':identifier')
   @HttpCode(HttpStatus.OK)
   @ApiParam({
-    name: 'id',
+    name: 'identifier',
     type: String,
     required: true,
+    description: 'User ID or Email',
   })
-  findOne(@Param('id') id: User['id']): Promise<NullableType<User>> {
-    console.log('findOne', id);
-    return this.usersService.findById(id);
+  findOne(
+    @Param('identifier') identifier: string,
+  ): Promise<NullableType<User>> {
+    console.log('findOne', identifier);
+    return this.usersService.findByIdOrEmail(identifier);
   }
 
   @ApiOkResponse({

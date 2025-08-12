@@ -37,7 +37,7 @@ import { infinityPagination } from '../utils/infinity-pagination';
 import { QueryStudentDto } from './dto/query-stuudent.dto';
 
 @ApiBearerAuth()
-@Roles(RoleEnum.admin, RoleEnum.user)
+@Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 @ApiTags('Students')
 @Controller({

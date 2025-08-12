@@ -21,7 +21,7 @@ import { NullableType } from '../utils/types/nullable.type';
 import { UpdateKycDto } from './dto/update-kyc.dto';
 import { FilterKYCDto } from './dto/query-kyc.dto';
 import { SortKYCDto } from './dto/sort-kyc.dto';
-import { IPaginationOptions } from '../utils/types/pagination-options';
+// import { IPaginationOptions } from '../utils/types/pagination-options';
 
 @Controller('kyc')
 export class KycController {
@@ -96,26 +96,31 @@ export class KycController {
   @SerializeOptions({
     groups: ['me'],
   })
-  @Get()
+  @Post('list')
   @UseGuards(AuthGuard('jwt'))
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({
     type: [KYC],
   })
   async findManyWithPagination(
+    @Request() request?: any,
     @Body()
-    body: {
+    body?: {
       filterOptions?: FilterKYCDto;
       sortOptions?: SortKYCDto[];
-      paginationOptions: IPaginationOptions;
+      page?: number;
+      limit?: number;
     },
-    @Request() request,
   ): Promise<KYC[]> {
     const token = request.headers.authorization?.replace('Bearer ', '');
+
     return this.kycService.findManyWithPagination({
-      filterOptions: body.filterOptions,
-      sortOptions: body.sortOptions,
-      paginationOptions: body.paginationOptions,
+      filterOptions: body?.filterOptions ?? {},
+      sortOptions: body?.sortOptions ?? [],
+      paginationOptions: {
+        page: Number(body?.page) || 1,
+        limit: Number(body?.limit) || 10,
+      },
       bearerToken: token,
     });
   }

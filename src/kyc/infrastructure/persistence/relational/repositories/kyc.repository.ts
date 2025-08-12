@@ -38,7 +38,6 @@ export class KYCRelationalRepository implements KYCRepository {
     paginationOptions: IPaginationOptions;
   }): Promise<KYC[]> {
     const where: FindOptionsWhere<KYCEntity> = {};
-
     if (filterOptions?.is_verified !== undefined) {
       where.is_verified = filterOptions.is_verified;
     }

@@ -69,7 +69,7 @@ export class AuthController {
   ): Promise<{ url: string; statusCode: number }> {
     await this.service.confirmEmailByQuery(confirmEmailDto.hash);
     return {
-      url: 'https://www.zidallie.co.ke',
+      url: 'https://www.zidallie.co.ke/email-confirmation',
       statusCode: HttpStatus.FOUND, // 302 redirect
     };
   }

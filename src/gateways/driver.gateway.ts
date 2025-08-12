@@ -10,7 +10,7 @@ import {
 import { Injectable, Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
-import { LocationService } from '../location/location.service';
+import { LocationsService } from '../location/location.service';
 import { SocketRoomService } from '../redis/socket-room.service';
 import { RedisPubSubService } from '../redis/redis.service';
 import { AppConfigService } from '../config/config.service';
@@ -31,7 +31,7 @@ export class DriverGateway
   private readonly logger = new Logger(DriverGateway.name);
 
   constructor(
-    private readonly locationService: LocationService,
+    private readonly locationService: LocationsService,
     private readonly socketRoomService: SocketRoomService,
     private readonly redisPubSub: RedisPubSubService,
     private readonly jwtService: JwtService,
@@ -93,25 +93,23 @@ export class DriverGateway
 
   @SubscribeMessage('locationUpdate')
   async handleLocationUpdate(@MessageBody() data: LocationPayloadDto) {
-    try {
-      await this.locationService.handleLocation(data);
-      const { driverId, location } = data;
-
-      // Publish to Redis pub/sub for admin panel
-      await this.redisPubSub.publishDriverLocationUpdate({
-        driverId,
-        location: {
-          latitude: location.latitude,
-          longitude: location.longitude,
-          timestamp: location.timestamp,
-        },
-      });
-
-      this.logger.debug(`Location updated for driver ${driverId}`);
-    } catch (error) {
-      this.logger.error('Location update failed:', error);
-      // Don't disconnect driver, just log the error
-    }
+    // try {
+    //   await this.locationService.handleLocation(data);
+    //   const { driverId, location } = data;
+    //   // Publish to Redis pub/sub for admin panel
+    //   await this.redisPubSub.publishDriverLocationUpdate({
+    //     driverId,
+    //     location: {
+    //       latitude: location.latitude,
+    //       longitude: location.longitude,
+    //       timestamp: location.timestamp,
+    //     },
+    //   });
+    //   this.logger.debug(`Location updated for driver ${driverId}`);
+    // } catch (error) {
+    //   this.logger.error('Location update failed:', error);
+    //   // Don't disconnect driver, just log the error
+    // }
   }
 
   @SubscribeMessage('pickup')

@@ -6,7 +6,6 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
   OneToMany,
-  OneToOne,
 } from 'typeorm';
 import { EntityRelationalHelper } from '../../../../../utils/relational-entity-helper';
 import { SchoolEntity } from '../../../../../schools/infrastructure/persistence/relational/entities/school.entity';
@@ -19,7 +18,9 @@ export class StudentEntity extends EntityRelationalHelper {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @OneToOne(() => SchoolEntity, { nullable: true })
+  @ManyToOne(() => SchoolEntity, (school) => school.students, {
+    nullable: true,
+  })
   school: SchoolEntity | null;
 
   @ManyToOne(() => UserEntity, (user) => user.students, { nullable: true })

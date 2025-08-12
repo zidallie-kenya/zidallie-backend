@@ -112,7 +112,6 @@ export class UsersRelationalRepository implements UserRepository {
 
     return entity ? UserMapper.toDomain(entity) : null;
   }
-
   async update(id: User['id'], payload: Partial<User>): Promise<User> {
     const entity = await this.usersRepository.findOne({
       where: { id: Number(id) },
@@ -122,14 +121,29 @@ export class UsersRelationalRepository implements UserRepository {
       throw new Error('User not found');
     }
 
-    const updatedEntity = await this.usersRepository.save(
-      this.usersRepository.create(
-        UserMapper.toPersistence({
-          ...UserMapper.toDomain(entity),
-          ...payload,
-        }),
-      ),
+    // Convert existing DB entity to domain
+    const currentDomain = UserMapper.toDomain(entity);
+
+    // Merge only provided fields into existing domain object
+    const mergedDomain = {
+      ...currentDomain,
+      ...payload,
+    };
+
+    // Convert to persistence object
+    const persistenceData = UserMapper.toPersistence(mergedDomain);
+
+    // Remove undefined keys so they won't overwrite existing DB values
+    Object.keys(persistenceData).forEach(
+      (key) =>
+        persistenceData[key] === undefined && delete persistenceData[key],
     );
+
+    // Perform the save (partial overwrite, keeping old values)
+    const updatedEntity = await this.usersRepository.save({
+      ...entity,
+      ...persistenceData,
+    });
 
     return UserMapper.toDomain(updatedEntity);
   }

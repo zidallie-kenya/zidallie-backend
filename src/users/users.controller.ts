@@ -37,7 +37,7 @@ import { RolesGuard } from '../roles/roles.guard';
 import { infinityPagination } from '../utils/infinity-pagination';
 
 @ApiBearerAuth()
-@Roles(RoleEnum.admin)
+@Roles(RoleEnum.admin, RoleEnum.user)
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 @ApiTags('Users')
 @Controller({
@@ -103,6 +103,7 @@ export class UsersController {
     required: true,
   })
   findOne(@Param('id') id: User['id']): Promise<NullableType<User>> {
+    console.log('findOne', id);
     return this.usersService.findById(id);
   }
 

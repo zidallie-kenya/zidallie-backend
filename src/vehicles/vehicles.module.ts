@@ -1,9 +1,16 @@
 import { Module } from '@nestjs/common';
-import { VehiclesService } from './vehicles.service';
-import { VehiclesController } from './vehicles.controller';
+import { RelationalVehiclePersistenceModule } from './infrastructure/persistence/relational/relational-persistence.module';
+import { UsersModule } from '../users/users.module'; // For user validation
+import { VehicleController } from './vehicles.controller';
+import { VehicleService } from './vehicles.service';
 
 @Module({
-  controllers: [VehiclesController],
-  providers: [VehiclesService],
+  imports: [
+    RelationalVehiclePersistenceModule,
+    UsersModule, // For validating users in the service
+  ],
+  controllers: [VehicleController],
+  providers: [VehicleService],
+  exports: [VehicleService, RelationalVehiclePersistenceModule],
 })
-export class VehiclesModule {}
+export class VehicleModule {}

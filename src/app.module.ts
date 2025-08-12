@@ -20,7 +20,7 @@ import { MailerModule } from './mailer/mailer.module';
 import { KycModule } from './kyc/kyc.module';
 import { SchoolsModule } from './schools/schools.module';
 import { StudentsModule } from './students/students.module';
-import { VehiclesModule } from './vehicles/vehicles.module';
+import { VehicleModule } from './vehicles/vehicles.module';
 import { RidesModule } from './rides/rides.module';
 import { DailyRidesModule } from './daily_rides/daily_rides.module';
 import { PaymentsModule } from './payments/payments.module';
@@ -112,7 +112,7 @@ const infrastructureDatabaseModule = TypeOrmModule.forRootAsync({
     KycModule,
     SchoolsModule,
     StudentsModule,
-    VehiclesModule,
+    VehicleModule,
     RidesModule,
     DailyRidesModule,
     PaymentsModule,

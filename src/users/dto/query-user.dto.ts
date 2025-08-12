@@ -12,7 +12,7 @@ import { User } from '../domain/user';
 import { RoleDto } from '../../roles/dto/role.dto';
 import { StatusDto } from '../../statuses/dto/status.dto';
 
-export type UserKind = 'Parent' | 'Driver';
+export type UserKind = 'Parent' | 'Driver' | 'Admin';
 
 export class FilterUserDto {
   @ApiPropertyOptional({ type: RoleDto })
@@ -47,9 +47,9 @@ export class FilterUserDto {
   @IsString()
   phone_number?: string;
 
-  @ApiPropertyOptional({ enum: ['Parent', 'Driver'] })
+  @ApiPropertyOptional({ enum: ['Parent', 'Driver', 'Admin'] })
   @IsOptional()
-  @IsEnum(['Parent', 'Driver'])
+  @IsEnum(['Parent', 'Driver', 'Admin'])
   kind?: UserKind;
 
   @ApiPropertyOptional({ type: Boolean })

@@ -30,8 +30,8 @@ export class AuthRegisterLoginDto {
   @IsNotEmpty()
   lastName: string;
 
-  @ApiProperty({ example: 'Parent', enum: ['Parent', 'Driver'] })
-  @IsEnum(['Parent', 'Driver'])
+  @ApiProperty({ example: 'Parent', enum: ['Parent', 'Driver', 'Admin'] })
+  @IsEnum(['Parent', 'Driver', 'Admin'])
   @IsNotEmpty()
   kind: UserKind;
 

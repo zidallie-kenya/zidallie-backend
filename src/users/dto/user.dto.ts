@@ -9,7 +9,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
-export type UserKind = 'Parent' | 'Driver';
+export type UserKind = 'Parent' | 'Driver' | 'Admin';
 
 export class UserDto {
   @ApiProperty({

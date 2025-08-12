@@ -47,7 +47,7 @@ export class DailyRidesController {
     groups: ['admin'],
   })
   @Post()
-  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user)
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @HttpCode(HttpStatus.CREATED)
   create(@Body() createDailyRideDto: CreateDailyRideDto): Promise<DailyRide> {
     return this.dailyRidesService.create(createDailyRideDto);
@@ -57,7 +57,7 @@ export class DailyRidesController {
     groups: ['admin'],
   })
   @Get()
-  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user)
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @HttpCode(HttpStatus.OK)
   @ApiQuery({ name: 'status', required: false })
   @ApiQuery({ name: 'rideId', required: false })
@@ -115,7 +115,7 @@ export class DailyRidesController {
     groups: ['admin'],
   })
   @Get('upcoming')
-  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user)
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @HttpCode(HttpStatus.OK)
   @ApiQuery({
     name: 'days',
@@ -132,7 +132,7 @@ export class DailyRidesController {
     groups: ['admin'],
   })
   @Get('by-status/:status')
-  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user)
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @HttpCode(HttpStatus.OK)
   @ApiParam({ name: 'status', enum: DailyRideStatus })
   findByStatus(@Param('status') status: DailyRideStatus): Promise<DailyRide[]> {
@@ -143,7 +143,7 @@ export class DailyRidesController {
     groups: ['admin'],
   })
   @Get('by-ride/:rideId')
-  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user)
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @HttpCode(HttpStatus.OK)
   @ApiParam({ name: 'rideId', type: 'number' })
   findByRideId(
@@ -156,7 +156,7 @@ export class DailyRidesController {
     groups: ['admin'],
   })
   @Get('by-driver/:driverId')
-  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user)
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @HttpCode(HttpStatus.OK)
   @ApiParam({ name: 'driverId', type: 'number' })
   findByDriverId(
@@ -169,7 +169,7 @@ export class DailyRidesController {
     groups: ['admin'],
   })
   @Get('by-date-range')
-  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user)
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @HttpCode(HttpStatus.OK)
   @ApiQuery({ name: 'startDate', type: 'string', format: 'date' })
   @ApiQuery({ name: 'endDate', type: 'string', format: 'date' })
@@ -187,7 +187,7 @@ export class DailyRidesController {
     groups: ['admin'],
   })
   @Get(':id')
-  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user)
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @HttpCode(HttpStatus.OK)
   @ApiParam({ name: 'id', type: 'number' })
   findOne(
@@ -200,7 +200,7 @@ export class DailyRidesController {
     groups: ['admin'],
   })
   @Patch(':id')
-  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user)
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @HttpCode(HttpStatus.OK)
   @ApiParam({ name: 'id', type: 'number' })
   update(
@@ -214,7 +214,7 @@ export class DailyRidesController {
     groups: ['admin'],
   })
   @Patch(':id/start')
-  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user)
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @HttpCode(HttpStatus.OK)
   @ApiParam({ name: 'id', type: 'number' })
   startDailyRide(
@@ -227,7 +227,7 @@ export class DailyRidesController {
     groups: ['admin'],
   })
   @Patch(':id/complete')
-  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user)
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @HttpCode(HttpStatus.OK)
   @ApiParam({ name: 'id', type: 'number' })
   completeDailyRide(
@@ -240,7 +240,7 @@ export class DailyRidesController {
     groups: ['admin'],
   })
   @Patch(':id/cancel')
-  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user)
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @HttpCode(HttpStatus.OK)
   @ApiParam({ name: 'id', type: 'number' })
   cancelDailyRide(

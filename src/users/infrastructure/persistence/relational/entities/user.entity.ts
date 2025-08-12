@@ -26,7 +26,7 @@ import { PaymentEntity } from '../../../../../payments/infrastructure/persistenc
 import { NotificationEntity } from '../../../../../notifications/infrastructure/persistence/relational/entities/notification.entity';
 import { LocationEntity } from '../../../../../location/infrastructure/persistence/relational/entities/location.entity';
 
-export type UserKind = 'Parent' | 'Driver';
+export type UserKind = 'Parent' | 'Driver' | 'Admin';
 
 export type UserMeta = {
   payments: {
@@ -79,7 +79,11 @@ export class UserEntity extends EntityRelationalHelper {
   @Column({ type: 'varchar', nullable: true })
   phone_number: string | null;
 
-  @Column({ type: 'varchar', nullable: true, enum: ['Parent', 'Driver'] })
+  @Column({
+    type: 'varchar',
+    nullable: true,
+    enum: ['Parent', 'Driver', 'Admin'],
+  })
   kind: UserKind;
 
   @Column({ type: 'jsonb', nullable: true })

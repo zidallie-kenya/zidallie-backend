@@ -5,7 +5,7 @@ import { Role } from '../../roles/domain/role';
 import { Status } from '../../statuses/domain/status';
 import { UserMetaDto } from '../dto/user.dto';
 
-export type UserKind = 'Parent' | 'Driver';
+export type UserKind = 'Parent' | 'Driver' | 'Admin';
 
 export class User {
   @ApiProperty({ type: Number })

@@ -52,7 +52,7 @@ export class VehicleController {
   @SerializeOptions({
     groups: ['admin'],
   })
-  @Roles(RoleEnum.admin, RoleEnum.user)
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Post()
   @HttpCode(HttpStatus.CREATED)
@@ -66,7 +66,7 @@ export class VehicleController {
   @SerializeOptions({
     groups: ['admin'],
   })
-  @Roles(RoleEnum.admin)
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Get()
   @HttpCode(HttpStatus.OK)
@@ -98,7 +98,7 @@ export class VehicleController {
   @SerializeOptions({
     groups: ['admin'],
   })
-  @Roles(RoleEnum.admin)
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Get(':id')
   @HttpCode(HttpStatus.OK)
@@ -117,7 +117,7 @@ export class VehicleController {
   @SerializeOptions({
     groups: ['admin'],
   })
-  @Roles(RoleEnum.admin)
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Get('registration/:registrationNumber')
   @HttpCode(HttpStatus.OK)
@@ -138,7 +138,7 @@ export class VehicleController {
   @SerializeOptions({
     groups: ['admin'],
   })
-  @Roles(RoleEnum.admin)
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Get('user/:userId')
   @HttpCode(HttpStatus.OK)
@@ -157,7 +157,7 @@ export class VehicleController {
   @SerializeOptions({
     groups: ['admin'],
   })
-  @Roles(RoleEnum.admin)
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Get('status/available')
   @HttpCode(HttpStatus.OK)
@@ -171,7 +171,7 @@ export class VehicleController {
   @SerializeOptions({
     groups: ['admin'],
   })
-  @Roles(RoleEnum.admin)
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Get('type/:vehicleType')
   @HttpCode(HttpStatus.OK)
@@ -192,7 +192,7 @@ export class VehicleController {
   @SerializeOptions({
     groups: ['admin'],
   })
-  @Roles(RoleEnum.admin)
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Get('status/inspected')
   @HttpCode(HttpStatus.OK)
@@ -206,7 +206,7 @@ export class VehicleController {
   @SerializeOptions({
     groups: ['admin'],
   })
-  @Roles(RoleEnum.admin)
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Get('available-seats/:minSeats')
   @HttpCode(HttpStatus.OK)
@@ -227,7 +227,7 @@ export class VehicleController {
   @SerializeOptions({
     groups: ['admin'],
   })
-  @Roles(RoleEnum.admin)
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Get('search/model')
   @HttpCode(HttpStatus.OK)
@@ -247,7 +247,7 @@ export class VehicleController {
   @SerializeOptions({
     groups: ['admin'],
   })
-  @Roles(RoleEnum.admin)
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Patch(':id/available-seats')
   @HttpCode(HttpStatus.OK)
@@ -269,7 +269,7 @@ export class VehicleController {
   @SerializeOptions({
     groups: ['admin'],
   })
-  @Roles(RoleEnum.admin)
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Patch(':id')
   @HttpCode(HttpStatus.OK)
@@ -285,7 +285,7 @@ export class VehicleController {
     return this.vehicleService.update(id, updateVehicleDto);
   }
 
-  @Roles(RoleEnum.admin)
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Delete(':id')
   @ApiParam({

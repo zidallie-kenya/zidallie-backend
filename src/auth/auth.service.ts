@@ -199,6 +199,18 @@ export class AuthService {
   }
 
   async register(dto: AuthRegisterLoginDto): Promise<void> {
+    let current_role = { id: RoleEnum.user };
+    if (dto.kind === 'Parent') {
+      current_role = { id: RoleEnum.parent };
+    }
+    if (dto.kind === 'Driver') {
+      current_role = { id: RoleEnum.driver };
+    }
+    if (dto.kind === 'Admin') {
+      current_role = {
+        id: RoleEnum.admin,
+      };
+    }
     const user = await this.usersService.create({
       email: dto.email,
       password: dto.password,
@@ -210,7 +222,7 @@ export class AuthService {
       wallet_balance: 0, // default value
       is_kyc_verified: false, // default value
       provider: AuthProvidersEnum.email,
-      role: { id: RoleEnum.user },
+      role: current_role,
       status: { id: StatusEnum.inactive },
     });
 

@@ -31,7 +31,7 @@ export class PaymentsService {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
           errors: {
-            user: 'userNotExists',
+            user: 'This user does not exist',
           },
         });
       }
@@ -42,7 +42,7 @@ export class PaymentsService {
       throw new UnprocessableEntityException({
         status: HttpStatus.UNPROCESSABLE_ENTITY,
         errors: {
-          kind: 'invalidPaymentKind',
+          kind: 'invalid payment kind',
         },
       });
     }
@@ -55,7 +55,7 @@ export class PaymentsService {
       throw new UnprocessableEntityException({
         status: HttpStatus.UNPROCESSABLE_ENTITY,
         errors: {
-          transaction_type: 'invalidTransactionType',
+          transaction_type: 'invalid transaction type',
         },
       });
     }
@@ -68,7 +68,7 @@ export class PaymentsService {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
           errors: {
-            transaction_id: 'transactionIdAlreadyExists',
+            transaction_id: 'transaction id already exists',
           },
         });
       }
@@ -137,7 +137,7 @@ export class PaymentsService {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
           errors: {
-            user: 'userNotExists',
+            user: 'this user does not exist',
           },
         });
       }
@@ -151,7 +151,7 @@ export class PaymentsService {
       throw new UnprocessableEntityException({
         status: HttpStatus.UNPROCESSABLE_ENTITY,
         errors: {
-          kind: 'invalidPaymentKind',
+          kind: 'invalid payment kind',
         },
       });
     }
@@ -165,7 +165,7 @@ export class PaymentsService {
       throw new UnprocessableEntityException({
         status: HttpStatus.UNPROCESSABLE_ENTITY,
         errors: {
-          transaction_type: 'invalidTransactionType',
+          transaction_type: 'invalid transactiont ype',
         },
       });
     }
@@ -178,7 +178,7 @@ export class PaymentsService {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
           errors: {
-            transaction_id: 'transactionIdAlreadyExists',
+            transaction_id: 'transaction Id already exists',
           },
         });
       }

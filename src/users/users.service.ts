@@ -49,7 +49,7 @@ export class UsersService {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
           errors: {
-            email: 'emailAlreadyExists',
+            email: 'The Email already exists',
           },
         });
       }
@@ -64,7 +64,7 @@ export class UsersService {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
           errors: {
-            photo: 'imageNotExists',
+            photo: 'the image does not exist',
           },
         });
       }
@@ -83,7 +83,7 @@ export class UsersService {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
           errors: {
-            role: 'roleNotExists',
+            role: 'this role does not exist',
           },
         });
       }
@@ -103,7 +103,7 @@ export class UsersService {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
           errors: {
-            status: 'statusNotExists',
+            status: 'this status does not exist',
           },
         });
       }
@@ -210,7 +210,7 @@ export class UsersService {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
           errors: {
-            email: 'emailAlreadyExists',
+            email: 'This email already exists',
           },
         });
       }
@@ -228,7 +228,7 @@ export class UsersService {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
           errors: {
-            photo: 'imageNotExists',
+            photo: 'This image does not exist',
           },
         });
       }
@@ -247,7 +247,7 @@ export class UsersService {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
           errors: {
-            role: 'roleNotExists',
+            role: 'This role does not exist',
           },
         });
       }
@@ -267,7 +267,7 @@ export class UsersService {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
           errors: {
-            status: 'statusNotExists',
+            status: 'This status does not exist',
           },
         });
       }

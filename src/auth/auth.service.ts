@@ -46,7 +46,7 @@ export class AuthService {
       throw new UnprocessableEntityException({
         status: HttpStatus.UNPROCESSABLE_ENTITY,
         errors: {
-          email: 'notFound',
+          email: 'This user doesnt have an active account, please register',
         },
       });
     }
@@ -55,7 +55,7 @@ export class AuthService {
       throw new UnprocessableEntityException({
         status: HttpStatus.UNPROCESSABLE_ENTITY,
         errors: {
-          email: `needLoginViaProvider:${user.provider}`,
+          email: `You need to login via :${user.provider}`,
         },
       });
     }
@@ -64,7 +64,7 @@ export class AuthService {
       throw new UnprocessableEntityException({
         status: HttpStatus.UNPROCESSABLE_ENTITY,
         errors: {
-          password: 'incorrectPassword',
+          password: 'incorrect password',
         },
       });
     }
@@ -78,7 +78,7 @@ export class AuthService {
       throw new UnprocessableEntityException({
         status: HttpStatus.UNPROCESSABLE_ENTITY,
         errors: {
-          password: 'incorrectPassword',
+          password: 'incorrect password',
         },
       });
     }
@@ -164,7 +164,7 @@ export class AuthService {
       throw new UnprocessableEntityException({
         status: HttpStatus.UNPROCESSABLE_ENTITY,
         errors: {
-          user: 'userNotFound',
+          user: 'This user does not exist',
         },
       });
     }
@@ -265,7 +265,7 @@ export class AuthService {
       throw new UnprocessableEntityException({
         status: HttpStatus.UNPROCESSABLE_ENTITY,
         errors: {
-          hash: `invalidHash`,
+          hash: `The hash provided is invalid`,
         },
       });
     }
@@ -278,7 +278,7 @@ export class AuthService {
     ) {
       throw new NotFoundException({
         status: HttpStatus.NOT_FOUND,
-        error: `notFound`,
+        error: `The user was not found`,
       });
     }
 
@@ -315,7 +315,7 @@ export class AuthService {
       throw new UnprocessableEntityException({
         status: HttpStatus.UNPROCESSABLE_ENTITY,
         errors: {
-          hash: `invalidHash`,
+          hash: `The hash provided is invalid`,
         },
       });
     }
@@ -325,7 +325,7 @@ export class AuthService {
     if (!user) {
       throw new NotFoundException({
         status: HttpStatus.NOT_FOUND,
-        error: `notFound`,
+        error: `This user was not found`,
       });
     }
 
@@ -344,7 +344,7 @@ export class AuthService {
       throw new UnprocessableEntityException({
         status: HttpStatus.UNPROCESSABLE_ENTITY,
         errors: {
-          email: 'emailNotExists',
+          email: 'This email does not exist',
         },
       });
     }
@@ -395,7 +395,7 @@ export class AuthService {
       throw new UnprocessableEntityException({
         status: HttpStatus.UNPROCESSABLE_ENTITY,
         errors: {
-          hash: `invalidHash`,
+          hash: `The hash provided is invalid`,
         },
       });
     }
@@ -406,7 +406,7 @@ export class AuthService {
       throw new UnprocessableEntityException({
         status: HttpStatus.UNPROCESSABLE_ENTITY,
         errors: {
-          hash: `notFound`,
+          hash: `This user does not exist`,
         },
       });
     }
@@ -434,7 +434,7 @@ export class AuthService {
       throw new UnprocessableEntityException({
         status: HttpStatus.UNPROCESSABLE_ENTITY,
         errors: {
-          user: 'userNotFound',
+          user: 'This user does not exist',
         },
       });
     }
@@ -444,7 +444,7 @@ export class AuthService {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
           errors: {
-            oldPassword: 'missingOldPassword',
+            oldPassword: 'Yoou are missing the old password',
           },
         });
       }
@@ -453,7 +453,7 @@ export class AuthService {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
           errors: {
-            oldPassword: 'incorrectOldPassword',
+            oldPassword: 'incorrect old password',
           },
         });
       }
@@ -467,7 +467,7 @@ export class AuthService {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
           errors: {
-            oldPassword: 'incorrectOldPassword',
+            oldPassword: 'incorrect old password',
           },
         });
       } else {
@@ -485,7 +485,7 @@ export class AuthService {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
           errors: {
-            email: 'emailExists',
+            email: 'this email already exists',
           },
         });
       }
@@ -633,7 +633,7 @@ export class AuthService {
         throw new UnauthorizedException({
           status: HttpStatus.UNAUTHORIZED,
           errors: {
-            auth: 'userNotFound',
+            auth: 'this user is not found',
           },
         });
       }
@@ -643,7 +643,7 @@ export class AuthService {
         throw new UnauthorizedException({
           status: HttpStatus.UNAUTHORIZED,
           errors: {
-            auth: 'invalidSession',
+            auth: 'The hash provided is invalid',
           },
         });
       }
@@ -654,7 +654,7 @@ export class AuthService {
       throw new UnauthorizedException({
         status: HttpStatus.UNAUTHORIZED,
         errors: {
-          auth: 'invalidToken',
+          auth: 'invalid token',
         },
       });
     }

@@ -33,7 +33,7 @@ export class KycService {
     if (!authenticatedUser) {
       throw new UnauthorizedException({
         status: HttpStatus.UNAUTHORIZED,
-        errors: { auth: 'invalidToken' },
+        errors: { auth: 'invalid token' },
       });
     }
 
@@ -42,7 +42,7 @@ export class KycService {
     if (!user) {
       throw new UnprocessableEntityException({
         status: HttpStatus.UNPROCESSABLE_ENTITY,
-        errors: { user: 'userNotExists' },
+        errors: { user: 'This user does not exist' },
       });
     }
 
@@ -51,7 +51,7 @@ export class KycService {
     if (existingKyc) {
       throw new UnprocessableEntityException({
         status: HttpStatus.UNPROCESSABLE_ENTITY,
-        errors: { kyc: 'kycAlreadyExists' },
+        errors: { kyc: 'kyc already exist' },
       });
     }
 
@@ -59,7 +59,7 @@ export class KycService {
     if (createKycDto.userId !== authenticatedUser.id) {
       throw new UnprocessableEntityException({
         status: HttpStatus.UNPROCESSABLE_ENTITY,
-        errors: { userId: 'userIdMismatch' },
+        errors: { userId: 'the authenticated user does not match the userId' },
       });
     }
 
@@ -100,7 +100,7 @@ export class KycService {
     if (!authenticatedUser) {
       throw new UnauthorizedException({
         status: HttpStatus.UNAUTHORIZED,
-        errors: { auth: 'invalidToken' },
+        errors: { auth: 'invalid token' },
       });
     }
 
@@ -124,7 +124,7 @@ export class KycService {
     if (!authenticatedUser) {
       throw new UnauthorizedException({
         status: HttpStatus.UNAUTHORIZED,
-        errors: { auth: 'invalidToken' },
+        errors: { auth: 'invalid token' },
       });
     }
 
@@ -146,7 +146,7 @@ export class KycService {
     if (!authenticatedUser) {
       throw new UnauthorizedException({
         status: HttpStatus.UNAUTHORIZED,
-        errors: { auth: 'invalidToken' },
+        errors: { auth: 'invalid token' },
       });
     }
 
@@ -154,7 +154,7 @@ export class KycService {
     if (!kyc || (kyc.user && kyc.user.id !== authenticatedUser.id)) {
       throw new NotFoundException({
         status: HttpStatus.NOT_FOUND,
-        errors: { kyc: 'kycNotExists' },
+        errors: { kyc: 'the kyc does not exist' },
       });
     }
 
@@ -188,7 +188,7 @@ export class KycService {
     if (!authenticatedUser) {
       throw new UnauthorizedException({
         status: HttpStatus.UNAUTHORIZED,
-        errors: { auth: 'invalidToken' },
+        errors: { auth: 'invalid token' },
       });
     }
 
@@ -206,7 +206,7 @@ export class KycService {
     if (!authenticatedUser) {
       throw new UnauthorizedException({
         status: HttpStatus.UNAUTHORIZED,
-        errors: { auth: 'invalidToken' },
+        errors: { auth: 'invalid token' },
       });
     }
 
@@ -221,14 +221,14 @@ export class KycService {
     if (!authenticatedUser) {
       throw new UnauthorizedException({
         status: HttpStatus.UNAUTHORIZED,
-        errors: { auth: 'invalidToken' },
+        errors: { auth: 'invalid token' },
       });
     }
     const kyc = await this.kycRepository.findById(id);
     if (!kyc || (kyc.user && kyc.user.id !== authenticatedUser.id)) {
       throw new NotFoundException({
         status: HttpStatus.NOT_FOUND,
-        errors: { kyc: 'kycNotExists' },
+        errors: { kyc: 'the kyc does not exist' },
       });
     }
 

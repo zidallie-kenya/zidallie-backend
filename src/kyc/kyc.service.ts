@@ -181,6 +181,39 @@ export class KycService {
     });
   }
 
+  async findAll(bearerToken: string): Promise<KYC[]> {
+    // Verify user authentication
+    const authenticatedUser =
+      await this.authService.verifyBearerToken(bearerToken);
+    if (!authenticatedUser) {
+      throw new UnauthorizedException({
+        status: HttpStatus.UNAUTHORIZED,
+        errors: { auth: 'invalidToken' },
+      });
+    }
+
+    // Return ALL KYC records for dashboard
+    return this.kycRepository.findAll();
+  }
+
+  async findByDriverId(
+    driverId: number,
+    bearerToken: string,
+  ): Promise<NullableType<KYC>> {
+    // Verify user authentication
+    const authenticatedUser =
+      await this.authService.verifyBearerToken(bearerToken);
+    if (!authenticatedUser) {
+      throw new UnauthorizedException({
+        status: HttpStatus.UNAUTHORIZED,
+        errors: { auth: 'invalidToken' },
+      });
+    }
+
+    // Find KYC by driver/user ID
+    return this.kycRepository.findByDriverId(driverId);
+  }
+
   async remove(id: number, bearerToken: string): Promise<void> {
     // Verify user authentication
     const authenticatedUser =

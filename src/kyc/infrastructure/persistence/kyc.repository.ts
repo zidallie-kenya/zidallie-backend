@@ -20,7 +20,7 @@ export abstract class KYCRepository {
     paginationOptions: IPaginationOptions;
   }): Promise<KYC[]>;
 
-  abstract findById(id: KYC['id']): Promise<NullableType<KYC>>;
+  abstract findById(id: number): Promise<NullableType<KYC>>;
 
   abstract findByUserId(userId: KYC['user']): Promise<NullableType<KYC>>;
 
@@ -30,4 +30,8 @@ export abstract class KYCRepository {
   ): Promise<KYC | null>;
 
   abstract remove(id: KYC['id']): Promise<void>;
+
+  abstract findAll(): Promise<KYC[]>;
+
+  abstract findByDriverId(driverId: number): Promise<NullableType<KYC>>;
 }

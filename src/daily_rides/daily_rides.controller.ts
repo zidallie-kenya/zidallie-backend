@@ -168,6 +168,19 @@ export class DailyRidesController {
   @SerializeOptions({
     groups: ['admin'],
   })
+  @Get('by-parent/:parentId')
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
+  @HttpCode(HttpStatus.OK)
+  @ApiParam({ name: 'parentId', type: 'number' })
+  findByParentId(
+    @Param('parentId', ParseIntPipe) parentId: number,
+  ): Promise<DailyRide[]> {
+    return this.dailyRidesService.findByParentId(parentId);
+  }
+
+  @SerializeOptions({
+    groups: ['admin'],
+  })
   @Get('by-date-range')
   @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @HttpCode(HttpStatus.OK)

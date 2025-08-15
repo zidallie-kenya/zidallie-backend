@@ -30,6 +30,10 @@ export abstract class DailyRideRepository {
 
   abstract findByDriverId(driverId: number): Promise<DailyRide[]>;
 
+  abstract findByParentId(parentId: number): Promise<DailyRide[]>;
+
+  abstract debugFindByParentId(parentId: number): Promise<DailyRide[]>;
+
   abstract findByDateRange(
     startDate: Date,
     endDate: Date,

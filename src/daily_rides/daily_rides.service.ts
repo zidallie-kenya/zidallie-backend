@@ -237,6 +237,10 @@ export class DailyRidesService {
     return this.dailyRideRepository.findByDriverId(driverId);
   }
 
+  findByParentId(parentId: number): Promise<DailyRide[]> {
+    return this.dailyRideRepository.findByDriverId(parentId);
+  }
+
   findByDateRange(startDate: Date, endDate: Date): Promise<DailyRide[]> {
     return this.dailyRideRepository.findByDateRange(startDate, endDate);
   }

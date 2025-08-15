@@ -37,7 +37,6 @@ import brevoConfig from './mail/config/brevo.config';
 import { LocationModule } from './location/location.module';
 // import { EventEmitterModule } from '@nestjs/event-emitter';
 // import { AppConfigModule } from './config/appconfig.module';
-import { TrackingModule } from './tracking/tracking.module';
 
 const infrastructureDatabaseModule = TypeOrmModule.forRootAsync({
   useClass: TypeOrmConfigService,
@@ -120,7 +119,6 @@ const infrastructureDatabaseModule = TypeOrmModule.forRootAsync({
     NotificationsModule,
     OnboardingModule,
     LocationModule,
-    TrackingModule,
     // RedisModule,
     // AppConfigModule,
   ],

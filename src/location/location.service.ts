@@ -33,7 +33,7 @@ export class LocationsService {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
           errors: {
-            dailyRide: 'dailyRideNotExists',
+            dailyRide: 'this dailyRide does not exists',
           },
         });
       }
@@ -49,7 +49,7 @@ export class LocationsService {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
           errors: {
-            driver: 'driverNotExists',
+            driver: 'this driver does not exists',
           },
         });
       }
@@ -122,7 +122,7 @@ export class LocationsService {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
           errors: {
-            dailyRide: 'dailyRideNotExists',
+            dailyRide: 'this dailyRide does not exist',
           },
         });
       }
@@ -138,7 +138,7 @@ export class LocationsService {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
           errors: {
-            driver: 'driverNotExists',
+            driver: 'the driver does not exist',
           },
         });
       }

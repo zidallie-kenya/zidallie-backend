@@ -26,7 +26,7 @@ export class SchoolsService {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
           errors: {
-            name: 'schoolAlreadyExists',
+            name: 'This school already exists',
           },
         });
       }
@@ -98,7 +98,7 @@ export class SchoolsService {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
           errors: {
-            name: 'schoolAlreadyExists',
+            name: 'this school already exists',
           },
         });
       }

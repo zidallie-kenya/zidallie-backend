@@ -20,7 +20,7 @@ export class RidesRelationalRepository implements RideRepository {
     private readonly ridesRepository: Repository<RideEntity>,
   ) {}
 
-  async create(data: Ride): Promise<Ride> {
+  async create(data: Ride): Promise<{ ride: Ride; ride_id: number }> {
     // Create entity with relationship IDs only to avoid circular mapping issues
     const entityToSave = new RideEntity();
 
@@ -85,7 +85,11 @@ export class RidesRelationalRepository implements RideRepository {
       throw new Error('Failed to create ride');
     }
 
-    return RideMapper.toDomain(completeEntity);
+    // Return both the mapped domain object and the ride_id
+    return {
+      ride: RideMapper.toDomain(completeEntity),
+      ride_id: savedEntity.id,
+    };
   }
   async findManyWithPagination({
     filterOptions,

@@ -67,9 +67,39 @@ export class KYCRelationalRepository implements KYCRepository {
     return entities.map((kyc) => KYCMapper.toDomain(kyc));
   }
 
-  async findById(id: KYC['id']): Promise<NullableType<KYC>> {
+  // In your KYCRelationalRepository class
+  async findAll(): Promise<KYC[]> {
+    const entities = await this.kycRepository.find({
+      relations: ['user'],
+    });
+
+    return entities.map((kyc) => KYCMapper.toDomain(kyc));
+  }
+
+  async findById(id: number): Promise<NullableType<KYC>> {
+    // Validate ID
+    if (!id || isNaN(id)) {
+      return null;
+    }
+
     const entity = await this.kycRepository.findOne({
-      where: { id: Number(id) },
+      where: { id: id },
+      relations: ['user'],
+    });
+
+    return entity ? KYCMapper.toDomain(entity) : null;
+  }
+
+  async findByDriverId(driverId: number): Promise<NullableType<KYC>> {
+    // Validate driver ID
+    if (!driverId || isNaN(driverId)) {
+      return null;
+    }
+
+    const entity = await this.kycRepository.findOne({
+      where: {
+        user: { id: driverId }, // Find KYC where user.id matches the driverId
+      },
       relations: ['user'],
     });
 

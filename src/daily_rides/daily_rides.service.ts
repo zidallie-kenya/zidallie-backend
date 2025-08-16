@@ -124,7 +124,7 @@ export class DailyRidesService {
       if (!ride) {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
-          errors: { ride: 'rideNotExists' },
+          errors: { ride: 'this ride does not exist' },
         });
       }
     }
@@ -137,7 +137,7 @@ export class DailyRidesService {
       if (!vehicle) {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
-          errors: { vehicle: 'vehicleNotExists' },
+          errors: { vehicle: 'this vehicle does not exist' },
         });
       }
     }
@@ -150,7 +150,7 @@ export class DailyRidesService {
       if (!driver) {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
-          errors: { driver: 'driverNotExists' },
+          errors: { driver: 'this driver does not exist' },
         });
       }
     }
@@ -162,7 +162,7 @@ export class DailyRidesService {
     ) {
       throw new UnprocessableEntityException({
         status: HttpStatus.UNPROCESSABLE_ENTITY,
-        errors: { kind: 'invalidKind' },
+        errors: { kind: 'Invalid kind' },
       });
     }
 
@@ -173,7 +173,7 @@ export class DailyRidesService {
     ) {
       throw new UnprocessableEntityException({
         status: HttpStatus.UNPROCESSABLE_ENTITY,
-        errors: { status: 'invalidStatus' },
+        errors: { status: 'invalid status' },
       });
     }
 
@@ -237,6 +237,10 @@ export class DailyRidesService {
     return this.dailyRideRepository.findByDriverId(driverId);
   }
 
+  findByParentId(parentId: number): Promise<DailyRide[]> {
+    return this.dailyRideRepository.findByDriverId(parentId);
+  }
+
   findByDateRange(startDate: Date, endDate: Date): Promise<DailyRide[]> {
     return this.dailyRideRepository.findByDateRange(startDate, endDate);
   }
@@ -251,7 +255,7 @@ export class DailyRidesService {
       throw new NotFoundException({
         status: HttpStatus.NOT_FOUND,
         errors: {
-          dailyRide: 'dailyRideNotFound',
+          dailyRide: 'this daily ride does not exist',
         },
       });
     }
@@ -263,7 +267,7 @@ export class DailyRidesService {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
           errors: {
-            ride: 'rideNotExists',
+            ride: 'this ride does not exist',
           },
         });
       }
@@ -278,7 +282,7 @@ export class DailyRidesService {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
           errors: {
-            vehicle: 'vehicleNotExists',
+            vehicle: 'this vehicle does not exist',
           },
         });
       }
@@ -293,7 +297,7 @@ export class DailyRidesService {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
           errors: {
-            driver: 'driverNotExists',
+            driver: 'this driver does not exist',
           },
         });
       }
@@ -307,7 +311,7 @@ export class DailyRidesService {
       throw new UnprocessableEntityException({
         status: HttpStatus.UNPROCESSABLE_ENTITY,
         errors: {
-          kind: 'invalidKind',
+          kind: 'invalid kind',
         },
       });
     }
@@ -320,7 +324,7 @@ export class DailyRidesService {
       throw new UnprocessableEntityException({
         status: HttpStatus.UNPROCESSABLE_ENTITY,
         errors: {
-          status: 'invalidStatus',
+          status: 'invalid status',
         },
       });
     }
@@ -346,7 +350,7 @@ export class DailyRidesService {
       throw new NotFoundException({
         status: HttpStatus.NOT_FOUND,
         errors: {
-          dailyRide: 'dailyRideNotFound',
+          dailyRide: 'daily ride not found',
         },
       });
     }

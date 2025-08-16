@@ -148,7 +148,9 @@ export class RidesService {
 
   //   return this.rideRepository.create(rideToCreate);
   // }
-  async create(createRideDto: CreateRideDto): Promise<Ride> {
+  async create(
+    createRideDto: CreateRideDto,
+  ): Promise<{ ride: Ride; ride_id: number }> {
     // Simple existence checks without loading full relations to avoid circular mapping
     if (createRideDto.vehicle?.id) {
       const vehicleExists = await this.vehiclesService.existsById(
@@ -159,7 +161,7 @@ export class RidesService {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
           errors: {
-            vehicle: 'vehicleNotExists',
+            vehicle: 'this vehicle does not exist',
           },
         });
       }
@@ -171,7 +173,7 @@ export class RidesService {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
           errors: {
-            driver: 'driverNotExists',
+            driver: 'this driver does not exist',
           },
         });
       }
@@ -185,7 +187,7 @@ export class RidesService {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
           errors: {
-            school: 'schoolNotExists',
+            school: 'the school does not exist',
           },
         });
       }
@@ -199,7 +201,7 @@ export class RidesService {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
           errors: {
-            student: 'studentNotExists',
+            student: 'the student not exist',
           },
         });
       }
@@ -211,7 +213,7 @@ export class RidesService {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
           errors: {
-            parent: 'parentNotExists',
+            parent: 'the parent not exist',
           },
         });
       }
@@ -225,7 +227,7 @@ export class RidesService {
       throw new UnprocessableEntityException({
         status: HttpStatus.UNPROCESSABLE_ENTITY,
         errors: {
-          status: 'invalidStatus',
+          status: 'The hash provided is invalid',
         },
       });
     }
@@ -311,7 +313,7 @@ export class RidesService {
       throw new NotFoundException({
         status: HttpStatus.NOT_FOUND,
         errors: {
-          ride: 'rideNotFound',
+          ride: 'this ride does not exist',
         },
       });
     }
@@ -325,7 +327,7 @@ export class RidesService {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
           errors: {
-            vehicle: 'vehicleNotExists',
+            vehicle: 'this vehicle does not exist',
           },
         });
       }
@@ -338,7 +340,7 @@ export class RidesService {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
           errors: {
-            driver: 'driverNotExists',
+            driver: 'this driver does not exist',
           },
         });
       }
@@ -353,7 +355,7 @@ export class RidesService {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
           errors: {
-            school: 'schoolNotExists',
+            school: 'this school does not exist',
           },
         });
       }
@@ -368,7 +370,7 @@ export class RidesService {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
           errors: {
-            student: 'studentNotExists',
+            student: 'this student does not exist',
           },
         });
       }
@@ -381,7 +383,7 @@ export class RidesService {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
           errors: {
-            parent: 'parentNotExists',
+            parent: 'this parent does not exist',
           },
         });
       }
@@ -395,7 +397,7 @@ export class RidesService {
       throw new UnprocessableEntityException({
         status: HttpStatus.UNPROCESSABLE_ENTITY,
         errors: {
-          status: 'invalidStatus',
+          status: 'The hash provided is invalid',
         },
       });
     }
@@ -421,7 +423,7 @@ export class RidesService {
       throw new NotFoundException({
         status: HttpStatus.NOT_FOUND,
         errors: {
-          ride: 'rideNotFound',
+          ride: 'Ride not found',
         },
       });
     }

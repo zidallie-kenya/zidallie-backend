@@ -69,14 +69,14 @@ export class StudentsService {
       if (!schoolEntity) {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
-          errors: { school: 'schoolNotExists' },
+          errors: { school: 'this school does not exists' },
         });
       }
       school = { id: createStudentDto.school.id } as SchoolEntity;
     } else if (createStudentDto.school && !createStudentDto.school.id) {
       throw new UnprocessableEntityException({
         status: HttpStatus.UNPROCESSABLE_ENTITY,
-        errors: { school: 'schoolIdMissing' },
+        errors: { school: 'the school is is missing' },
       });
     }
 
@@ -89,14 +89,18 @@ export class StudentsService {
       if (!parentEntity || parentEntity.kind !== 'Parent') {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
-          errors: { parent: parentEntity ? 'notAParent' : 'parentNotExists' },
+          errors: {
+            parent: parentEntity
+              ? 'This is not a parent'
+              : 'this parent does not exists',
+          },
         });
       }
       parent = { id: createStudentDto.parent.id } as UserEntity;
     } else if (createStudentDto.parent && !createStudentDto.parent.id) {
       throw new UnprocessableEntityException({
         status: HttpStatus.UNPROCESSABLE_ENTITY,
-        errors: { parent: 'parentIdMissing' },
+        errors: { parent: 'the parentId is missing' },
       });
     }
 
@@ -116,7 +120,7 @@ export class StudentsService {
       console.error('Error creating student:', error);
       throw new UnprocessableEntityException({
         status: HttpStatus.UNPROCESSABLE_ENTITY,
-        errors: { student: 'creationFailed' },
+        errors: { student: 'student creation failed' },
         message: error.message,
       });
     }

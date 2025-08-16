@@ -7,7 +7,7 @@ import { FilterRideDto, SortRideDto } from '../../dto/query-ride.dto';
 export abstract class RideRepository {
   abstract create(
     data: Omit<Ride, 'id' | 'created_at' | 'updated_at'>,
-  ): Promise<Ride>;
+  ): Promise<{ ride: Ride; ride_id: number }>;
 
   abstract findManyWithPagination({
     filterOptions,

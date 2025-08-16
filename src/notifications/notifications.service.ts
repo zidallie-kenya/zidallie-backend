@@ -36,7 +36,7 @@ export class NotificationsService {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
           errors: {
-            user: 'userNotExists',
+            user: 'This user does not exist',
           },
         });
       }
@@ -47,7 +47,7 @@ export class NotificationsService {
       throw new UnprocessableEntityException({
         status: HttpStatus.UNPROCESSABLE_ENTITY,
         errors: {
-          kind: 'invalidNotificationKind',
+          kind: 'invalid notification kind',
         },
       });
     }
@@ -60,7 +60,7 @@ export class NotificationsService {
       throw new UnprocessableEntityException({
         status: HttpStatus.UNPROCESSABLE_ENTITY,
         errors: {
-          section: 'invalidNotificationSection',
+          section: 'invalid notification section',
         },
       });
     }
@@ -153,7 +153,7 @@ export class NotificationsService {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
           errors: {
-            user: 'userNotExists',
+            user: 'This user does not exist',
           },
         });
       }
@@ -167,7 +167,7 @@ export class NotificationsService {
       throw new UnprocessableEntityException({
         status: HttpStatus.UNPROCESSABLE_ENTITY,
         errors: {
-          kind: 'invalidNotificationKind',
+          kind: 'invalid notification kind',
         },
       });
     }
@@ -181,7 +181,7 @@ export class NotificationsService {
       throw new UnprocessableEntityException({
         status: HttpStatus.UNPROCESSABLE_ENTITY,
         errors: {
-          section: 'invalidNotificationSection',
+          section: 'invalid notification section',
         },
       });
     }

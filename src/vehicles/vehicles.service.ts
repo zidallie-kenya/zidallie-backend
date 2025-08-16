@@ -19,7 +19,7 @@ import { VehicleType } from '../utils/types/enums';
 export class VehicleService {
   constructor(
     private readonly vehicleRepository: VehicleRepository,
-    private readonly usersService: UsersService, // Optional: for user validation
+    private readonly usersService: UsersService,
   ) {}
 
   async create(createVehicleDto: CreateVehicleDto): Promise<Vehicle> {
@@ -33,11 +33,24 @@ export class VehicleService {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
           errors: {
-            user: 'userNotExists',
+            user: 'This user does not exist',
           },
         });
       }
       user = existingUser;
+
+      // Check if user already has a vehicle
+      const userVehicles = await this.vehicleRepository.findByUserId(
+        createVehicleDto.user.id,
+      );
+      if (userVehicles.length > 0) {
+        throw new UnprocessableEntityException({
+          status: HttpStatus.UNPROCESSABLE_ENTITY,
+          errors: {
+            user: 'This user already has a vehicle assigned',
+          },
+        });
+      }
     }
 
     // Check for existing vehicle with same registration number
@@ -51,7 +64,7 @@ export class VehicleService {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
           errors: {
-            registration_number: 'registrationNumberAlreadyExists',
+            registration_number: 'this registration number already exists',
           },
         });
       }
@@ -62,7 +75,7 @@ export class VehicleService {
       throw new UnprocessableEntityException({
         status: HttpStatus.UNPROCESSABLE_ENTITY,
         errors: {
-          available_seats: 'availableSeatsCannotExceedTotalSeats',
+          available_seats: 'the available seats cannot exceed the total seats',
         },
       });
     }
@@ -87,6 +100,108 @@ export class VehicleService {
     });
   }
 
+  async update(
+    id: Vehicle['id'],
+    updateVehicleDto: UpdateVehicleDto,
+  ): Promise<Vehicle | null> {
+    const existingVehicle = await this.vehicleRepository.findById(id);
+
+    if (!existingVehicle) {
+      throw new NotFoundException('Vehicle not found');
+    }
+
+    // Validate user if provided
+    let user: User | null | undefined = undefined;
+    if (updateVehicleDto.user?.id) {
+      const existingUser = await this.usersService.findById(
+        updateVehicleDto.user.id,
+      );
+      if (!existingUser) {
+        throw new UnprocessableEntityException({
+          status: HttpStatus.UNPROCESSABLE_ENTITY,
+          errors: {
+            user: 'This user does not exist',
+          },
+        });
+      }
+      user = existingUser;
+
+      // Check if user already has a vehicle (excluding the current vehicle being updated)
+      const userVehicles = await this.vehicleRepository.findByUserId(
+        updateVehicleDto.user.id,
+      );
+      if (
+        userVehicles.length > 0 &&
+        userVehicles.some((vehicle) => vehicle.id !== id)
+      ) {
+        throw new UnprocessableEntityException({
+          status: HttpStatus.UNPROCESSABLE_ENTITY,
+          errors: {
+            user: 'This user already has another vehicle assigned',
+          },
+        });
+      }
+    } else if (updateVehicleDto.user === null) {
+      user = null;
+    }
+
+    // Check for registration number conflicts if being updated
+    if (
+      updateVehicleDto.registration_number &&
+      updateVehicleDto.registration_number !==
+        existingVehicle.registration_number
+    ) {
+      const conflictingVehicle =
+        await this.vehicleRepository.findByRegistrationNumber(
+          updateVehicleDto.registration_number,
+        );
+
+      if (conflictingVehicle && conflictingVehicle.id !== id) {
+        throw new UnprocessableEntityException({
+          status: HttpStatus.UNPROCESSABLE_ENTITY,
+          errors: {
+            registration_number: 'This registration number already exists',
+          },
+        });
+      }
+    }
+
+    // Validate seat count vs available seats
+    const finalSeatCount =
+      updateVehicleDto.seat_count ?? existingVehicle.seat_count;
+    const finalAvailableSeats =
+      updateVehicleDto.available_seats ?? existingVehicle.available_seats;
+
+    if (finalAvailableSeats > finalSeatCount) {
+      throw new UnprocessableEntityException({
+        status: HttpStatus.UNPROCESSABLE_ENTITY,
+        errors: {
+          available_seats: 'the available seats cannot exceed the total seats',
+        },
+      });
+    }
+
+    return this.vehicleRepository.update(id, {
+      user,
+      vehicle_name: updateVehicleDto.vehicle_name,
+      registration_number: updateVehicleDto.registration_number,
+      vehicle_type: updateVehicleDto.vehicle_type,
+      vehicle_model: updateVehicleDto.vehicle_model,
+      vehicle_year: updateVehicleDto.vehicle_year,
+      vehicle_image_url: updateVehicleDto.vehicle_image_url,
+      seat_count: updateVehicleDto.seat_count,
+      available_seats: updateVehicleDto.available_seats,
+      is_inspected: updateVehicleDto.is_inspected,
+      comments: updateVehicleDto.comments,
+      meta: updateVehicleDto.meta,
+      vehicle_registration: updateVehicleDto.vehicle_registration,
+      insurance_certificate: updateVehicleDto.insurance_certificate,
+      vehicle_data: updateVehicleDto.vehicle_data,
+      status: updateVehicleDto.status,
+    });
+  }
+
+  // Other methods remain unchanged
   findManyWithPagination({
     filterOptions,
     sortOptions,
@@ -107,7 +222,6 @@ export class VehicleService {
     return this.vehicleRepository.findById(id);
   }
 
-  // Add existence check method
   async existsById(id: Vehicle['id']): Promise<boolean> {
     const vehicle = await this.vehicleRepository.findById(id);
     return !!vehicle;
@@ -157,102 +271,16 @@ export class VehicleService {
       throw new NotFoundException('Vehicle not found');
     }
 
-    // Validate available seats don't exceed total seats
     if (availableSeats > existingVehicle.seat_count) {
       throw new UnprocessableEntityException({
         status: HttpStatus.UNPROCESSABLE_ENTITY,
         errors: {
-          available_seats: 'availableSeatsCannotExceedTotalSeats',
+          available_seats: 'the available seats cannot exceed the total seats',
         },
       });
     }
 
     return this.vehicleRepository.updateAvailableSeats(id, availableSeats);
-  }
-
-  async update(
-    id: Vehicle['id'],
-    updateVehicleDto: UpdateVehicleDto,
-  ): Promise<Vehicle | null> {
-    const existingVehicle = await this.vehicleRepository.findById(id);
-
-    if (!existingVehicle) {
-      throw new NotFoundException('Vehicle not found');
-    }
-
-    // Validate user if provided
-    let user: User | null | undefined = undefined;
-    if (updateVehicleDto.user?.id) {
-      const existingUser = await this.usersService.findById(
-        updateVehicleDto.user.id,
-      );
-      if (!existingUser) {
-        throw new UnprocessableEntityException({
-          status: HttpStatus.UNPROCESSABLE_ENTITY,
-          errors: {
-            user: 'userNotExists',
-          },
-        });
-      }
-      user = existingUser;
-    } else if (updateVehicleDto.user === null) {
-      user = null;
-    }
-
-    // Check for registration number conflicts if being updated
-    if (
-      updateVehicleDto.registration_number &&
-      updateVehicleDto.registration_number !==
-        existingVehicle.registration_number
-    ) {
-      const conflictingVehicle =
-        await this.vehicleRepository.findByRegistrationNumber(
-          updateVehicleDto.registration_number,
-        );
-
-      if (conflictingVehicle && conflictingVehicle.id !== id) {
-        throw new UnprocessableEntityException({
-          status: HttpStatus.UNPROCESSABLE_ENTITY,
-          errors: {
-            registration_number: 'registrationNumberAlreadyExists',
-          },
-        });
-      }
-    }
-
-    // Validate seat count vs available seats
-    const finalSeatCount =
-      updateVehicleDto.seat_count ?? existingVehicle.seat_count;
-    const finalAvailableSeats =
-      updateVehicleDto.available_seats ?? existingVehicle.available_seats;
-
-    if (finalAvailableSeats > finalSeatCount) {
-      throw new UnprocessableEntityException({
-        status: HttpStatus.UNPROCESSABLE_ENTITY,
-        errors: {
-          available_seats: 'availableSeatsCannotExceedTotalSeats',
-        },
-      });
-    }
-
-    return this.vehicleRepository.update(id, {
-      user,
-      vehicle_name: updateVehicleDto.vehicle_name,
-      registration_number: updateVehicleDto.registration_number,
-      vehicle_type: updateVehicleDto.vehicle_type,
-      vehicle_model: updateVehicleDto.vehicle_model,
-      vehicle_year: updateVehicleDto.vehicle_year,
-      vehicle_image_url: updateVehicleDto.vehicle_image_url,
-      seat_count: updateVehicleDto.seat_count,
-      available_seats: updateVehicleDto.available_seats,
-      is_inspected: updateVehicleDto.is_inspected,
-      comments: updateVehicleDto.comments,
-      meta: updateVehicleDto.meta,
-      vehicle_registration: updateVehicleDto.vehicle_registration,
-      insurance_certificate: updateVehicleDto.insurance_certificate,
-      vehicle_data: updateVehicleDto.vehicle_data,
-      status: updateVehicleDto.status,
-    });
   }
 
   async remove(id: Vehicle['id']): Promise<void> {

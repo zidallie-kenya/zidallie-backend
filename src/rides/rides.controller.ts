@@ -58,7 +58,9 @@ export class RidesController {
   @Post()
   @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @HttpCode(HttpStatus.CREATED)
-  create(@Body() createRideDto: CreateRideDto): Promise<Ride> {
+  create(
+    @Body() createRideDto: CreateRideDto,
+  ): Promise<{ ride: Ride; ride_id: number }> {
     return this.ridesService.create(createRideDto);
   }
 

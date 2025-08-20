@@ -3,6 +3,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
@@ -22,6 +23,10 @@ export class NotificationEntity extends EntityRelationalHelper {
     nullable: false,
   })
   user: UserEntity;
+
+  @ManyToOne(() => UserEntity, { nullable: true })
+  @JoinColumn({ name: 'senderId' })
+  sender: UserEntity;
 
   @Column({ type: 'text', nullable: false })
   title: string;

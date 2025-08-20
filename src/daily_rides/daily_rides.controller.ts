@@ -13,6 +13,8 @@ import {
   Query,
   UseGuards,
   SerializeOptions,
+  Req,
+  BadRequestException,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
@@ -25,16 +27,25 @@ import { NullableType } from '../utils/types/nullable.type';
 import { UpdateDailyRideDto } from './dto/update-daily_ride.dto';
 import { CreateDailyRideDto } from './dto/create-daily_ride.dto';
 import { DailyRidesService } from './daily_rides.service';
-// Import the correct DTOs from query-dailyrides.dto instead of sorting.dto
-import {
-  FilterDailyRideDto,
-  SortDailyRideDto,
-} from './dto/query-dailyrides.dto';
-// Import QueryDailyRideDto from sorting.dto for the API query parameter
-import {
-  InfinityPaginationResponseDto,
-  QueryDailyRideDto,
-} from './dto/sorting.dto';
+import { JwtPayloadType } from '../auth/strategies/types/jwt-payload.type';
+
+const parseDate = (dateStr: string): Date => {
+  const [day, month, year] = dateStr.split('-').map(Number);
+  if (!day || !month || !year || isNaN(day) || isNaN(month) || isNaN(year)) {
+    throw new BadRequestException({
+      status: HttpStatus.BAD_REQUEST,
+      errors: { date: `Invalid date format: ${dateStr}. Use DD-MM-YYYY.` },
+    });
+  }
+  const date = new Date(year, month - 1, day); // Month is 0-based in JavaScript
+  if (isNaN(date.getTime())) {
+    throw new BadRequestException({
+      status: HttpStatus.BAD_REQUEST,
+      errors: { date: `Invalid date: ${dateStr}` },
+    });
+  }
+  return date;
+};
 
 @ApiBearerAuth()
 @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -43,6 +54,7 @@ import {
 export class DailyRidesController {
   constructor(private readonly dailyRidesService: DailyRidesService) {}
 
+  //create the daily ride
   @SerializeOptions({
     groups: ['admin'],
   })
@@ -53,64 +65,7 @@ export class DailyRidesController {
     return this.dailyRidesService.create(createDailyRideDto);
   }
 
-  @SerializeOptions({
-    groups: ['admin'],
-  })
-  @Get()
-  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
-  @HttpCode(HttpStatus.OK)
-  @ApiQuery({ name: 'status', required: false })
-  @ApiQuery({ name: 'rideId', required: false })
-  @ApiQuery({ name: 'vehicleId', required: false })
-  @ApiQuery({ name: 'driverId', required: false })
-  @ApiQuery({ name: 'kind', required: false })
-  @ApiQuery({ name: 'date', required: false })
-  @ApiQuery({ name: 'sortBy', required: false })
-  @ApiQuery({ name: 'sortDirection', required: false })
-  @ApiQuery({ name: 'page', required: false })
-  @ApiQuery({ name: 'limit', required: false })
-  async findAll(
-    @Query() query: QueryDailyRideDto,
-  ): Promise<InfinityPaginationResponseDto<DailyRide>> {
-    const page = query?.page ?? 1;
-    let limit = query?.limit ?? 10;
-    if (limit > 50) {
-      limit = 50;
-    }
-
-    // Transform the query parameters to match the service expectations
-    const filterOptions: FilterDailyRideDto | null = query?.filters
-      ? {
-          ...query.filters,
-          // Convert string date to Date object if present
-          date: query.filters.date ? new Date(query.filters.date) : undefined,
-        }
-      : null;
-
-    const sortOptions: SortDailyRideDto[] | null = query?.sort
-      ? query.sort.map((sortItem) => ({
-          orderBy: sortItem.orderBy || 'id', // Provide default value
-          order: sortItem.order || 'ASC',
-        }))
-      : null;
-
-    const items = await this.dailyRidesService.findManyWithPagination({
-      filterOptions,
-      sortOptions,
-      paginationOptions: {
-        page,
-        limit,
-      },
-    });
-
-    return new InfinityPaginationResponseDto({
-      items,
-      page,
-      limit,
-      hasMore: items.length === limit,
-    });
-  }
-
+  //returns all the upcoming dailys
   @SerializeOptions({
     groups: ['admin'],
   })
@@ -128,6 +83,7 @@ export class DailyRidesController {
     return this.dailyRidesService.findUpcomingDailyRides(days);
   }
 
+  // returns daily-rides by status
   @SerializeOptions({
     groups: ['admin'],
   })
@@ -139,6 +95,7 @@ export class DailyRidesController {
     return this.dailyRidesService.findDailyRidesByStatus(status);
   }
 
+  // returns a specific daily ride
   @SerializeOptions({
     groups: ['admin'],
   })
@@ -152,50 +109,109 @@ export class DailyRidesController {
     return this.dailyRidesService.findByRideId(rideId);
   }
 
-  @SerializeOptions({
-    groups: ['admin'],
-  })
-  @Get('by-driver/:driverId')
-  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
-  @HttpCode(HttpStatus.OK)
-  @ApiParam({ name: 'driverId', type: 'number' })
-  findByDriverId(
-    @Param('driverId', ParseIntPipe) driverId: number,
-  ): Promise<DailyRide[]> {
-    return this.dailyRidesService.findByDriverId(driverId);
-  }
-
-  @SerializeOptions({
-    groups: ['admin'],
-  })
-  @Get('by-parent/:parentId')
-  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
-  @HttpCode(HttpStatus.OK)
-  @ApiParam({ name: 'parentId', type: 'number' })
-  findByParentId(
-    @Param('parentId', ParseIntPipe) parentId: number,
-  ): Promise<DailyRide[]> {
-    return this.dailyRidesService.findByParentId(parentId);
-  }
-
+  // returns daily rides by-date-range
   @SerializeOptions({
     groups: ['admin'],
   })
   @Get('by-date-range')
   @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @HttpCode(HttpStatus.OK)
-  @ApiQuery({ name: 'startDate', type: 'string', format: 'date' })
-  @ApiQuery({ name: 'endDate', type: 'string', format: 'date' })
+  @ApiQuery({
+    name: 'startDate',
+    type: 'string',
+    format: 'date',
+    description: 'Start date in DD-MM-YYYY format (e.g., 26-08-2025)',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    type: 'string',
+    format: 'date',
+    description: 'End date in DD-MM-YYYY format (e.g., 26-09-2025)',
+  })
   findByDateRange(
     @Query('startDate') startDate: string,
     @Query('endDate') endDate: string,
   ): Promise<DailyRide[]> {
-    return this.dailyRidesService.findByDateRange(
-      new Date(startDate),
-      new Date(endDate),
-    );
+    try {
+      const start = parseDate(startDate);
+      const end = parseDate(endDate);
+      return this.dailyRidesService.findByDateRange(start, end);
+    } catch (error) {
+      console.log(error);
+
+      throw new BadRequestException({
+        status: HttpStatus.BAD_REQUEST,
+        errors: { date: 'Failed to parse dates. Ensure format is DD-MM-YYYY.' },
+      });
+    }
   }
 
+  //returns a driver's and parent's rides
+  @SerializeOptions({
+    groups: ['admin'],
+  })
+  @Get('my-rides')
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
+  @HttpCode(HttpStatus.OK)
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    description: 'Filter by ride status',
+    enum: DailyRideStatus,
+  })
+  getMyRides(
+    @Req() req: any,
+    @Query('status') status?: DailyRideStatus,
+  ): Promise<DailyRide[]> {
+    const userJwtPayload: JwtPayloadType = req.user;
+    return this.dailyRidesService.findMyDailyRides(userJwtPayload, status);
+  }
+
+  // driver starts all today's ride [marks all todays rides as Started]
+  @SerializeOptions({
+    groups: ['admin'],
+  })
+  @Patch('start-day')
+  @Roles(RoleEnum.admin, RoleEnum.driver)
+  @HttpCode(HttpStatus.OK)
+  startDay(@Req() req: any): Promise<{
+    message: string;
+    updatedRides: DailyRide[];
+    driverStartTime: Date;
+  }> {
+    const userJwtPayload: JwtPayloadType = req.user;
+    return this.dailyRidesService.startDriverDay(userJwtPayload);
+  }
+
+  // changes a student's daily ride status to Active
+  @SerializeOptions({
+    groups: ['admin'],
+  })
+  @Patch(':id/embark')
+  @Roles(RoleEnum.admin, RoleEnum.driver)
+  @HttpCode(HttpStatus.OK)
+  @ApiParam({ name: 'id', type: 'number' })
+  embarkStudent(
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<DailyRide | null> {
+    return this.dailyRidesService.embarkStudent(id);
+  }
+
+  // changes the student's daily ride status to Finished
+  @SerializeOptions({
+    groups: ['admin'],
+  })
+  @Patch(':id/disembark')
+  @Roles(RoleEnum.admin, RoleEnum.driver)
+  @HttpCode(HttpStatus.OK)
+  @ApiParam({ name: 'id', type: 'number' })
+  disembarkStudent(
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<DailyRide | null> {
+    return this.dailyRidesService.disembarkStudent(id);
+  }
+
+  //gets a specific dairy ride
   @SerializeOptions({
     groups: ['admin'],
   })
@@ -209,6 +225,7 @@ export class DailyRidesController {
     return this.dailyRidesService.findById(id);
   }
 
+  // updates a daily ride
   @SerializeOptions({
     groups: ['admin'],
   })
@@ -223,32 +240,7 @@ export class DailyRidesController {
     return this.dailyRidesService.update(id, updateDailyRideDto);
   }
 
-  @SerializeOptions({
-    groups: ['admin'],
-  })
-  @Patch(':id/start')
-  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
-  @HttpCode(HttpStatus.OK)
-  @ApiParam({ name: 'id', type: 'number' })
-  startDailyRide(
-    @Param('id', ParseIntPipe) id: number,
-  ): Promise<DailyRide | null> {
-    return this.dailyRidesService.startDailyRide(id);
-  }
-
-  @SerializeOptions({
-    groups: ['admin'],
-  })
-  @Patch(':id/complete')
-  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
-  @HttpCode(HttpStatus.OK)
-  @ApiParam({ name: 'id', type: 'number' })
-  completeDailyRide(
-    @Param('id', ParseIntPipe) id: number,
-  ): Promise<DailyRide | null> {
-    return this.dailyRidesService.completeDailyRide(id);
-  }
-
+  //marks a ride as Finished since it was cancelled
   @SerializeOptions({
     groups: ['admin'],
   })
@@ -263,6 +255,7 @@ export class DailyRidesController {
     return this.dailyRidesService.cancelDailyRide(id, reason);
   }
 
+  // delete a daily ride
   @Delete(':id')
   @Roles(RoleEnum.admin)
   @HttpCode(HttpStatus.NO_CONTENT)

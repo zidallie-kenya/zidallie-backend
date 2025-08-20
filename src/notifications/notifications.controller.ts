@@ -73,7 +73,7 @@ export class NotificationsController {
     @Query() query: QueryNotificationsDto,
   ): Promise<InfinityPaginationResponseDto<Notification>> {
     const page = query?.page ?? 1;
-    let limit = query?.limit ?? 10;
+    let limit = query?.limit ?? 30;
     if (limit > 50) {
       limit = 50;
     }

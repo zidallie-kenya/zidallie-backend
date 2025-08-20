@@ -28,6 +28,9 @@ export class NotificationsService {
     createNotificationDto: CreateNotificationDto,
   ): Promise<Notification> {
     let user: User | undefined = undefined;
+    let sender: User | undefined = undefined;
+
+    // validate recipient
     if (createNotificationDto.userId) {
       const userEntity = await this.usersService.findById(
         createNotificationDto.userId,
@@ -41,6 +44,22 @@ export class NotificationsService {
         });
       }
       user = userEntity;
+    }
+
+    // validate sender
+    if (createNotificationDto.senderId) {
+      const senderEntity = await this.usersService.findById(
+        createNotificationDto.senderId,
+      );
+      if (!senderEntity) {
+        throw new UnprocessableEntityException({
+          status: HttpStatus.UNPROCESSABLE_ENTITY,
+          errors: {
+            sender: 'This user does not exist',
+          },
+        });
+      }
+      sender = senderEntity;
     }
 
     if (!Object.values(NotificationKind).includes(createNotificationDto.kind)) {
@@ -67,6 +86,7 @@ export class NotificationsService {
 
     return this.notificationsRepository.create({
       user: user!,
+      sender: sender!,
       title: createNotificationDto.title,
       message: createNotificationDto.message,
       meta: createNotificationDto.meta ?? null,
@@ -145,6 +165,9 @@ export class NotificationsService {
     updateNotificationDto: UpdateNotificationDto,
   ): Promise<Notification | null> {
     let user: User | undefined = undefined;
+    let sender: User | undefined = undefined;
+
+    // validate receiver
     if (updateNotificationDto.userId) {
       const userEntity = await this.usersService.findById(
         updateNotificationDto.userId,
@@ -158,6 +181,22 @@ export class NotificationsService {
         });
       }
       user = userEntity;
+    }
+
+    // validate sender
+    if (updateNotificationDto.senderId) {
+      const senderEntity = await this.usersService.findById(
+        updateNotificationDto.senderId,
+      );
+      if (!senderEntity) {
+        throw new UnprocessableEntityException({
+          status: HttpStatus.UNPROCESSABLE_ENTITY,
+          errors: {
+            sender: 'This sender does not exist',
+          },
+        });
+      }
+      sender = senderEntity;
     }
 
     if (
@@ -188,6 +227,7 @@ export class NotificationsService {
 
     return this.notificationsRepository.update(id, {
       user,
+      sender,
       title: updateNotificationDto.title,
       message: updateNotificationDto.message,
       meta: updateNotificationDto.meta,

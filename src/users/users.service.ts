@@ -18,7 +18,6 @@ import { FileType } from '../files/domain/file';
 import { Role } from '../roles/domain/role';
 import { Status } from '../statuses/domain/status';
 import { UpdateUserDto } from './dto/update-user.dto';
-// import { UserMeta } from './infrastructure/persistence/relational/entities/user.entity';
 
 @Injectable()
 export class UsersService {
@@ -79,6 +78,7 @@ export class UsersService {
       const valid = Object.values(RoleEnum)
         .map(String)
         .includes(String(createUserDto.role.id));
+
       if (!valid) {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
@@ -91,6 +91,18 @@ export class UsersService {
       role = {
         id: createUserDto.role.id,
       };
+    } else {
+      if (createUserDto?.kind) {
+        if (createUserDto?.kind === 'Driver') {
+          role = { id: 3 };
+        } else if (createUserDto?.kind === 'Parent') {
+          role = { id: 4 };
+        } else if (createUserDto?.kind === 'Admin') {
+          role = { id: 1 };
+        } else {
+          role = { id: 2 };
+        }
+      }
     }
 
     let status: Status | undefined = undefined;

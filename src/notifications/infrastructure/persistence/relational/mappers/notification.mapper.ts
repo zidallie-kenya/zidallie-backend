@@ -8,7 +8,9 @@ export class NotificationMapper {
   static toDomain(raw: NotificationEntity): Notification {
     const domainEntity = new Notification();
     domainEntity.id = raw.id;
-    domainEntity.user = UserMapper.toDomain(raw.user);
+    // domainEntity.user = UserMapper.toDomain(raw.user);
+    domainEntity.user = { id: raw.user?.id } as any;
+    domainEntity.sender = { id: raw.sender?.id } as any;
     domainEntity.title = raw.title;
     domainEntity.message = raw.message;
     domainEntity.meta = raw.meta;
@@ -31,6 +33,12 @@ export class NotificationMapper {
     if (domainEntity.user?.id !== undefined) {
       persistenceEntity.user = UserMapper.toPersistence(
         domainEntity.user as User,
+      );
+    }
+
+    if (domainEntity.sender?.id !== undefined) {
+      persistenceEntity.sender = UserMapper.toPersistence(
+        domainEntity.sender as User,
       );
     }
 

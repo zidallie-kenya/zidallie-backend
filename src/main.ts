@@ -18,6 +18,10 @@ async function bootstrap() {
   useContainer(app.select(AppModule), { fallbackOnErrors: true });
   const configService = app.get(ConfigService<AllConfigType>);
 
+  app.use((req, res, next) => {
+    res.setTimeout(120000); // 120 seconds
+    next();
+  });
   app.enableShutdownHooks();
   app.setGlobalPrefix(
     configService.getOrThrow('app.apiPrefix', { infer: true }),

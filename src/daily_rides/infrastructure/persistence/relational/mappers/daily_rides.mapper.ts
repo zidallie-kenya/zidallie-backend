@@ -8,47 +8,87 @@ import { UserMapper } from '../../../../../users/infrastructure/persistence/rela
 import { RideEntity } from '../../../../../rides/infrastructure/persistence/relational/entities/ride.entity';
 import { VehicleEntity } from '../../../../../vehicles/infrastructure/persistence/relational/entities/vehicle.entity';
 import { UserEntity } from '../../../../../users/infrastructure/persistence/relational/entities/user.entity';
-// Import your custom Location domain class
+import {
+  DailyRideKind,
+  DailyRideStatus,
+} from '../../../../../utils/types/enums';
 
 export class DailyRideMapper {
   static toDomain(raw: DailyRideEntity): DailyRide {
     const domainEntity = new DailyRide();
     domainEntity.id = raw.id;
-    domainEntity.ride = raw.ride ? RideMapper.toDomain(raw.ride) : null;
-    domainEntity.vehicle = raw.vehicle
-      ? VehicleMapper.toDomain(raw.vehicle)
+    domainEntity.ride = raw.ride
+      ? ({
+          id: raw?.id,
+          ride: {
+            id: raw?.ride.id,
+            vehicle: {
+              id: raw?.ride?.vehicle?.id,
+              registration_number: raw?.ride?.vehicle?.registration_number,
+              available_seats: raw?.ride?.vehicle?.available_seats,
+            },
+            // driver: {
+            //   id: raw?.ride?.driver?.id,
+            //   email: raw?.ride?.driver?.email,
+            // },
+            // school: {
+            //   id: raw?.ride?.driver?.id,
+            //   name: raw?.ride?.driver?.name,
+            // },
+            student: {
+              id: raw?.ride?.student?.id,
+              name: raw?.ride?.student?.name,
+              address: raw?.ride?.student?.address,
+            },
+            parent: {
+              id: raw?.ride?.parent?.id,
+              email: raw?.ride?.parent?.email,
+              name: raw?.ride?.parent?.name,
+            },
+            schedule: {
+              pickup: raw?.ride?.schedule?.pickup,
+              dropoff: raw?.ride?.schedule?.dropoff,
+              kind: raw?.ride?.schedule?.kind,
+            },
+          },
+        } as any)
       : null;
 
-    if (raw.driver) {
-      domainEntity.driver = UserMapper.toDomain(raw.driver);
-    } else {
-      domainEntity.driver = null;
-    }
+    // domainEntity.ride = raw.ride ? RideMapper.toDomain(raw.ride) : null;
+    // domainEntity.vehicle = raw.vehicle
+    //   ? VehicleMapper.toDomain(raw.vehicle)
+    //   : null;
+
+    // if (raw.driver) {
+    //   domainEntity.driver = UserMapper.toDomain(raw.driver);
+    // } else {
+    //   domainEntity.driver = null;
+    // }
 
     domainEntity.kind = raw.kind;
     domainEntity.date = raw.date;
     domainEntity.start_time = raw.start_time;
     domainEntity.end_time = raw.end_time;
-    domainEntity.comments = raw.comments;
-    domainEntity.meta = raw.meta;
+    // domainEntity.comments = raw.comments;
+    // domainEntity.meta = raw.meta;
     domainEntity.status = raw.status;
 
-    // Fix: Proper location mapping without overwriting
-    if (raw.locations && raw.locations.length > 0) {
-      domainEntity.locations = raw.locations.map((location) =>
-        LocationMapper.toDomain(location),
-      );
-    } else {
-      domainEntity.locations = [];
-    }
+    // if (raw.locations && raw.locations.length > 0) {
+    //   domainEntity.locations = raw.locations.map((location) =>
+    //     LocationMapper.toDomain(location),
+    //   );
+    // } else {
+    //   domainEntity.locations = [];
+    // }
 
-    domainEntity.created_at = raw.created_at;
-    domainEntity.updated_at = raw.updated_at;
+    // domainEntity.created_at = raw.created_at;
+    // domainEntity.updated_at = raw.updated_at;
     return domainEntity;
   }
 
-  static toPersistence(domainEntity: DailyRide): DailyRideEntity {
+  static toPersistence(domainEntity: Partial<DailyRide>): DailyRideEntity {
     let ride: RideEntity | undefined = undefined;
+
     if (domainEntity.ride) {
       ride = RideMapper.toPersistence(domainEntity.ride);
     }
@@ -73,26 +113,26 @@ export class DailyRideMapper {
     }
 
     const persistenceEntity = new DailyRideEntity();
+
     if (domainEntity.id && typeof domainEntity.id === 'number') {
       persistenceEntity.id = domainEntity.id;
     }
     if (ride) {
       persistenceEntity.ride = ride;
     }
+
     if (vehicle) {
       persistenceEntity.vehicle = vehicle;
     }
     persistenceEntity.driver = driver ?? null;
-    persistenceEntity.kind = domainEntity.kind;
-    persistenceEntity.date = domainEntity.date;
-    persistenceEntity.start_time = domainEntity.start_time;
-    persistenceEntity.end_time = domainEntity.end_time;
-    persistenceEntity.comments = domainEntity.comments;
-    persistenceEntity.meta = domainEntity.meta;
-    persistenceEntity.status = domainEntity.status;
+    persistenceEntity.kind = domainEntity.kind ?? DailyRideKind.Pickup; // Default to Pickup if undefined
+    persistenceEntity.date = domainEntity.date ?? new Date(); // Default to current date
+    persistenceEntity.start_time = domainEntity.start_time ?? null;
+    persistenceEntity.end_time = domainEntity.end_time ?? null;
+    persistenceEntity.comments = domainEntity.comments ?? null;
+    persistenceEntity.meta = domainEntity.meta ?? null;
+    persistenceEntity.status = domainEntity.status ?? DailyRideStatus.Inactive; // Default to Inactive
     persistenceEntity.locations = locations ?? [];
-    persistenceEntity.created_at = domainEntity.created_at;
-    persistenceEntity.updated_at = domainEntity.updated_at;
     return persistenceEntity;
   }
 }

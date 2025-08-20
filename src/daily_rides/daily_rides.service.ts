@@ -5,13 +5,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { NullableType } from '../utils/types/nullable.type';
-import {
-  FilterDailyRideDto,
-  SortDailyRideDto,
-} from './dto/query-dailyrides.dto';
+
 import { DailyRide } from './domain/daily_rides';
-import { IPaginationOptions } from '../utils/types/pagination-options';
-import { DailyRideKind, DailyRideStatus } from '../utils/types/enums';
 import { RidesService } from '../rides/rides.service';
 import { UsersService } from '../users/users.service';
 import { UpdateDailyRideDto } from './dto/update-daily_ride.dto';
@@ -22,15 +17,13 @@ import { UserEntity } from '../users/infrastructure/persistence/relational/entit
 import { VehicleEntity } from '../vehicles/infrastructure/persistence/relational/entities/vehicle.entity';
 import { RideEntity } from '../rides/infrastructure/persistence/relational/entities/ride.entity';
 import { LocationEntity } from '../location/infrastructure/persistence/relational/entities/location.entity';
-
-interface DriverDashboardResponse {
-  status: string;
-  rides: DailyRide[];
-  total_trips: number;
-  upcoming: number;
-  pickups: number;
-  dropoffs: number;
-}
+import { DailyRideKind, DailyRideStatus } from '../utils/types/enums';
+import {
+  FilterDailyRideDto,
+  SortDailyRideDto,
+} from './dto/query-dailyrides.dto';
+import { IPaginationOptions } from '../utils/types/pagination-options';
+import { JwtPayloadType } from '../auth/strategies/types/jwt-payload.type';
 
 @Injectable()
 export class DailyRidesService {
@@ -40,77 +33,6 @@ export class DailyRidesService {
     private readonly vehiclesService: VehicleService,
     private readonly usersService: UsersService,
   ) {}
-
-  async getDriverDashboard(driverId: number): Promise<DriverDashboardResponse> {
-    const today = this.formatDate(new Date());
-
-    // Get today's rides for the driver
-    const todayRides = await this.dailyRideRepository.findTodayRidesForDriver(
-      driverId,
-      today,
-    );
-
-    // Get total trips count for the driver
-    const totalTrips =
-      await this.dailyRideRepository.countTotalTripsForDriver(driverId);
-
-    // Get upcoming trips count (after today)
-    const upcomingTrips =
-      await this.dailyRideRepository.countUpcomingTripsForDriver(
-        driverId,
-        today,
-      );
-
-    // Count pickups and dropoffs for today
-    const pickups = todayRides.filter(
-      (ride) => ride.kind === DailyRideKind.Pickup,
-    ).length;
-    const dropoffs = todayRides.filter(
-      (ride) => ride.kind === DailyRideKind.Dropoff,
-    ).length;
-
-    return {
-      status: 'success',
-      rides: todayRides,
-      total_trips: totalTrips,
-      upcoming: upcomingTrips,
-      pickups,
-      dropoffs,
-    };
-  }
-
-  // Helper method to get total trips for a driver
-  private async getTotalTripsForDriver(driverId: number): Promise<number> {
-    const allTrips = await this.findManyWithPagination({
-      filterOptions: { driverId: driverId },
-      sortOptions: null,
-      paginationOptions: { page: 1, limit: 10000 }, // Large limit to get count
-    });
-    return allTrips.length;
-  }
-
-  // Helper method to get upcoming trips for a driver
-  private async getUpcomingTripsForDriver(
-    driverId: number,
-    today: string,
-  ): Promise<number> {
-    const upcomingTrips = await this.findManyWithPagination({
-      filterOptions: {
-        driverId: driverId,
-        // Note: You'll need to modify your repository to handle date comparisons
-        // For now, we'll get all and filter
-      },
-      sortOptions: null,
-      paginationOptions: { page: 1, limit: 10000 },
-    });
-
-    // Filter for dates after today
-    const todayDate = new Date(today);
-    return upcomingTrips.filter((trip) => {
-      const tripDate = new Date(trip.date);
-      return tripDate > todayDate;
-    }).length;
-  }
 
   // Helper method to format date
   private formatDate(date: Date): string {
@@ -233,17 +155,161 @@ export class DailyRidesService {
     return this.dailyRideRepository.findByRideId(rideId);
   }
 
-  findByDriverId(driverId: number): Promise<DailyRide[]> {
-    return this.dailyRideRepository.findByDriverId(driverId);
-  }
-
-  findByParentId(parentId: number): Promise<DailyRide[]> {
-    return this.dailyRideRepository.findByDriverId(parentId);
-  }
-
   findByDateRange(startDate: Date, endDate: Date): Promise<DailyRide[]> {
     return this.dailyRideRepository.findByDateRange(startDate, endDate);
   }
+
+  ////////////////////////////////////////////////////////
+  async findMyDailyRides(
+    userJwtPayload: JwtPayloadType,
+    status?: DailyRideStatus,
+  ): Promise<DailyRide[]> {
+    // Get the full user details to check their kind
+    const user = await this.usersService.findById(userJwtPayload.id);
+
+    if (!user) {
+      throw new NotFoundException({
+        status: HttpStatus.NOT_FOUND,
+        errors: { user: 'User not found' },
+      });
+    }
+
+    // Determine if user is a driver or parent based on their kind
+    const isDriver = user.kind === 'Driver';
+    const isParent = user.kind === 'Parent';
+
+    let rides: DailyRide[] = [];
+
+    if (isDriver) {
+      // Driver sees their own rides
+      rides = await this.dailyRideRepository.findByDriverIdWithStatus(
+        user.id,
+        status,
+      );
+    } else if (isParent) {
+      // Parent sees rides for their children
+      rides = await this.dailyRideRepository.findByParentIdWithStatus(
+        user.id,
+        status,
+      );
+    } else {
+      // User is neither driver nor parent, return empty array
+      rides = [];
+    }
+
+    return rides;
+  }
+
+  // mark todays rides as started
+  async startDriverDay(userJwtPayload: JwtPayloadType): Promise<{
+    message: string;
+    updatedRides: DailyRide[];
+    driverStartTime: Date;
+  }> {
+    // Get the driver from JWT token
+    const driver = await this.usersService.findById(userJwtPayload.id);
+
+    if (!driver) {
+      throw new NotFoundException({
+        status: HttpStatus.NOT_FOUND,
+        errors: { driver: 'Driver not found' },
+      });
+    }
+
+    if (driver.kind !== 'Driver') {
+      throw new UnprocessableEntityException({
+        status: HttpStatus.UNPROCESSABLE_ENTITY,
+        errors: { user: 'Only drivers can start their day' },
+      });
+    }
+
+    const today = this.formatDate(new Date());
+    const driverStartTime = new Date();
+
+    // Mark ALL today's rides for this driver as Started
+    const updatedCount =
+      await this.dailyRideRepository.updateAllTodayRidesForDriver(
+        driver.id,
+        today,
+        DailyRideStatus.Started,
+        driverStartTime,
+      );
+
+    if (updatedCount === 0) {
+      throw new UnprocessableEntityException({
+        status: HttpStatus.UNPROCESSABLE_ENTITY,
+        errors: { rides: 'No inactive rides found for today' },
+      });
+    }
+
+    // Get all updated rides to return
+    const updatedRides = await this.dailyRideRepository.findTodayRidesForDriver(
+      driver.id,
+      today,
+    );
+
+    return {
+      message: `Started ${updatedCount} daily rides for today`,
+      updatedRides,
+      driverStartTime,
+    };
+  }
+
+  // New method for when driver embarks a student (ride becomes Active)
+  async embarkStudent(id: DailyRide['id']): Promise<DailyRide | null> {
+    const dailyRide = await this.dailyRideRepository.findById(id);
+
+    if (!dailyRide) {
+      throw new NotFoundException({
+        status: HttpStatus.NOT_FOUND,
+        errors: { dailyRide: 'Daily ride not found' },
+      });
+    }
+
+    // Check if ride is in correct status to embark
+    if (dailyRide.status !== DailyRideStatus.Started) {
+      throw new UnprocessableEntityException({
+        status: HttpStatus.UNPROCESSABLE_ENTITY,
+        errors: {
+          status: `Cannot embark student. Ride must be in 'Started' status, currently '${dailyRide.status}'`,
+        },
+      });
+    }
+
+    return this.update(id, {
+      status: DailyRideStatus.Active,
+      start_time: new Date().toISOString(),
+    });
+  }
+
+  // New method for when driver disembarks a student (ride becomes Finished)
+  async disembarkStudent(id: DailyRide['id']): Promise<DailyRide | null> {
+    const dailyRide = await this.dailyRideRepository.findById(id);
+
+    if (!dailyRide) {
+      throw new NotFoundException({
+        status: HttpStatus.NOT_FOUND,
+        errors: { dailyRide: 'Daily ride not found' },
+      });
+    }
+
+    // Check if ride is in correct status to disembark
+    if (dailyRide.status !== DailyRideStatus.Active) {
+      throw new UnprocessableEntityException({
+        status: HttpStatus.UNPROCESSABLE_ENTITY,
+        errors: {
+          status: `Cannot disembark student. Ride must be in 'Active' status, currently '${dailyRide.status}'`,
+        },
+      });
+    }
+
+    return this.update(id, {
+      status: DailyRideStatus.Finished,
+      end_time: new Date().toISOString(),
+    });
+  }
+
+  ////////////////////////////////////////////////////////
 
   async update(
     id: DailyRide['id'],
@@ -367,25 +433,11 @@ export class DailyRidesService {
     return this.findByDateRange(startDate, endDate);
   }
 
-  async findDailyRidesByStatus(status: DailyRideStatus): Promise<DailyRide[]> {
+  findDailyRidesByStatus(status: DailyRideStatus): Promise<DailyRide[]> {
     return this.findManyWithPagination({
       filterOptions: { status },
       sortOptions: [{ orderBy: 'date', order: 'ASC' }],
       paginationOptions: { page: 1, limit: 1000 }, // Large limit to get all
-    });
-  }
-
-  async startDailyRide(id: DailyRide['id']): Promise<DailyRide | null> {
-    return this.update(id, {
-      status: DailyRideStatus.Active,
-      start_time: new Date().toISOString(),
-    });
-  }
-
-  async completeDailyRide(id: DailyRide['id']): Promise<DailyRide | null> {
-    return this.update(id, {
-      status: DailyRideStatus.Finished,
-      end_time: new Date().toISOString(),
     });
   }
 

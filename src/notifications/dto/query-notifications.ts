@@ -5,8 +5,11 @@ import { Type } from 'class-transformer';
 import { IsNumber, IsOptional, ValidateNested } from 'class-validator';
 
 export class FilterNotificationDto {
-  @ApiPropertyOptional({ type: Number, description: 'Filter by User ID' })
+  @ApiPropertyOptional({ type: Number, description: 'Filter by Receiver ID' })
   userId?: number;
+
+  @ApiPropertyOptional({ type: Number, description: 'Filter by Sender ID' })
+  senderId?: number;
 
   @ApiPropertyOptional({ type: Boolean, description: 'Filter by read status' })
   is_read?: boolean;

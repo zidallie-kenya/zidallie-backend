@@ -15,6 +15,11 @@ export class CreateNotificationDto {
   @IsNotEmpty()
   userId: number;
 
+  @ApiProperty({ type: Number })
+  @IsNumber()
+  @IsNotEmpty()
+  senderId: number;
+
   @ApiProperty({ type: String, example: 'Ride Confirmed' })
   @IsString()
   @IsNotEmpty()

@@ -40,3 +40,9 @@ lerna-debug.log*
 .env.production
 /ormconfig.json
 .codegpt
+
+
+.husky
+.hygen
+.vscode
+.github

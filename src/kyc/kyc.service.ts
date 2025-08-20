@@ -8,7 +8,6 @@ import {
 import { KYC } from './domain/kyc';
 import { UsersService } from '../users/users.service';
 import { AuthService } from '../auth/auth.service';
-import { FilesService } from '../files/files.service';
 import { CreateKYCDto } from './dto/create-kyc.dto';
 import { FilterKYCDto } from './dto/query-kyc.dto';
 import { SortKYCDto } from './dto/sort-kyc.dto';
@@ -23,7 +22,6 @@ export class KycService {
     private readonly kycRepository: KYCRepository,
     private readonly usersService: UsersService,
     private readonly authService: AuthService,
-    private readonly filesService: FilesService, // Still injected but unused for validation
   ) {}
 
   async create(createKycDto: CreateKYCDto, bearerToken: string): Promise<KYC> {

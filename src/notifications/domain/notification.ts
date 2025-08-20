@@ -11,6 +11,10 @@ export class Notification {
   @Expose({ groups: ['me', 'admin'] })
   user: User;
 
+  @ApiProperty({ type: () => User })
+  @Expose({ groups: ['me', 'admin'] })
+  sender: User;
+
   @ApiProperty({ type: String, example: 'Ride Confirmed' })
   @Expose({ groups: ['me', 'admin'] })
   title: string;

@@ -17,72 +17,35 @@ export class DailyRideMapper {
   static toDomain(raw: DailyRideEntity): DailyRide {
     const domainEntity = new DailyRide();
     domainEntity.id = raw.id;
-    domainEntity.ride = raw.ride
-      ? ({
-          id: raw?.id,
-          ride: {
-            id: raw?.ride.id,
-            vehicle: {
-              id: raw?.ride?.vehicle?.id,
-              registration_number: raw?.ride?.vehicle?.registration_number,
-              available_seats: raw?.ride?.vehicle?.available_seats,
-            },
-            // driver: {
-            //   id: raw?.ride?.driver?.id,
-            //   email: raw?.ride?.driver?.email,
-            // },
-            // school: {
-            //   id: raw?.ride?.driver?.id,
-            //   name: raw?.ride?.driver?.name,
-            // },
-            student: {
-              id: raw?.ride?.student?.id,
-              name: raw?.ride?.student?.name,
-              address: raw?.ride?.student?.address,
-            },
-            parent: {
-              id: raw?.ride?.parent?.id,
-              email: raw?.ride?.parent?.email,
-              name: raw?.ride?.parent?.name,
-            },
-            schedule: {
-              pickup: raw?.ride?.schedule?.pickup,
-              dropoff: raw?.ride?.schedule?.dropoff,
-              kind: raw?.ride?.schedule?.kind,
-            },
-          },
-        } as any)
+    domainEntity.ride = raw.ride ? RideMapper.toDomain(raw.ride) : null;
+    domainEntity.vehicle = raw.vehicle
+      ? VehicleMapper.toDomain(raw.vehicle)
       : null;
 
-    // domainEntity.ride = raw.ride ? RideMapper.toDomain(raw.ride) : null;
-    // domainEntity.vehicle = raw.vehicle
-    //   ? VehicleMapper.toDomain(raw.vehicle)
-    //   : null;
-
-    // if (raw.driver) {
-    //   domainEntity.driver = UserMapper.toDomain(raw.driver);
-    // } else {
-    //   domainEntity.driver = null;
-    // }
+    if (raw.driver) {
+      domainEntity.driver = UserMapper.toDomain(raw.driver);
+    } else {
+      domainEntity.driver = null;
+    }
 
     domainEntity.kind = raw.kind;
     domainEntity.date = raw.date;
     domainEntity.start_time = raw.start_time;
     domainEntity.end_time = raw.end_time;
-    // domainEntity.comments = raw.comments;
-    // domainEntity.meta = raw.meta;
+    domainEntity.comments = raw.comments;
+    domainEntity.meta = raw.meta;
     domainEntity.status = raw.status;
 
-    // if (raw.locations && raw.locations.length > 0) {
-    //   domainEntity.locations = raw.locations.map((location) =>
-    //     LocationMapper.toDomain(location),
-    //   );
-    // } else {
-    //   domainEntity.locations = [];
-    // }
+    if (raw.locations && raw.locations.length > 0) {
+      domainEntity.locations = raw.locations.map((location) =>
+        LocationMapper.toDomain(location),
+      );
+    } else {
+      domainEntity.locations = [];
+    }
 
-    // domainEntity.created_at = raw.created_at;
-    // domainEntity.updated_at = raw.updated_at;
+    domainEntity.created_at = raw.created_at;
+    domainEntity.updated_at = raw.updated_at;
     return domainEntity;
   }
 

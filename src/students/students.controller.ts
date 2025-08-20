@@ -71,7 +71,7 @@ export class StudentsController {
     @Query() query: QueryStudentDto,
   ): Promise<InfinityPaginationResponseDto<Student>> {
     const page = query?.page ?? 1;
-    let limit = query?.limit ?? 10;
+    let limit = query?.limit ?? 30;
     if (limit > 50) {
       limit = 50;
     }

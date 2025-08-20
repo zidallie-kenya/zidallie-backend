@@ -25,38 +25,6 @@ export class StudentsService {
     private readonly schoolsService: SchoolsService,
   ) {}
 
-  // async create(createStudentDto: CreateStudentDto): Promise<Student> {
-  //   // let school: School | null = null;
-  //   // if (createStudentDto.school?.id) {
-  //   //   school = {
-  //   //     id: createStudentDto.school.id,
-  //   //   } as School;
-  //   // }
-
-  //   // let parent: User | null = null;
-  //   // if (createStudentDto.parent?.id) {
-  //   //   parent = {
-  //   //     id: createStudentDto.parent.id,
-  //   //   } as User;
-  //   // }
-  //   console.log('Creating student with DTO:', createStudentDto);
-  //   return this.studentsRepository.create({
-  //     name: createStudentDto.name,
-  //     school: createStudentDto.school
-  //       ? ({ id: createStudentDto.school.id } as SchoolEntity)
-  //       : null,
-  //     parent: createStudentDto.parent
-  //       ? ({ id: createStudentDto.parent.id } as UserEntity)
-  //       : null,
-  //     profile_picture: createStudentDto.profile_picture ?? null,
-  //     gender: createStudentDto.gender,
-  //     address: createStudentDto.address ?? null,
-  //     comments: createStudentDto.comments ?? null,
-  //     meta: createStudentDto.meta ?? null,
-  //     rides: [],
-  //   });
-  // }
-
   async create(createStudentDto: CreateStudentDto): Promise<Student> {
     console.log('school:', createStudentDto?.school?.id);
     console.log('parent:', createStudentDto?.parent?.id);
@@ -135,9 +103,12 @@ export class StudentsService {
     sortOptions?: SortStudentDto[] | null;
     paginationOptions: IPaginationOptions;
   }): Promise<Student[]> {
+    const defaultSort: SortStudentDto[] = sortOptions ?? [
+      { orderBy: 'name', order: 'ASC' },
+    ];
     return this.studentsRepository.findManyWithPagination({
       filterOptions,
-      sortOptions,
+      sortOptions: defaultSort,
       paginationOptions,
     });
   }

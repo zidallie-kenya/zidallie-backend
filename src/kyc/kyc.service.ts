@@ -15,6 +15,7 @@ import { IPaginationOptions } from '../utils/types/pagination-options';
 import { NullableType } from '../utils/types/nullable.type';
 import { UpdateKycDto } from './dto/update-kyc.dto';
 import { KYCRepository } from './infrastructure/persistence/kyc.repository';
+import { JwtPayloadType } from '../auth/strategies/types/jwt-payload.type';
 
 @Injectable()
 export class KycService {
@@ -134,22 +135,28 @@ export class KycService {
   }
 
   async update(
-    id: number,
+    userJwtPayload: JwtPayloadType,
     updateKycDto: UpdateKycDto,
-    bearerToken: string,
   ): Promise<KYC | null> {
     // Verify user authentication
-    const authenticatedUser =
-      await this.authService.verifyBearerToken(bearerToken);
-    if (!authenticatedUser) {
-      throw new UnauthorizedException({
-        status: HttpStatus.UNAUTHORIZED,
-        errors: { auth: 'invalid token' },
+    const user = await this.usersService.findById(userJwtPayload.id);
+
+    if (!user) {
+      throw new NotFoundException({
+        status: HttpStatus.NOT_FOUND,
+        errors: { user: 'User not found' },
       });
     }
 
-    const kyc = await this.kycRepository.findById(id);
-    if (!kyc || (kyc.user && kyc.user.id !== authenticatedUser.id)) {
+    if (user.kind !== 'Driver') {
+      throw new NotFoundException({
+        status: HttpStatus.FORBIDDEN,
+        errors: { user: 'The user must be a driver' },
+      });
+    }
+
+    const kyc = await this.kycRepository.findById(user.id);
+    if (!kyc || (kyc.user && kyc.user.id)) {
       throw new NotFoundException({
         status: HttpStatus.NOT_FOUND,
         errors: { kyc: 'the kyc does not exist' },
@@ -167,7 +174,7 @@ export class KycService {
       updateKycDto.certificate_of_good_conduct ??
       kyc.certificate_of_good_conduct;
 
-    return this.kycRepository.update(id, {
+    return this.kycRepository.update(user.id, {
       national_id_front: nationalIdFront,
       national_id_back: nationalIdBack,
       passport_photo: passportPhoto,
@@ -195,41 +202,53 @@ export class KycService {
   }
 
   async findByDriverId(
-    driverId: number,
-    bearerToken: string,
+    userJwtPayload: JwtPayloadType,
   ): Promise<NullableType<KYC>> {
-    // Verify user authentication
-    const authenticatedUser =
-      await this.authService.verifyBearerToken(bearerToken);
-    if (!authenticatedUser) {
-      throw new UnauthorizedException({
-        status: HttpStatus.UNAUTHORIZED,
-        errors: { auth: 'invalid token' },
+    const user = await this.usersService.findById(userJwtPayload.id);
+
+    if (!user) {
+      throw new NotFoundException({
+        status: HttpStatus.NOT_FOUND,
+        errors: { user: 'User not found' },
+      });
+    }
+
+    if (user.kind !== 'Driver') {
+      throw new NotFoundException({
+        status: HttpStatus.FORBIDDEN,
+        errors: { user: 'The user must be a driver' },
       });
     }
 
     // Find KYC by driver/user ID
-    return this.kycRepository.findByDriverId(driverId);
+    return this.kycRepository.findByDriverId(user.id);
   }
 
-  async remove(id: number, bearerToken: string): Promise<void> {
-    // Verify user authentication
-    const authenticatedUser =
-      await this.authService.verifyBearerToken(bearerToken);
-    if (!authenticatedUser) {
-      throw new UnauthorizedException({
-        status: HttpStatus.UNAUTHORIZED,
-        errors: { auth: 'invalid token' },
+  async remove(userJwtPayload: JwtPayloadType): Promise<void> {
+    const user = await this.usersService.findById(userJwtPayload.id);
+
+    if (!user) {
+      throw new NotFoundException({
+        status: HttpStatus.NOT_FOUND,
+        errors: { user: 'User not found' },
       });
     }
-    const kyc = await this.kycRepository.findById(id);
-    if (!kyc || (kyc.user && kyc.user.id !== authenticatedUser.id)) {
+
+    if (user.kind !== 'Driver') {
+      throw new NotFoundException({
+        status: HttpStatus.FORBIDDEN,
+        errors: { user: 'The user must be a driver' },
+      });
+    }
+
+    const kyc = await this.kycRepository.findById(user.id);
+    if (!kyc || (kyc.user && kyc.user.id)) {
       throw new NotFoundException({
         status: HttpStatus.NOT_FOUND,
         errors: { kyc: 'the kyc does not exist' },
       });
     }
 
-    await this.kycRepository.remove(id);
+    await this.kycRepository.remove(user.id);
   }
 }

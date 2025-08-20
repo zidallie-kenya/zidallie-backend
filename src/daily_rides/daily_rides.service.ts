@@ -24,6 +24,7 @@ import {
 } from './dto/query-dailyrides.dto';
 import { IPaginationOptions } from '../utils/types/pagination-options';
 import { JwtPayloadType } from '../auth/strategies/types/jwt-payload.type';
+import { MyRidesResponseDto } from './dto/response.dto';
 
 @Injectable()
 export class DailyRidesService {
@@ -159,11 +160,10 @@ export class DailyRidesService {
     return this.dailyRideRepository.findByDateRange(startDate, endDate);
   }
 
-  ////////////////////////////////////////////////////////
   async findMyDailyRides(
     userJwtPayload: JwtPayloadType,
     status?: DailyRideStatus,
-  ): Promise<DailyRide[]> {
+  ): Promise<MyRidesResponseDto[]> {
     // Get the full user details to check their kind
     const user = await this.usersService.findById(userJwtPayload.id);
 
@@ -197,7 +197,11 @@ export class DailyRidesService {
       rides = [];
     }
 
-    return rides;
+    const dailyRides = rides;
+
+    return dailyRides.map((dailyRide) =>
+      this.formatDailyRideResponse(dailyRide),
+    );
   }
 
   // mark todays rides as started
@@ -308,8 +312,6 @@ export class DailyRidesService {
       end_time: new Date().toISOString(),
     });
   }
-
-  ////////////////////////////////////////////////////////
 
   async update(
     id: DailyRide['id'],
@@ -449,5 +451,47 @@ export class DailyRidesService {
       status: DailyRideStatus.Finished,
       comments: reason ?? 'Cancelled',
     });
+  }
+
+  private formatDailyRideResponse(dailyRide: DailyRide): MyRidesResponseDto {
+    return {
+      id: dailyRide.id,
+      status: dailyRide.status,
+      date: dailyRide.date,
+      start_time: dailyRide.start_time || new Date(),
+      end_time: dailyRide.end_time || new Date(),
+      ride: {
+        id: dailyRide.ride?.id || 0,
+        vehicle: {
+          id: dailyRide.ride?.vehicle?.id || 0,
+          registration_number:
+            dailyRide.ride?.vehicle?.registration_number || '',
+          available_seats: dailyRide.ride?.vehicle?.available_seats || 0,
+        },
+        student: {
+          id: dailyRide.ride?.student?.id || 0,
+          name: dailyRide.ride?.student?.name || '',
+          address: dailyRide.ride?.student?.address || '',
+        },
+        parent: {
+          id: dailyRide.ride?.parent?.id || 0,
+          email: dailyRide.ride?.parent?.email || '',
+          name: dailyRide.ride?.parent?.name || '',
+        },
+        schedule: {
+          pickup: {
+            lat: dailyRide.ride?.schedule?.pickup?.latitude || 0,
+            lng: dailyRide.ride?.schedule?.pickup?.longitude || 0,
+            time: dailyRide.ride?.schedule?.pickup?.start_time || '',
+          },
+          dropoff: {
+            lat: dailyRide.ride?.schedule?.dropoff?.latitude || 0,
+            lng: dailyRide.ride?.schedule?.dropoff?.longitude || 0,
+            time: dailyRide.ride?.schedule?.dropoff?.start_time || '',
+          },
+          kind: dailyRide.ride?.schedule?.kind || '',
+        },
+      },
+    };
   }
 }

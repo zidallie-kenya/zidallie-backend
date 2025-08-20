@@ -9,6 +9,7 @@ import {
   Param,
   Patch,
   Post,
+  Req,
   Request,
   SerializeOptions,
   UseGuards,
@@ -20,6 +21,7 @@ import { KYC } from './domain/kyc';
 import { CreateKYCDto } from './dto/create-kyc.dto';
 import { NullableType } from '../utils/types/nullable.type';
 import { UpdateKycDto } from './dto/update-kyc.dto';
+import { JwtPayloadType } from '../auth/strategies/types/jwt-payload.type';
 // import { FilterKYCDto } from './dto/query-kyc.dto';
 // import { SortKYCDto } from './dto/sort-kyc.dto';
 // import { IPaginationOptions } from '../utils/types/pagination-options';
@@ -65,24 +67,16 @@ export class KycController {
   @SerializeOptions({
     groups: ['me'],
   })
-  @Get('driver/:driverId')
+  @Get('driver')
   @UseGuards(AuthGuard('jwt'))
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({
     type: KYC,
   })
-  async findByDriverId(
-    @Param('driverId') driverId: string,
-    @Request() request,
-  ): Promise<NullableType<KYC>> {
-    // Validate driver ID before parsing
-    const numericDriverId = parseInt(driverId, 10);
-    if (isNaN(numericDriverId)) {
-      throw new BadRequestException('Invalid driver ID format');
-    }
+  async findByDriverId(@Req() req: any): Promise<NullableType<KYC>> {
+    const userJwtPayload: JwtPayloadType = req.user;
 
-    const token = request.headers.authorization?.replace('Bearer ', '');
-    return this.kycService.findByDriverId(numericDriverId, token);
+    return this.kycService.findByDriverId(userJwtPayload);
   }
 
   @ApiBearerAuth()
@@ -112,28 +106,28 @@ export class KycController {
   @SerializeOptions({
     groups: ['me'],
   })
-  @Patch(':id')
+  @Patch('update')
   @UseGuards(AuthGuard('jwt'))
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({
     type: KYC,
   })
   async update(
-    @Param('id') id: string,
+    @Req() req: any,
     @Body() updateKycDto: UpdateKycDto,
-    @Request() request,
   ): Promise<NullableType<KYC>> {
-    const token = request.headers.authorization?.replace('Bearer ', '');
-    return this.kycService.update(parseInt(id, 10), updateKycDto, token);
+    const userJwtPayload: JwtPayloadType = req.user;
+
+    return this.kycService.update(userJwtPayload, updateKycDto);
   }
 
   @ApiBearerAuth()
-  @Delete(':id')
+  @Delete('delete')
   @UseGuards(AuthGuard('jwt'))
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOkResponse()
-  async remove(@Param('id') id: string, @Request() request): Promise<void> {
-    const token = request.headers.authorization?.replace('Bearer ', '');
-    return this.kycService.remove(parseInt(id, 10), token);
+  async remove(@Req() req: any): Promise<void> {
+    const userJwtPayload: JwtPayloadType = req.user;
+    return this.kycService.remove(userJwtPayload);
   }
 }

@@ -28,6 +28,7 @@ import { UpdateDailyRideDto } from './dto/update-daily_ride.dto';
 import { CreateDailyRideDto } from './dto/create-daily_ride.dto';
 import { DailyRidesService } from './daily_rides.service';
 import { JwtPayloadType } from '../auth/strategies/types/jwt-payload.type';
+import { MyRidesResponseDto } from './dto/response.dto';
 
 const parseDate = (dateStr: string): Date => {
   const [day, month, year] = dateStr.split('-').map(Number);
@@ -162,7 +163,7 @@ export class DailyRidesController {
   getMyRides(
     @Req() req: any,
     @Query('status') status?: DailyRideStatus,
-  ): Promise<DailyRide[]> {
+  ): Promise<MyRidesResponseDto[]> {
     const userJwtPayload: JwtPayloadType = req.user;
     return this.dailyRidesService.findMyDailyRides(userJwtPayload, status);
   }

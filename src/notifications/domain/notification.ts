@@ -11,9 +11,23 @@ export class Notification {
   @Expose({ groups: ['me', 'admin'] })
   user: User;
 
-  @ApiProperty({ type: () => User })
+  @ApiProperty({
+    type: String,
+    example: '0:1703167055324634%97a4b8d4f9fd7ecd',
+    required: false,
+    nullable: true,
+  })
   @Expose({ groups: ['me', 'admin'] })
-  sender: User;
+  sender: string | null;
+
+  @ApiProperty({
+    type: String,
+    example: '0:1703167055324634%97a4b8d4f9fd7ecd',
+    required: false,
+    nullable: true,
+  })
+  @Expose({ groups: ['me', 'admin'] })
+  receiver: string | null;
 
   @ApiProperty({ type: String, example: 'Ride Confirmed' })
   @Expose({ groups: ['me', 'admin'] })

@@ -79,6 +79,9 @@ export class UserEntity extends EntityRelationalHelper {
   @Column({ type: 'varchar', nullable: true })
   phone_number: string | null;
 
+  @Column({ type: 'varchar', nullable: true })
+  push_token: string | null;
+
   @Column({
     type: 'varchar',
     nullable: true,

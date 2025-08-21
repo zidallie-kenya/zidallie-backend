@@ -42,6 +42,13 @@ export class User {
   @Expose({ groups: ['me', 'admin'] })
   phone_number: string | null;
 
+  @ApiProperty({
+    type: String,
+    example: 'ExponentPushToken[QxGljeKLHqZPRsgb9R6GxX]',
+  })
+  @Expose({ groups: ['me', 'admin'] })
+  push_token: string | null;
+
   @ApiProperty({ enum: ['Parent', 'Driver'] })
   @Expose({ groups: ['me', 'admin'] })
   kind: UserKind;

@@ -17,6 +17,7 @@ export class UserMapper {
     domainEntity.lastName = raw.lastName;
     domainEntity.name = raw.name;
     domainEntity.phone_number = raw.phone_number;
+    domainEntity.push_token = raw.push_token;
     domainEntity.kind = raw.kind;
     domainEntity.meta = raw.meta;
     domainEntity.wallet_balance = raw.wallet_balance;
@@ -73,6 +74,7 @@ export class UserMapper {
     persistenceEntity.status = status;
     persistenceEntity.name = domainEntity.name;
     persistenceEntity.phone_number = domainEntity.phone_number;
+    persistenceEntity.push_token = domainEntity.push_token;
     persistenceEntity.kind = domainEntity.kind;
     persistenceEntity.meta = domainEntity.meta;
     persistenceEntity.wallet_balance = domainEntity.wallet_balance;

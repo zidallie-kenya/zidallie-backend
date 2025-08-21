@@ -129,6 +129,7 @@ export class UsersService {
       firstName: createUserDto.firstName,
       lastName: createUserDto.lastName,
       phone_number: createUserDto.phone_number ?? null,
+      push_token: createUserDto.push_token ?? null,
       kind: createUserDto.kind,
       meta: createUserDto.meta ?? null,
       wallet_balance: createUserDto.wallet_balance ?? 0,
@@ -293,6 +294,7 @@ export class UsersService {
       firstName: updateUserDto.firstName,
       lastName: updateUserDto.lastName,
       phone_number: updateUserDto.phone_number,
+      push_token: updateUserDto.push_token,
       kind: updateUserDto.kind,
       meta: updateUserDto.meta,
       wallet_balance: updateUserDto.wallet_balance,
@@ -311,50 +313,4 @@ export class UsersService {
   async remove(id: User['id']): Promise<void> {
     await this.usersRepository.remove(id);
   }
-
-  // async updateNotifications(
-  //   userId: number,
-  //   notifications: UserMeta['notifications'],
-  // ): Promise<User | null> {
-  //   const user = await this.findById(userId);
-
-  //   if (!user) throw new NotFoundException('User not found');
-
-  //   const currentMeta = user.meta ?? {
-  //     payments: {
-  //       kind: 'Bank',
-  //       bank: null,
-  //       account_number: null,
-  //       account_name: null,
-  //     },
-  //     notifications: {
-  //       when_bus_leaves: false,
-  //       when_bus_makes_home_drop_off: false,
-  //       when_bus_make_home_pickup: false,
-  //       when_bus_arrives: false,
-  //       when_bus_is_1km_away: false,
-  //       when_bus_is_0_5km_away: false,
-  //     },
-  //     county: null,
-  //     neighborhood: null,
-  //   };
-
-  //   return this.update(userId, {
-  //     meta: {
-  //       ...currentMeta,
-  //       payments: currentMeta.payments ?? {
-  //         kind: 'Bank',
-  //         bank: null,
-  //         account_number: null,
-  //         account_name: null,
-  //       },
-  //       notifications: {
-  //         ...currentMeta.notifications,
-  //         ...notifications,
-  //       },
-  //       county: currentMeta.county ?? null,
-  //       neighborhood: currentMeta.neighborhood ?? null,
-  //     },
-  //   });
-  // }
 }

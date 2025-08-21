@@ -52,6 +52,14 @@ export class CreateUserDto {
   @IsString()
   phone_number?: string | null;
 
+  @ApiPropertyOptional({
+    example: 'ExponentPushToken[QxGljeKLHqZPRsgb9R6GxX]',
+    type: String,
+  })
+  @IsOptional()
+  @IsString()
+  push_token?: string | null;
+
   @ApiProperty({ enum: ['Parent', 'Driver', 'Admin'] })
   @IsNotEmpty()
   @IsEnum(['Parent', 'Driver', 'Admin'])

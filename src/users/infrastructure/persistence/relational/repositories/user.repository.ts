@@ -121,25 +121,20 @@ export class UsersRelationalRepository implements UserRepository {
       throw new Error('User not found');
     }
 
-    // Convert existing DB entity to domain
     const currentDomain = UserMapper.toDomain(entity);
 
-    // Merge only provided fields into existing domain object
     const mergedDomain = {
       ...currentDomain,
       ...payload,
     };
 
-    // Convert to persistence object
     const persistenceData = UserMapper.toPersistence(mergedDomain);
 
-    // Remove undefined keys so they won't overwrite existing DB values
     Object.keys(persistenceData).forEach(
       (key) =>
         persistenceData[key] === undefined && delete persistenceData[key],
     );
 
-    // Perform the save (partial overwrite, keeping old values)
     const updatedEntity = await this.usersRepository.save({
       ...entity,
       ...persistenceData,

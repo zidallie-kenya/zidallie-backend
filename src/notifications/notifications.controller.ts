@@ -11,6 +11,7 @@ import {
   HttpStatus,
   HttpCode,
   SerializeOptions,
+  Req,
 } from '@nestjs/common';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { UpdateNotificationDto } from './dto/update-notification.dto';
@@ -35,6 +36,8 @@ import { Notification } from './domain/notification';
 import { NotificationsService } from './notifications.service';
 import { infinityPagination } from '../utils/infinity-pagination';
 import { QueryNotificationsDto } from './dto/query-notifications';
+import { MyNotificationResponseDto } from './dto/response.dto';
+import { JwtPayloadType } from '../auth/strategies/types/jwt-payload.type';
 
 @ApiBearerAuth()
 @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
@@ -62,7 +65,7 @@ export class NotificationsController {
   }
 
   @ApiOkResponse({
-    type: InfinityPaginationResponse(Notification),
+    type: InfinityPaginationResponse(MyNotificationResponseDto),
   })
   @SerializeOptions({
     groups: ['admin'],
@@ -71,7 +74,7 @@ export class NotificationsController {
   @HttpCode(HttpStatus.OK)
   async findAll(
     @Query() query: QueryNotificationsDto,
-  ): Promise<InfinityPaginationResponseDto<Notification>> {
+  ): Promise<InfinityPaginationResponseDto<MyNotificationResponseDto>> {
     const page = query?.page ?? 1;
     let limit = query?.limit ?? 30;
     if (limit > 50) {
@@ -92,7 +95,146 @@ export class NotificationsController {
   }
 
   @ApiOkResponse({
+    type: [MyNotificationResponseDto],
+  })
+  @SerializeOptions({
+    groups: ['admin'],
+  })
+  @Get('user')
+  @HttpCode(HttpStatus.OK)
+  findByUserId(@Req() req: any): Promise<MyNotificationResponseDto[]> {
+    const userJwtPayload: JwtPayloadType = req.user;
+
+    return this.notificationsService.findByUserId(userJwtPayload);
+  }
+
+  @ApiOkResponse({
+    type: [MyNotificationResponseDto],
+  })
+  @SerializeOptions({
+    groups: ['admin'],
+  })
+  @Get('user/unread')
+  @HttpCode(HttpStatus.OK)
+  findUnreadByUserId(@Req() req: any): Promise<MyNotificationResponseDto[]> {
+    const userJwtPayload: JwtPayloadType = req.user;
+
+    return this.notificationsService.findUnreadByUserId(userJwtPayload);
+  }
+
+  @ApiOkResponse({
+    type: [MyNotificationResponseDto],
+  })
+  @SerializeOptions({
+    groups: ['admin'],
+  })
+  @Get('user/section/:section')
+  @HttpCode(HttpStatus.OK)
+  @ApiParam({
+    name: 'section',
+    type: String,
+    required: true,
+  })
+  findByUserIdAndSection(
+    @Param('section') section: string,
+    @Req() req: any,
+  ): Promise<MyNotificationResponseDto[]> {
+    const userJwtPayload: JwtPayloadType = req.user;
+    return this.notificationsService.findByUserIdAndSection(
+      userJwtPayload,
+      section,
+    );
+  }
+
+  @ApiOkResponse({
+    type: [MyNotificationResponseDto],
+  })
+  @SerializeOptions({
+    groups: ['admin'],
+  })
+  @Get('kind/:kind')
+  @HttpCode(HttpStatus.OK)
+  @ApiParam({
+    name: 'kind',
+    type: String,
+    required: true,
+  })
+  findByKind(
+    @Param('kind') kind: string,
+  ): Promise<MyNotificationResponseDto[]> {
+    return this.notificationsService.findByKind(kind);
+  }
+
+  @ApiOkResponse({
+    type: Number,
+  })
+  @SerializeOptions({
+    groups: ['admin'],
+  })
+  @Get('user/unread-count')
+  @HttpCode(HttpStatus.OK)
+  getUnreadCountByUserId(@Req() req: any): Promise<number> {
+    const userJwtPayload: JwtPayloadType = req.user;
+    return this.notificationsService.getUnreadCountByUserId(userJwtPayload);
+  }
+
+  @ApiOkResponse({
     type: Notification,
+  })
+  @SerializeOptions({
+    groups: ['admin'],
+  })
+  @Patch(':id/read')
+  @HttpCode(HttpStatus.OK)
+  @ApiParam({
+    name: 'id',
+    type: String,
+    required: true,
+  })
+  markAsRead(@Param('id') id: Notification['id']): Promise<Notification> {
+    return this.notificationsService.markAsRead(id);
+  }
+
+  @ApiOkResponse()
+  @SerializeOptions({
+    groups: ['admin'],
+  })
+  @Patch('user/mark-all-read')
+  @HttpCode(HttpStatus.OK)
+  markAllAsReadByUserId(@Req() req: any): Promise<void> {
+    const userJwtPayload: JwtPayloadType = req.user;
+
+    return this.notificationsService.markAllAsReadByUserId(userJwtPayload);
+  }
+
+  @ApiOkResponse({
+    type: [MyNotificationResponseDto],
+  })
+  @SerializeOptions({
+    groups: ['admin'],
+  })
+  @Get('user/recent')
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({ type: [Notification] })
+  @SerializeOptions({ groups: ['admin'] })
+  @ApiQuery({
+    name: 'limit',
+    type: Number,
+    required: false,
+  })
+  async findRecentByUserId(
+    @Req() req: any,
+    @Query('limit') limit?: string,
+  ): Promise<MyNotificationResponseDto[]> {
+    const userJwtPayload: JwtPayloadType = req.user;
+    return this.notificationsService.findRecentByUserId(
+      userJwtPayload,
+      parseInt(limit ?? '10', 10),
+    );
+  }
+
+  @ApiOkResponse({
+    type: MyNotificationResponseDto,
   })
   @SerializeOptions({
     groups: ['admin'],
@@ -106,7 +248,7 @@ export class NotificationsController {
   })
   findOne(
     @Param('id') id: Notification['id'],
-  ): Promise<NullableType<Notification>> {
+  ): Promise<NullableType<MyNotificationResponseDto>> {
     return this.notificationsService.findById(id);
   }
 
@@ -139,168 +281,5 @@ export class NotificationsController {
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@Param('id') id: Notification['id']): Promise<void> {
     return this.notificationsService.remove(id);
-  }
-
-  @ApiOkResponse({
-    type: [Notification],
-  })
-  @SerializeOptions({
-    groups: ['admin'],
-  })
-  @Get('user/:userId')
-  @HttpCode(HttpStatus.OK)
-  @ApiParam({
-    name: 'userId',
-    type: String,
-    required: true,
-  })
-  findByUserId(
-    @Param('userId') userId: Notification['user']['id'],
-  ): Promise<Notification[]> {
-    return this.notificationsService.findByUserId(userId);
-  }
-
-  @ApiOkResponse({
-    type: [Notification],
-  })
-  @SerializeOptions({
-    groups: ['admin'],
-  })
-  @Get('user/:userId/unread')
-  @HttpCode(HttpStatus.OK)
-  @ApiParam({
-    name: 'userId',
-    type: String,
-    required: true,
-  })
-  findUnreadByUserId(
-    @Param('userId') userId: Notification['user']['id'],
-  ): Promise<Notification[]> {
-    return this.notificationsService.findUnreadByUserId(userId);
-  }
-
-  @ApiOkResponse({
-    type: [Notification],
-  })
-  @SerializeOptions({
-    groups: ['admin'],
-  })
-  @Get('user/:userId/section/:section')
-  @HttpCode(HttpStatus.OK)
-  @ApiParam({
-    name: 'userId',
-    type: String,
-    required: true,
-  })
-  @ApiParam({
-    name: 'section',
-    type: String,
-    required: true,
-  })
-  findByUserIdAndSection(
-    @Param('userId') userId: Notification['user']['id'],
-    @Param('section') section: string,
-  ): Promise<Notification[]> {
-    return this.notificationsService.findByUserIdAndSection(userId, section);
-  }
-
-  @ApiOkResponse({
-    type: [Notification],
-  })
-  @SerializeOptions({
-    groups: ['admin'],
-  })
-  @Get('kind/:kind')
-  @HttpCode(HttpStatus.OK)
-  @ApiParam({
-    name: 'kind',
-    type: String,
-    required: true,
-  })
-  findByKind(@Param('kind') kind: string): Promise<Notification[]> {
-    return this.notificationsService.findByKind(kind);
-  }
-
-  @ApiOkResponse({
-    type: Number,
-  })
-  @SerializeOptions({
-    groups: ['admin'],
-  })
-  @Get('user/:userId/unread-count')
-  @HttpCode(HttpStatus.OK)
-  @ApiParam({
-    name: 'userId',
-    type: String,
-    required: true,
-  })
-  getUnreadCountByUserId(
-    @Param('userId') userId: Notification['user']['id'],
-  ): Promise<number> {
-    return this.notificationsService.getUnreadCountByUserId(userId);
-  }
-
-  @ApiOkResponse({
-    type: Notification,
-  })
-  @SerializeOptions({
-    groups: ['admin'],
-  })
-  @Patch(':id/read')
-  @HttpCode(HttpStatus.OK)
-  @ApiParam({
-    name: 'id',
-    type: String,
-    required: true,
-  })
-  markAsRead(@Param('id') id: Notification['id']): Promise<Notification> {
-    return this.notificationsService.markAsRead(id);
-  }
-
-  @ApiOkResponse()
-  @SerializeOptions({
-    groups: ['admin'],
-  })
-  @Patch('user/:userId/mark-all-read')
-  @HttpCode(HttpStatus.OK)
-  @ApiParam({
-    name: 'userId',
-    type: String,
-    required: true,
-  })
-  markAllAsReadByUserId(
-    @Param('userId') userId: Notification['user']['id'],
-  ): Promise<void> {
-    return this.notificationsService.markAllAsReadByUserId(userId);
-  }
-
-  @ApiOkResponse({
-    type: [Notification],
-  })
-  @SerializeOptions({
-    groups: ['admin'],
-  })
-  @Get('user/:userId/recent')
-  @HttpCode(HttpStatus.OK)
-  @ApiOkResponse({ type: [Notification] })
-  @SerializeOptions({ groups: ['admin'] })
-  @ApiParam({
-    name: 'userId',
-    type: String,
-    required: true,
-  })
-  @ApiQuery({
-    name: 'limit',
-    type: Number,
-    required: false,
-  })
-  async findRecentByUserId(
-    @Param('userId') userId: Notification['user']['id'],
-    @Query('limit') limit?: string,
-  ): Promise<Notification[]> {
-    return this.notificationsService.findRecentByUserId(
-      userId,
-      parseInt(limit ?? '10', 10),
-    );
   }
 }

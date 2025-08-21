@@ -8,8 +8,17 @@ export class FilterNotificationDto {
   @ApiPropertyOptional({ type: Number, description: 'Filter by Receiver ID' })
   userId?: number;
 
-  @ApiPropertyOptional({ type: Number, description: 'Filter by Sender ID' })
-  senderId?: number;
+  @ApiPropertyOptional({
+    type: String,
+    description: '0:1703167055324634%97a4b8d4f9fd7ecd',
+  })
+  senderId?: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: '0:1703167055324634%97a4b8d4f9fd7ecd',
+  })
+  receiverId?: string;
 
   @ApiPropertyOptional({ type: Boolean, description: 'Filter by read status' })
   is_read?: boolean;

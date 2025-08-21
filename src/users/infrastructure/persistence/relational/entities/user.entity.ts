@@ -139,9 +139,6 @@ export class UserEntity extends EntityRelationalHelper {
   @OneToMany(() => NotificationEntity, (notification) => notification.user)
   notifications: NotificationEntity[];
 
-  @OneToMany(() => NotificationEntity, (notification) => notification.sender)
-  sentNotifications: NotificationEntity[];
-
   @OneToMany(() => LocationEntity, (location) => location.driver)
   locations: LocationEntity[];
 }

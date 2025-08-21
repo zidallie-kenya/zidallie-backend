@@ -54,6 +54,14 @@ export class UpdateUserDto extends PartialType(CreateUserDto) {
   @IsString()
   phone_number?: string | null;
 
+  @ApiPropertyOptional({
+    example: 'ExponentPushToken[QxGljeKLHqZPRsgb9R6GxX]',
+    type: String,
+  })
+  @IsOptional()
+  @IsString()
+  push_token?: string | null;
+
   @ApiPropertyOptional({ enum: ['Parent', 'Driver', 'Admin'] })
   @IsOptional()
   @IsEnum(['Parent', 'Driver', 'Admin'])

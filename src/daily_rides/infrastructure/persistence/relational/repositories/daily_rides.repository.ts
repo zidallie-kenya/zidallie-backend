@@ -162,6 +162,72 @@ export class DailyRidesRelationalRepository implements DailyRideRepository {
     return entities.map((dailyRide) => DailyRideMapper.toDomain(dailyRide));
   }
 
+  async findUpcomingRidesForDriver(
+    driverId: number,
+    startDate: Date,
+    endDate: Date,
+    status?: DailyRideStatus,
+  ): Promise<DailyRide[]> {
+    const queryBuilder = this.dailyRidesRepository
+      .createQueryBuilder('daily_ride')
+      .leftJoinAndSelect('daily_ride.ride', 'ride')
+      .leftJoinAndSelect('ride.vehicle', 'ride_vehicle')
+      .leftJoinAndSelect('ride.driver', 'ride_driver')
+      .leftJoinAndSelect('ride.school', 'ride_school')
+      .leftJoinAndSelect('ride.student', 'ride_student')
+      .leftJoinAndSelect('ride.parent', 'ride_parent')
+      .leftJoinAndSelect('daily_ride.vehicle', 'vehicle')
+      .leftJoinAndSelect('daily_ride.driver', 'driver')
+      .leftJoinAndSelect('daily_ride.locations', 'locations')
+      .where('daily_ride.driver.id = :driverId', { driverId })
+      .andWhere('daily_ride.date BETWEEN :startDate AND :endDate', {
+        startDate: startDate.toISOString().split('T')[0],
+        endDate: endDate.toISOString().split('T')[0],
+      })
+      .orderBy('daily_ride.date', 'ASC')
+      .addOrderBy('daily_ride.start_time', 'ASC');
+
+    if (status) {
+      queryBuilder.andWhere('daily_ride.status = :status', { status });
+    }
+
+    const entities = await queryBuilder.getMany();
+    return entities.map((dailyRide) => DailyRideMapper.toDomain(dailyRide));
+  }
+
+  async findUpcomingRidesForParent(
+    parentId: number,
+    startDate: Date,
+    endDate: Date,
+    status?: DailyRideStatus,
+  ): Promise<DailyRide[]> {
+    const queryBuilder = this.dailyRidesRepository
+      .createQueryBuilder('daily_ride')
+      .leftJoinAndSelect('daily_ride.ride', 'ride')
+      .leftJoinAndSelect('daily_ride.vehicle', 'vehicle')
+      .leftJoinAndSelect('daily_ride.driver', 'driver')
+      .leftJoinAndSelect('daily_ride.locations', 'locations')
+      .leftJoinAndSelect('ride.vehicle', 'ride_vehicle')
+      .leftJoinAndSelect('ride.driver', 'ride_driver')
+      .leftJoinAndSelect('ride.school', 'ride_school')
+      .leftJoinAndSelect('ride.student', 'ride_student')
+      .leftJoinAndSelect('ride.parent', 'ride_parent')
+      .where('ride.parent.id = :parentId', { parentId })
+      .andWhere('daily_ride.date BETWEEN :startDate AND :endDate', {
+        startDate: startDate.toISOString().split('T')[0],
+        endDate: endDate.toISOString().split('T')[0],
+      })
+      .orderBy('daily_ride.date', 'ASC')
+      .addOrderBy('daily_ride.start_time', 'ASC');
+
+    if (status) {
+      queryBuilder.andWhere('daily_ride.status = :status', { status });
+    }
+
+    const entities = await queryBuilder.getMany();
+    return entities.map((dailyRide) => DailyRideMapper.toDomain(dailyRide));
+  }
+
   // get today's rides for a driver
   async findTodayRidesForDriver(
     driverId: number,
@@ -180,7 +246,6 @@ export class DailyRidesRelationalRepository implements DailyRideRepository {
     return entities.map((dailyRide) => DailyRideMapper.toDomain(dailyRide));
   }
 
-  ////////////////////////////////////////////////////////////////////////////////
   async findByDriverIdWithStatus(
     driverId: number,
     status?: DailyRideStatus,
@@ -265,8 +330,6 @@ export class DailyRidesRelationalRepository implements DailyRideRepository {
 
     return result.affected || 0;
   }
-
-  ///////////////////////////////////////////////////////////////////////////////
 
   async update(
     id: DailyRide['id'],

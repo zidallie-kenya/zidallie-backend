@@ -4,6 +4,7 @@ import { SchoolEntity } from '../../../../../schools/infrastructure/persistence/
 import { SchoolMapper } from '../../../../../schools/infrastructure/persistence/relational/mappers/schools.mapper';
 import { UserEntity } from '../../../../../users/infrastructure/persistence/relational/entities/user.entity';
 import { UserMapper } from '../../../../../users/infrastructure/persistence/relational/mappers/user.mapper';
+import { mapRelation } from '../../../../../utils/relation.mapper';
 import { Student } from '../../../../domain/student';
 import { StudentEntity } from '../entities/student.entity';
 
@@ -41,40 +42,32 @@ export class StudentMapper {
     return domainEntity;
   }
 
-  static toPersistence(domainEntity: Student): StudentEntity {
-    let school: SchoolEntity | undefined | null = undefined;
-    if (domainEntity.school) {
-      school = SchoolMapper.toPersistence(domainEntity.school);
-    } else if (domainEntity.school === null) {
-      school = null;
-    }
+  static toPersistence(domainEntity: Partial<Student>): Partial<StudentEntity> {
+    const persistence: Partial<StudentEntity> = {};
+    if (domainEntity.id !== undefined) persistence.id = domainEntity.id;
+    if (domainEntity.name !== undefined) persistence.name = domainEntity.name;
+    if (domainEntity.profile_picture !== undefined)
+      persistence.profile_picture = domainEntity.profile_picture;
+    if (domainEntity.gender !== undefined)
+      persistence.gender = domainEntity.gender;
+    if (domainEntity.address !== undefined)
+      persistence.address = domainEntity.address;
+    if (domainEntity.comments !== undefined)
+      persistence.comments = domainEntity.comments;
+    if (domainEntity.meta !== undefined) persistence.meta = domainEntity.meta;
+    if (domainEntity.rides !== undefined)
+      persistence.rides = domainEntity.rides.map(
+        (ride) => RideMapper.toPersistence(ride) as RideEntity,
+      );
+    //relations
+    //school
+    persistence.school =
+      (mapRelation(domainEntity.school, SchoolMapper) as SchoolEntity) ||
+      undefined;
+    //parent
+    persistence.parent =
+      (mapRelation(domainEntity.parent, UserMapper) as UserEntity) || undefined;
 
-    let parent: UserEntity | undefined | null = undefined;
-    if (domainEntity.parent) {
-      parent = UserMapper.toPersistence(domainEntity.parent);
-    } else if (domainEntity.parent === null) {
-      parent = null;
-    }
-
-    let rides: RideEntity[] | undefined = undefined;
-    if (domainEntity.rides) {
-      rides = domainEntity.rides.map((ride) => RideMapper.toPersistence(ride));
-    }
-
-    const persistenceEntity = new StudentEntity();
-    if (domainEntity.id && typeof domainEntity.id === 'number') {
-      persistenceEntity.id = domainEntity.id;
-    }
-    persistenceEntity.school = school ?? null;
-    persistenceEntity.parent = parent ?? null;
-    persistenceEntity.name = domainEntity.name;
-    persistenceEntity.profile_picture = domainEntity.profile_picture;
-    persistenceEntity.gender = domainEntity.gender;
-    persistenceEntity.address = domainEntity.address;
-    persistenceEntity.comments = domainEntity.comments;
-    persistenceEntity.meta = domainEntity.meta;
-    persistenceEntity.rides = rides ?? [];
-    persistenceEntity.created_at = domainEntity.created_at;
-    return persistenceEntity;
+    return persistence;
   }
 }

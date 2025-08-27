@@ -1,5 +1,6 @@
 import { UserEntity } from '../../../../../users/infrastructure/persistence/relational/entities/user.entity';
 import { UserMapper } from '../../../../../users/infrastructure/persistence/relational/mappers/user.mapper';
+import { mapRelation } from '../../../../../utils/relation.mapper';
 import { Payment } from '../../../../domain/payment';
 import { PaymentEntity } from '../entities/payment.entity';
 
@@ -18,24 +19,24 @@ export class PaymentMapper {
     return domainEntity;
   }
 
-  static toPersistence(domainEntity: Payment): PaymentEntity {
-    let user: UserEntity | null = null;
-    if (domainEntity.user) {
-      user = UserMapper.toPersistence(domainEntity.user);
-    }
+  static toPersistence(domainEntity: Partial<Payment>): Partial<PaymentEntity> {
+    const persistence: Partial<PaymentEntity> = {};
 
-    const persistenceEntity = new PaymentEntity();
-    if (domainEntity.id && typeof domainEntity.id === 'number') {
-      persistenceEntity.id = domainEntity.id;
-    }
-    persistenceEntity.user = user as UserEntity;
-    persistenceEntity.amount = domainEntity.amount;
-    persistenceEntity.kind = domainEntity.kind;
-    persistenceEntity.transaction_type = domainEntity.transaction_type;
-    persistenceEntity.comments = domainEntity.comments;
-    persistenceEntity.transaction_id = domainEntity.transaction_id;
-    persistenceEntity.created_at = domainEntity.created_at;
-    persistenceEntity.updated_at = domainEntity.updated_at;
-    return persistenceEntity;
+    //simple fields
+    if (domainEntity.id !== undefined) persistence.id = domainEntity.id;
+    if (domainEntity.amount !== undefined)
+      persistence.amount = domainEntity.amount;
+    if (domainEntity.kind !== undefined) persistence.kind = domainEntity.kind;
+    if (domainEntity.transaction_type !== undefined)
+      persistence.transaction_type = domainEntity.transaction_type;
+    if (domainEntity.comments !== undefined)
+      persistence.comments = domainEntity.comments;
+    if (domainEntity.transaction_id !== undefined)
+      persistence.transaction_id = domainEntity.transaction_id;
+
+    //relations
+    persistence.user =
+      (mapRelation(domainEntity.user, UserMapper) as UserEntity) || undefined;
+    return persistence;
   }
 }

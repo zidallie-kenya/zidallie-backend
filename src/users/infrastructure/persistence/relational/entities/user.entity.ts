@@ -8,13 +8,11 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
-  JoinColumn,
   OneToOne,
   OneToMany,
 } from 'typeorm';
 import { EntityRelationalHelper } from '../../../../../utils/relational-entity-helper';
 import { AuthProvidersEnum } from '../../../../../auth/auth-providers.enum';
-import { FileEntity } from '../../../../../files/infrastructure/persistence/relational/entities/file.entity';
 import { RoleEntity } from '../../../../../roles/infrastructure/persistence/relational/entities/role.entity';
 import { StatusEntity } from '../../../../../statuses/infrastructure/persistence/relational/entities/status.entity';
 import { KYCEntity } from '../../../../../kyc/infrastructure/persistence/relational/entities/kyc.entity';
@@ -98,9 +96,8 @@ export class UserEntity extends EntityRelationalHelper {
   @Column({ type: 'boolean', default: false })
   is_kyc_verified: boolean;
 
-  @OneToOne(() => FileEntity, { eager: true })
-  @JoinColumn()
-  photo?: FileEntity | null;
+  @Column({ type: 'varchar', nullable: true })
+  photo: string | null;
 
   @ManyToOne(() => RoleEntity, { eager: true })
   role?: RoleEntity | null;

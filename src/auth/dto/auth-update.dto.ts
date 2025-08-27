@@ -7,15 +7,14 @@ import {
   IsEnum,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
-import { FileDto } from '../../files/dto/file.dto';
 import { lowerCaseTransformer } from '../../utils/transformers/lower-case.transformer';
 import { UserKind } from '../../users/dto/user.dto'; // or wherever you've defined it
 import { UserMetaDto } from '../../users/dto/user.dto';
 
 export class AuthUpdateDto {
-  @ApiPropertyOptional({ type: () => FileDto })
+  @ApiPropertyOptional({ type: String, example: '1234567890.jpg' })
   @IsOptional()
-  photo?: FileDto | null;
+  photo?: string | null;
 
   @ApiPropertyOptional({ example: 'John' })
   @IsOptional()

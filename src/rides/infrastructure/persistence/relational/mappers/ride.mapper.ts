@@ -6,6 +6,7 @@ import { StudentEntity } from '../../../../../students/infrastructure/persistenc
 import { StudentMapper } from '../../../../../students/infrastructure/persistence/relational/mappers/student.mapper';
 import { UserEntity } from '../../../../../users/infrastructure/persistence/relational/entities/user.entity';
 import { UserMapper } from '../../../../../users/infrastructure/persistence/relational/mappers/user.mapper';
+import { mapRelation } from '../../../../../utils/relation.mapper';
 import { VehicleEntity } from '../../../../../vehicles/infrastructure/persistence/relational/entities/vehicle.entity';
 import { VehicleMapper } from '../../../../../vehicles/infrastructure/persistence/relational/mappers/vehicles.mapper';
 import { Ride } from '../../../../domain/rides';
@@ -44,66 +45,44 @@ export class RideMapper {
     return domainEntity;
   }
 
-  static toPersistence(domainEntity: Ride): RideEntity {
-    let vehicle: VehicleEntity | undefined | null = undefined;
-    if (domainEntity.vehicle && domainEntity.vehicle.id) {
-      vehicle = VehicleMapper.toPersistence(domainEntity.vehicle);
-    } else if (domainEntity.vehicle === null) {
-      vehicle = null;
-    }
+  static toPersistence(domainEntity: Partial<Ride>): Partial<RideEntity> {
+    const persistence: Partial<RideEntity> = {};
 
-    let driver: UserEntity | undefined | null = undefined;
-    if (domainEntity.driver && domainEntity.driver.id) {
-      driver = UserMapper.toPersistence(domainEntity.driver);
-    } else if (domainEntity.driver === null) {
-      driver = null;
-    }
-
-    let school: SchoolEntity | undefined | null = undefined;
-    if (domainEntity.school && domainEntity.school.id) {
-      school = SchoolMapper.toPersistence(domainEntity.school);
-    } else if (domainEntity.school === null) {
-      school = null;
-    }
-
-    let student: StudentEntity | undefined | null = undefined;
-    if (domainEntity.student && domainEntity.student.id) {
-      student = StudentMapper.toPersistence(domainEntity.student);
-    } else if (domainEntity.student === null) {
-      student = null;
-    }
-
-    let parent: UserEntity | undefined | null = undefined;
-    if (domainEntity.parent && domainEntity.parent.id) {
-      parent = UserMapper.toPersistence(domainEntity.parent);
-    } else if (domainEntity.parent === null) {
-      parent = null;
-    }
-
-    let daily_rides: DailyRideEntity[] | undefined = undefined;
-    if (domainEntity.daily_rides && Array.isArray(domainEntity.daily_rides)) {
-      daily_rides = domainEntity.daily_rides.map((dailyRide) =>
-        DailyRideMapper.toPersistence(dailyRide),
+    if (domainEntity.id !== undefined) persistence.id = domainEntity.id;
+    if (domainEntity.schedule !== undefined)
+      persistence.schedule = domainEntity.schedule;
+    if (domainEntity.comments !== undefined)
+      persistence.comments = domainEntity.comments;
+    if (domainEntity.admin_comments !== undefined)
+      persistence.admin_comments = domainEntity.admin_comments;
+    if (domainEntity.meta !== undefined) persistence.meta = domainEntity.meta;
+    if (domainEntity.status !== undefined)
+      persistence.status = domainEntity.status;
+    if (domainEntity.daily_rides !== undefined) {
+      persistence.daily_rides = domainEntity.daily_rides.map(
+        (dr) => DailyRideMapper.toPersistence(dr) as DailyRideEntity,
       );
     }
 
-    const persistenceEntity = new RideEntity();
-    if (domainEntity.id && typeof domainEntity.id === 'number') {
-      persistenceEntity.id = domainEntity.id;
-    }
-    persistenceEntity.vehicle = vehicle ?? null;
-    persistenceEntity.driver = driver ?? null;
-    persistenceEntity.school = school ?? null;
-    persistenceEntity.student = student ?? null;
-    persistenceEntity.parent = parent ?? null;
-    persistenceEntity.schedule = domainEntity.schedule;
-    persistenceEntity.comments = domainEntity.comments;
-    persistenceEntity.admin_comments = domainEntity.admin_comments;
-    persistenceEntity.meta = domainEntity.meta;
-    persistenceEntity.status = domainEntity.status;
-    persistenceEntity.daily_rides = daily_rides ?? [];
-    persistenceEntity.created_at = domainEntity.created_at;
-    persistenceEntity.updated_at = domainEntity.updated_at;
-    return persistenceEntity;
+    // relations
+    //vehicle
+    persistence.vehicle =
+      (mapRelation(domainEntity.vehicle, VehicleMapper) as VehicleEntity) ||
+      undefined;
+    //driver
+    persistence.driver =
+      (mapRelation(domainEntity.driver, UserMapper) as UserEntity) || undefined;
+    //school
+    persistence.school =
+      (mapRelation(domainEntity.school, SchoolMapper) as SchoolEntity) ||
+      undefined;
+    //student
+    persistence.student =
+      (mapRelation(domainEntity.student, StudentMapper) as StudentEntity) ||
+      undefined;
+    //parent
+    persistence.parent =
+      (mapRelation(domainEntity.parent, UserMapper) as UserEntity) || undefined;
+    return persistence;
   }
 }

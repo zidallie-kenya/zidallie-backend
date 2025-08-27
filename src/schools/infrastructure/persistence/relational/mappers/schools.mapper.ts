@@ -43,39 +43,34 @@ export class SchoolMapper {
     return domainEntity;
   }
 
-  static toPersistence(domainEntity: School): SchoolEntity {
-    let students: StudentEntity[] | undefined = undefined;
-    if (domainEntity.students) {
-      students = domainEntity.students.map((student) =>
-        StudentMapper.toPersistence(student),
+  static toPersistence(domainEntity: Partial<School>): Partial<SchoolEntity> {
+    const persistence: Partial<SchoolEntity> = {};
+
+    //simple fields
+    if (domainEntity.id !== undefined) persistence.id = domainEntity.id;
+    if (domainEntity.name !== undefined) persistence.name = domainEntity.name;
+    if (domainEntity.location !== undefined)
+      persistence.location = domainEntity.location;
+    if (domainEntity.comments !== undefined)
+      persistence.comments = domainEntity.comments;
+    if (domainEntity.url !== undefined) persistence.url = domainEntity.url;
+    if (domainEntity.meta !== undefined) persistence.meta = domainEntity.meta;
+    if (domainEntity.students !== undefined) {
+      persistence.students = domainEntity.students.map(
+        (student) => StudentMapper.toPersistence(student) as StudentEntity,
       );
     }
-
-    let rides: RideEntity[] | undefined = undefined;
-    if (domainEntity.rides) {
-      rides = domainEntity.rides.map((ride) => RideMapper.toPersistence(ride));
-    }
-
-    let onboardings: OnboardingFormEntity[] | undefined = undefined;
-    if (domainEntity.onboardings) {
-      onboardings = domainEntity.onboardings.map((onboarding) =>
-        OnboardingMapper.toPersistence(onboarding),
+    if (domainEntity.rides !== undefined) {
+      persistence.rides = domainEntity.rides.map(
+        (ride) => RideMapper.toPersistence(ride) as RideEntity,
       );
     }
-
-    const persistenceEntity = new SchoolEntity();
-    if (domainEntity.id && typeof domainEntity.id === 'number') {
-      persistenceEntity.id = domainEntity.id;
+    if (domainEntity.onboardings !== undefined) {
+      persistence.onboardings = domainEntity.onboardings.map(
+        (onboarding) =>
+          OnboardingMapper.toPersistence(onboarding) as OnboardingFormEntity,
+      );
     }
-    persistenceEntity.name = domainEntity.name;
-    persistenceEntity.location = domainEntity.location;
-    persistenceEntity.comments = domainEntity.comments;
-    persistenceEntity.url = domainEntity.url;
-    persistenceEntity.meta = domainEntity.meta;
-    persistenceEntity.students = students ?? [];
-    persistenceEntity.rides = rides ?? [];
-    persistenceEntity.onboardings = onboardings ?? [];
-    persistenceEntity.created_at = domainEntity.created_at;
-    return persistenceEntity;
+    return persistence;
   }
 }

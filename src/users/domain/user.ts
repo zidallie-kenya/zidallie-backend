@@ -1,6 +1,5 @@
 import { Exclude, Expose } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
-import { FileType } from '../../files/domain/file';
 import { Role } from '../../roles/domain/role';
 import { Status } from '../../statuses/domain/status';
 import { UserMetaDto } from '../dto/user.dto';
@@ -65,9 +64,9 @@ export class User {
   @Expose({ groups: ['me', 'admin'] })
   is_kyc_verified: boolean;
 
-  @ApiProperty({ type: () => FileType, required: false, nullable: true })
+  @ApiProperty({ type: String, example: 'agfhtjtj.jpg' })
   @Expose({ groups: ['me', 'admin'] })
-  photo?: FileType | null;
+  photo: string | null;
 
   @ApiProperty({ type: () => Role })
   @Expose({ groups: ['me', 'admin'] })

@@ -25,6 +25,9 @@ import {
 import { IPaginationOptions } from '../utils/types/pagination-options';
 import { JwtPayloadType } from '../auth/strategies/types/jwt-payload.type';
 import { MyRidesResponseDto } from './dto/response.dto';
+import { ExpoPushService } from './expopush.service';
+import { DataSource } from 'typeorm'; // Add for transactions
+import { DailyRideEntity } from './infrastructure/persistence/relational/entities/daily_ride.entity';
 
 @Injectable()
 export class DailyRidesService {
@@ -33,11 +36,19 @@ export class DailyRidesService {
     private readonly ridesService: RidesService,
     private readonly vehiclesService: VehicleService,
     private readonly usersService: UsersService,
+    private readonly expoPushService: ExpoPushService,
+    private readonly dataSource: DataSource, // Add for transactions
   ) {}
 
   // Helper method to format date
-  private formatDate(date: Date): string {
-    return new Date(date).toISOString().split('T')[0];
+  private formatDateToString(date: Date): string {
+    return date.toISOString().split('T')[0];
+  }
+
+  private getTodayDate(): Date {
+    const now = new Date();
+    // Create date at midnight to avoid timezone issues
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
   }
 
   async create(createDailyRideDto: CreateDailyRideDto): Promise<DailyRide> {
@@ -210,56 +221,102 @@ export class DailyRidesService {
     updatedRides: DailyRide[];
     driverStartTime: Date;
   }> {
-    // Get the driver from JWT token
-    const driver = await this.usersService.findById(userJwtPayload.id);
+    //the trascation ensures that either all operations succees or if fail, all changes are rolled back
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-    if (!driver) {
-      throw new NotFoundException({
-        status: HttpStatus.NOT_FOUND,
-        errors: { driver: 'Driver not found' },
-      });
-    }
+    try {
+      // Get the driver and validate
+      const driver = await this.usersService.findById(userJwtPayload.id);
 
-    if (driver.kind !== 'Driver') {
-      throw new UnprocessableEntityException({
-        status: HttpStatus.UNPROCESSABLE_ENTITY,
-        errors: { user: 'Only drivers can start their day' },
-      });
-    }
+      if (!driver) {
+        throw new NotFoundException({
+          status: HttpStatus.NOT_FOUND,
+          errors: { driver: 'Driver not found' },
+        });
+      }
 
-    const today = this.formatDate(new Date());
-    const driverStartTime = new Date();
+      if (driver.kind !== 'Driver') {
+        throw new UnprocessableEntityException({
+          status: HttpStatus.UNPROCESSABLE_ENTITY,
+          errors: { user: 'Only drivers can start their day' },
+        });
+      }
 
-    // Mark ALL today's rides for this driver as Started
-    const updatedCount =
-      await this.dailyRideRepository.updateAllTodayRidesForDriver(
-        driver.id,
-        today,
-        DailyRideStatus.Started,
+      const today = this.getTodayDate();
+      const driverStartTime = new Date();
+
+      // Use transaction for atomic updates
+      const updatedCount = await queryRunner.manager
+        .getRepository(DailyRideEntity)
+        .createQueryBuilder()
+        .update(DailyRideEntity)
+        .set({
+          status: DailyRideStatus.Started,
+          start_time: driverStartTime,
+        })
+        .where('driver.id = :driverId', { driverId: driver.id })
+        .andWhere('date = :date', { date: today })
+        .andWhere('status = :currentStatus', {
+          currentStatus: DailyRideStatus.Inactive,
+        })
+        .execute();
+
+      if (updatedCount.affected === 0) {
+        throw new UnprocessableEntityException({
+          status: HttpStatus.UNPROCESSABLE_ENTITY,
+          errors: { rides: 'No inactive rides found for today' },
+        });
+      }
+
+      // Get updated rides
+      const updatedRides =
+        await this.dailyRideRepository.findTodayRidesForDriver(
+          driver.id,
+          this.formatDateToString(today),
+        );
+
+      await queryRunner.commitTransaction();
+
+      // Send notifications after successful transaction
+      await this.sendRideStartNotifications(updatedRides, driver);
+
+      return {
+        message: `Started ${updatedCount} daily rides for today`,
+        updatedRides,
         driverStartTime,
-      );
-
-    if (updatedCount === 0) {
-      throw new UnprocessableEntityException({
-        status: HttpStatus.UNPROCESSABLE_ENTITY,
-        errors: { rides: 'No inactive rides found for today' },
-      });
+      };
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
     }
-
-    // Get all updated rides to return
-    const updatedRides = await this.dailyRideRepository.findTodayRidesForDriver(
-      driver.id,
-      today,
-    );
-
-    return {
-      message: `Started ${updatedCount} daily rides for today`,
-      updatedRides,
-      driverStartTime,
-    };
   }
 
-  // New method for when driver embarks a student (ride becomes Active)
+  private async sendRideStartNotifications(
+    rides: DailyRide[],
+    driver: any,
+  ): Promise<void> {
+    const notificationPromises = rides
+      .filter((ride) => ride.ride?.parent?.push_token)
+      .map((ride) =>
+        this.expoPushService
+          .sendPushNotification(
+            ride.ride!.parent!.push_token!,
+            'Ride Started',
+            `Your child's ride has started.`,
+            { rideId: ride.id, driverId: driver.id },
+          )
+          .catch((error) => console.log(error)),
+      );
+
+    // Send all notifications concurrently
+    await Promise.allSettled(notificationPromises);
+  }
+
+  // when driver embarks a student (ride becomes Active)
   async embarkStudent(id: DailyRide['id']): Promise<DailyRide | null> {
     const dailyRide = await this.dailyRideRepository.findById(id);
 
@@ -280,13 +337,28 @@ export class DailyRidesService {
       });
     }
 
-    return this.update(id, {
+    const updated = await this.update(id, {
       status: DailyRideStatus.Active,
       start_time: new Date().toISOString(),
     });
+
+    if (updated?.ride?.parent?.push_token && updated.ride.student?.name) {
+      try {
+        await this.expoPushService.sendPushNotification(
+          updated.ride.parent.push_token,
+          'Student Embarked',
+          `${updated.ride.student.name} has boarded the vehicle.`,
+          { rideId: updated.id },
+        );
+      } catch (error) {
+        console.log(error);
+      }
+    }
+
+    return updated;
   }
 
-  // New method for when driver disembarks a student (ride becomes Finished)
+  // when driver disembarks a student (ride becomes Finished)
   async disembarkStudent(id: DailyRide['id']): Promise<DailyRide | null> {
     const dailyRide = await this.dailyRideRepository.findById(id);
 
@@ -307,10 +379,124 @@ export class DailyRidesService {
       });
     }
 
-    return this.update(id, {
+    const updated = await this.update(id, {
       status: DailyRideStatus.Finished,
       end_time: new Date().toISOString(),
     });
+
+    if (updated?.ride?.parent?.push_token && updated.ride.student?.name) {
+      try {
+        await this.expoPushService.sendPushNotification(
+          updated.ride.parent.push_token,
+          'Student Arrived',
+          `${updated.ride.student.name} has reached the destination.`,
+          { rideId: updated.id },
+        );
+      } catch (error) {
+        console.log(error);
+      }
+    }
+
+    return updated;
+  }
+
+  async cancelDailyRide(
+    id: DailyRide['id'],
+    reason?: string,
+  ): Promise<DailyRide | null> {
+    // validate if the ride exists
+    const existingRide = await this.dailyRideRepository.findById(id);
+
+    if (!existingRide) {
+      throw new NotFoundException({
+        status: HttpStatus.NOT_FOUND,
+        errors: { dailyRide: 'Daily ride not found' },
+      });
+    }
+
+    // Check if ride can be cancelled
+    if (existingRide.status === DailyRideStatus.Finished) {
+      throw new UnprocessableEntityException({
+        status: HttpStatus.UNPROCESSABLE_ENTITY,
+        errors: {
+          status: 'Cannot cancel a ride that is already finished',
+        },
+      });
+    }
+
+    // Update the ride status
+    let updated: DailyRide | null;
+    try {
+      updated = await this.update(id, {
+        status: DailyRideStatus.Finished,
+        comments: reason ?? 'Cancelled',
+      });
+
+      if (!updated) {
+        throw new Error('Update operation returned null');
+      }
+    } catch (error) {
+      console.log(error);
+      throw new UnprocessableEntityException({
+        status: HttpStatus.UNPROCESSABLE_ENTITY,
+        errors: {
+          cancellation: 'Failed to cancel ride. Please try again.',
+        },
+      });
+    }
+
+    // send notifications
+    const notificationPromises: Promise<void>[] = [];
+
+    if (updated.ride?.parent?.push_token) {
+      const parentNotification = this.expoPushService.sendPushNotification(
+        updated.ride.parent.push_token,
+        'Ride Cancelled',
+        `Your child's ride was cancelled. Reason: ${reason ?? 'Not specified'}`,
+        { rideId: updated.id, type: 'cancellation' },
+      );
+
+      notificationPromises.push(parentNotification);
+    }
+
+    if (updated.ride?.driver?.push_token) {
+      const studentName = updated.ride?.student?.name ?? 'Student';
+      const driverNotification = this.expoPushService.sendPushNotification(
+        updated.ride.driver.push_token,
+        'Ride Cancelled',
+        `${studentName}'s ride was cancelled. Reason: ${reason ?? 'Not specified'}`,
+        { rideId: updated.id, type: 'cancellation' },
+      );
+
+      notificationPromises.push(driverNotification);
+    }
+
+    if (notificationPromises.length > 0) {
+      Promise.allSettled(notificationPromises)
+        .then((results) => {
+          const failures = results.filter(
+            (result): result is PromiseRejectedResult =>
+              result.status === 'rejected',
+          ).length;
+
+          if (failures > 0) {
+            console.log(
+              `${failures} out of ${results.length} notifications failed for cancelled ride ${id}`,
+            );
+          } else {
+            console.log(
+              `All notifications sent successfully for cancelled ride ${id}`,
+            );
+          }
+        })
+        .catch((error) => {
+          console.log(
+            `Unexpected error in notification handling for ride ${id}:`,
+            error,
+          );
+        });
+    }
+    return updated;
   }
 
   async update(
@@ -435,21 +621,50 @@ export class DailyRidesService {
     return this.findByDateRange(startDate, endDate);
   }
 
+  async findUpcomingDailyRidesForUser(
+    daysAhead: number = 7,
+    userJwtPayload: JwtPayloadType,
+  ): Promise<DailyRide[]> {
+    //only get inactive status
+    const status = DailyRideStatus.Inactive;
+
+    // Get full user details
+    const user = await this.usersService.findById(userJwtPayload.id);
+    if (!user) {
+      throw new NotFoundException({
+        status: HttpStatus.NOT_FOUND,
+        errors: { user: 'User not found' },
+      });
+    }
+
+    const today = new Date();
+    const endDate = new Date();
+    endDate.setDate(today.getDate() + daysAhead);
+
+    if (user.kind === 'Driver') {
+      return this.dailyRideRepository.findUpcomingRidesForDriver(
+        user.id,
+        today,
+        endDate,
+        status,
+      );
+    } else if (user.kind === 'Parent') {
+      return this.dailyRideRepository.findUpcomingRidesForParent(
+        user.id,
+        today,
+        endDate,
+        status,
+      );
+    } else {
+      return [];
+    }
+  }
+
   findDailyRidesByStatus(status: DailyRideStatus): Promise<DailyRide[]> {
     return this.findManyWithPagination({
       filterOptions: { status },
       sortOptions: [{ orderBy: 'date', order: 'ASC' }],
-      paginationOptions: { page: 1, limit: 1000 }, // Large limit to get all
-    });
-  }
-
-  async cancelDailyRide(
-    id: DailyRide['id'],
-    reason?: string,
-  ): Promise<DailyRide | null> {
-    return this.update(id, {
-      status: DailyRideStatus.Finished,
-      comments: reason ?? 'Cancelled',
+      paginationOptions: { page: 1, limit: 1000 },
     });
   }
 

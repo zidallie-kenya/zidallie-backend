@@ -8,25 +8,21 @@ import { UserMapper } from '../../../../../users/infrastructure/persistence/rela
 import { RideEntity } from '../../../../../rides/infrastructure/persistence/relational/entities/ride.entity';
 import { VehicleEntity } from '../../../../../vehicles/infrastructure/persistence/relational/entities/vehicle.entity';
 import { UserEntity } from '../../../../../users/infrastructure/persistence/relational/entities/user.entity';
-import {
-  DailyRideKind,
-  DailyRideStatus,
-} from '../../../../../utils/types/enums';
+import { mapRelation } from '../../../../../utils/relation.mapper';
 
 export class DailyRideMapper {
+  // converts the newly created entity to a domain
   static toDomain(raw: DailyRideEntity): DailyRide {
+    //create a new domain instance
     const domainEntity = new DailyRide();
+
+    //add the fields from the new created entity
     domainEntity.id = raw.id;
     domainEntity.ride = raw.ride ? RideMapper.toDomain(raw.ride) : null;
     domainEntity.vehicle = raw.vehicle
       ? VehicleMapper.toDomain(raw.vehicle)
       : null;
-
-    if (raw.driver) {
-      domainEntity.driver = UserMapper.toDomain(raw.driver);
-    } else {
-      domainEntity.driver = null;
-    }
+    domainEntity.driver = raw.driver ? UserMapper.toDomain(raw.driver) : null;
 
     domainEntity.kind = raw.kind;
     domainEntity.date = raw.date;
@@ -49,53 +45,44 @@ export class DailyRideMapper {
     return domainEntity;
   }
 
-  static toPersistence(domainEntity: Partial<DailyRide>): DailyRideEntity {
-    let ride: RideEntity | undefined = undefined;
+  static toPersistence(
+    domainEntity: Partial<DailyRide>,
+  ): Partial<DailyRideEntity> {
+    const persistence: Partial<DailyRideEntity> = {};
 
-    if (domainEntity.ride) {
-      ride = RideMapper.toPersistence(domainEntity.ride);
-    }
+    //simple fields
+    if (domainEntity.id !== undefined) persistence.id = domainEntity.id;
+    if (domainEntity.kind !== undefined) persistence.kind = domainEntity.kind;
+    if (domainEntity.date !== undefined) persistence.date = domainEntity.date;
+    if (domainEntity.start_time !== undefined)
+      persistence.start_time = domainEntity.start_time;
+    if (domainEntity.end_time !== undefined)
+      persistence.end_time = domainEntity.end_time;
+    if (domainEntity.comments !== undefined)
+      persistence.comments = domainEntity.comments;
+    if (domainEntity.meta !== undefined) persistence.meta = domainEntity.meta;
+    if (domainEntity.status !== undefined)
+      persistence.status = domainEntity.status;
 
-    let vehicle: VehicleEntity | undefined = undefined;
-    if (domainEntity.vehicle) {
-      vehicle = VehicleMapper.toPersistence(domainEntity.vehicle);
-    }
+    //relations
 
-    let driver: UserEntity | undefined | null = undefined;
-    if (domainEntity.driver) {
-      driver = UserMapper.toPersistence(domainEntity.driver);
-    } else if (domainEntity.driver === null) {
-      driver = null;
-    }
-
-    let locations: LocationEntity[] | undefined = undefined;
-    if (domainEntity.locations && domainEntity.locations.length > 0) {
-      locations = domainEntity.locations.map((location) =>
+    //ride
+    persistence.ride =
+      (mapRelation(domainEntity.ride, RideMapper) as RideEntity) || undefined;
+    //vehicle
+    persistence.vehicle =
+      (mapRelation(domainEntity.vehicle, VehicleMapper) as VehicleEntity) ||
+      undefined;
+    //driver
+    persistence.driver =
+      (mapRelation(domainEntity.driver, UserMapper) as UserEntity) || undefined;
+    //locations
+    if (domainEntity.locations !== undefined) {
+      persistence.locations = domainEntity.locations.map((location) =>
         LocationMapper.toPersistence(location),
-      );
+      ) as LocationEntity[];
     }
 
-    const persistenceEntity = new DailyRideEntity();
-
-    if (domainEntity.id && typeof domainEntity.id === 'number') {
-      persistenceEntity.id = domainEntity.id;
-    }
-    if (ride) {
-      persistenceEntity.ride = ride;
-    }
-
-    if (vehicle) {
-      persistenceEntity.vehicle = vehicle;
-    }
-    persistenceEntity.driver = driver ?? null;
-    persistenceEntity.kind = domainEntity.kind ?? DailyRideKind.Pickup; // Default to Pickup if undefined
-    persistenceEntity.date = domainEntity.date ?? new Date(); // Default to current date
-    persistenceEntity.start_time = domainEntity.start_time ?? null;
-    persistenceEntity.end_time = domainEntity.end_time ?? null;
-    persistenceEntity.comments = domainEntity.comments ?? null;
-    persistenceEntity.meta = domainEntity.meta ?? null;
-    persistenceEntity.status = domainEntity.status ?? DailyRideStatus.Inactive; // Default to Inactive
-    persistenceEntity.locations = locations ?? [];
-    return persistenceEntity;
+    return persistence;
   }
 }

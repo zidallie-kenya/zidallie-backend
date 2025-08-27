@@ -4,6 +4,7 @@ import { UserEntity } from '../../../../../users/infrastructure/persistence/rela
 import { UserMapper } from '../../../../../users/infrastructure/persistence/relational/mappers/user.mapper';
 import { LocationEntity } from '../entities/location.entity';
 import { Location } from '../../../../domain/location';
+import { mapRelation } from '../../../../../utils/relation.mapper';
 
 export class LocationMapper {
   static toDomain(raw: LocationEntity): Location {
@@ -18,31 +19,31 @@ export class LocationMapper {
     return domainEntity;
   }
 
-  static toPersistence(domainEntity: Location): LocationEntity {
-    let daily_ride: DailyRideEntity | undefined = undefined;
-    if (domainEntity.daily_ride) {
-      daily_ride = DailyRideMapper.toPersistence(domainEntity.daily_ride);
-    }
+  static toPersistence(domainEntity: Location): Partial<LocationEntity> {
+    const persistence: Partial<LocationEntity> = {};
 
-    let driver: UserEntity | undefined = undefined;
-    if (domainEntity.driver) {
-      driver = UserMapper.toPersistence(domainEntity.driver);
-    }
+    //simple fields
+    if (domainEntity.id !== undefined) persistence.id = domainEntity.id;
+    if (domainEntity.latitude !== undefined)
+      persistence.latitude = domainEntity.latitude;
+    if (domainEntity.longitude !== undefined)
+      persistence.longitude = domainEntity.longitude;
+    if (domainEntity.timestamp !== undefined)
+      persistence.timestamp = domainEntity.timestamp;
 
-    const persistenceEntity = new LocationEntity();
-    if (domainEntity.id && typeof domainEntity.id === 'number') {
-      persistenceEntity.id = domainEntity.id;
-    }
-    if (daily_ride) {
-      persistenceEntity.daily_ride = daily_ride;
-    }
-    if (driver) {
-      persistenceEntity.driver = driver;
-    }
-    persistenceEntity.latitude = domainEntity.latitude;
-    persistenceEntity.longitude = domainEntity.longitude;
-    persistenceEntity.timestamp = domainEntity.timestamp;
-    persistenceEntity.created_at = domainEntity.created_at;
-    return persistenceEntity;
+    // relations
+
+    //daily_ride
+    persistence.daily_ride =
+      (mapRelation(
+        domainEntity.daily_ride,
+        DailyRideMapper,
+      ) as DailyRideEntity) || undefined;
+
+    //driver
+    persistence.driver =
+      (mapRelation(domainEntity.driver, UserMapper) as UserEntity) || undefined;
+
+    return persistence;
   }
 }

@@ -10,21 +10,16 @@ import { UserRepository } from './infrastructure/persistence/user.repository';
 import { User } from './domain/user';
 import bcrypt from 'bcryptjs';
 import { AuthProvidersEnum } from '../auth/auth-providers.enum';
-import { FilesService } from '../files/files.service';
 import { RoleEnum } from '../roles/roles.enum';
 import { StatusEnum } from '../statuses/statuses.enum';
 import { IPaginationOptions } from '../utils/types/pagination-options';
-import { FileType } from '../files/domain/file';
 import { Role } from '../roles/domain/role';
 import { Status } from '../statuses/domain/status';
 import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class UsersService {
-  constructor(
-    private readonly usersRepository: UserRepository,
-    private readonly filesService: FilesService,
-  ) {}
+  constructor(private readonly usersRepository: UserRepository) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
     // Do not remove comment below.
@@ -53,23 +48,6 @@ export class UsersService {
         });
       }
       email = createUserDto.email;
-    }
-
-    let photo: FileType | null | undefined = undefined;
-
-    if (createUserDto.photo?.id) {
-      const file = await this.filesService.findById(createUserDto.photo.id);
-      if (!file) {
-        throw new UnprocessableEntityException({
-          status: HttpStatus.UNPROCESSABLE_ENTITY,
-          errors: {
-            photo: 'the image does not exist',
-          },
-        });
-      }
-      photo = file;
-    } else if (createUserDto.photo === null) {
-      photo = null;
     }
 
     let role: Role | undefined = undefined;
@@ -139,7 +117,7 @@ export class UsersService {
       password,
       provider: createUserDto.provider ?? AuthProvidersEnum.email,
       socialId: createUserDto.socialId,
-      photo,
+      photo: createUserDto.photo ?? null,
       role,
       status,
     });
@@ -233,23 +211,6 @@ export class UsersService {
       email = null;
     }
 
-    let photo: FileType | null | undefined = undefined;
-
-    if (updateUserDto.photo?.id) {
-      const file = await this.filesService.findById(updateUserDto.photo.id);
-      if (!file) {
-        throw new UnprocessableEntityException({
-          status: HttpStatus.UNPROCESSABLE_ENTITY,
-          errors: {
-            photo: 'This image does not exist',
-          },
-        });
-      }
-      photo = file;
-    } else if (updateUserDto.photo === null) {
-      photo = null;
-    }
-
     let role: Role | undefined = undefined;
 
     if (updateUserDto.role?.id) {
@@ -304,7 +265,7 @@ export class UsersService {
       provider: updateUserDto.provider,
       socialId: updateUserDto.socialId,
       name: `${updateUserDto.firstName ?? ''} ${updateUserDto.lastName ?? ''}`.trim(), // required
-      photo,
+      photo: updateUserDto.photo,
       role,
       status,
     });

@@ -1,5 +1,3 @@
-import { FileEntity } from '../../../../../files/infrastructure/persistence/relational/entities/file.entity';
-import { FileMapper } from '../../../../../files/infrastructure/persistence/relational/mappers/file.mapper';
 import { RoleEntity } from '../../../../../roles/infrastructure/persistence/relational/entities/role.entity';
 import { StatusEntity } from '../../../../../statuses/infrastructure/persistence/relational/entities/status.entity';
 import { User } from '../../../../domain/user';
@@ -22,10 +20,7 @@ export class UserMapper {
     domainEntity.meta = raw.meta;
     domainEntity.wallet_balance = raw.wallet_balance;
     domainEntity.is_kyc_verified = raw.is_kyc_verified;
-
-    if (raw.photo) {
-      domainEntity.photo = FileMapper.toDomain(raw.photo);
-    }
+    domainEntity.photo = raw.photo;
     domainEntity.role = raw.role;
     domainEntity.status = raw.status;
     domainEntity.created_at = raw.created_at;
@@ -34,54 +29,48 @@ export class UserMapper {
     return domainEntity;
   }
 
-  static toPersistence(domainEntity: User): UserEntity {
-    let role: RoleEntity | undefined = undefined;
+  static toPersistence(domainEntity: Partial<User>): Partial<UserEntity> {
+    const persistence: Partial<UserEntity> = {};
 
-    if (domainEntity.role) {
-      role = new RoleEntity();
+    if (domainEntity.id !== undefined) persistence.id = domainEntity.id;
+    if (domainEntity.photo !== undefined)
+      persistence.photo = domainEntity.photo;
+
+    if (domainEntity.role !== undefined && domainEntity.role !== null) {
+      const role = new RoleEntity();
       role.id = Number(domainEntity.role.id);
+      persistence.role = role;
     }
 
-    let photo: FileEntity | undefined | null = undefined;
-
-    if (domainEntity.photo) {
-      photo = new FileEntity();
-      photo.id = domainEntity.photo.id;
-      photo.path = domainEntity.photo.path;
-    } else if (domainEntity.photo === null) {
-      photo = null;
-    }
-
-    let status: StatusEntity | undefined = undefined;
-
-    if (domainEntity.status) {
-      status = new StatusEntity();
+    if (domainEntity.status !== undefined && domainEntity.status !== null) {
+      const status = new StatusEntity();
       status.id = Number(domainEntity.status.id);
     }
 
-    const persistenceEntity = new UserEntity();
-    if (domainEntity.id && typeof domainEntity.id === 'number') {
-      persistenceEntity.id = domainEntity.id;
-    }
-    persistenceEntity.email = domainEntity.email;
-    persistenceEntity.password = domainEntity.password;
-    persistenceEntity.provider = domainEntity.provider;
-    persistenceEntity.socialId = domainEntity.socialId;
-    persistenceEntity.firstName = domainEntity.firstName;
-    persistenceEntity.lastName = domainEntity.lastName;
-    persistenceEntity.photo = photo;
-    persistenceEntity.role = role;
-    persistenceEntity.status = status;
-    persistenceEntity.name = domainEntity.name;
-    persistenceEntity.phone_number = domainEntity.phone_number;
-    persistenceEntity.push_token = domainEntity.push_token;
-    persistenceEntity.kind = domainEntity.kind;
-    persistenceEntity.meta = domainEntity.meta;
-    persistenceEntity.wallet_balance = domainEntity.wallet_balance;
-    persistenceEntity.is_kyc_verified = domainEntity.is_kyc_verified;
-    persistenceEntity.created_at = domainEntity.created_at;
-    persistenceEntity.updated_at = domainEntity.updated_at;
-    persistenceEntity.deleted_at = domainEntity.deleted_at;
-    return persistenceEntity;
+    if (domainEntity.email !== undefined)
+      persistence.email = domainEntity.email;
+    if (domainEntity.password != undefined)
+      persistence.password = domainEntity.password;
+    if (domainEntity.provider !== undefined)
+      persistence.provider = domainEntity.provider;
+    if (domainEntity.socialId !== undefined)
+      persistence.socialId = domainEntity.socialId;
+    if (domainEntity.firstName !== undefined)
+      persistence.firstName = domainEntity.firstName;
+    if (domainEntity.lastName !== undefined)
+      persistence.lastName = domainEntity.lastName;
+    if (domainEntity.name !== undefined) persistence.name = domainEntity.name;
+    if (domainEntity.phone_number !== undefined)
+      persistence.phone_number = domainEntity.phone_number;
+    if (domainEntity.push_token !== undefined)
+      persistence.push_token = domainEntity.push_token;
+    if (domainEntity.kind !== undefined) persistence.kind = domainEntity.kind;
+    if (domainEntity.meta !== undefined) persistence.meta = domainEntity.meta;
+    if (domainEntity.wallet_balance !== undefined)
+      persistence.wallet_balance = domainEntity.wallet_balance;
+    if (domainEntity.is_kyc_verified !== undefined)
+      persistence.is_kyc_verified = domainEntity.is_kyc_verified;
+
+    return persistence;
   }
 }

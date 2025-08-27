@@ -12,7 +12,6 @@ import {
   ValidateNested,
   Min,
 } from 'class-validator';
-import { FileDto } from '../../files/dto/file.dto';
 import { RoleDto } from '../../roles/dto/role.dto';
 import { StatusDto } from '../../statuses/dto/status.dto';
 import { lowerCaseTransformer } from '../../utils/transformers/lower-case.transformer';
@@ -82,9 +81,9 @@ export class CreateUserDto {
   @IsBoolean()
   is_kyc_verified?: boolean;
 
-  @ApiPropertyOptional({ type: () => FileDto })
+  @ApiPropertyOptional({ type: String, example: '1234567890.jpg' })
   @IsOptional()
-  photo?: FileDto | null;
+  photo?: string | null;
 
   @ApiPropertyOptional({ type: () => RoleDto })
   @IsOptional()

@@ -66,7 +66,7 @@ export class DailyRidesController {
     return this.dailyRidesService.create(createDailyRideDto);
   }
 
-  //returns all the upcoming dailys
+  //returns all the upcoming daily rides => dashboard
   @SerializeOptions({
     groups: ['admin'],
   })
@@ -82,6 +82,29 @@ export class DailyRidesController {
     @Query('days', new DefaultValuePipe(7), ParseIntPipe) days: number,
   ): Promise<DailyRide[]> {
     return this.dailyRidesService.findUpcomingDailyRides(days);
+  }
+
+  //return all upcoming rides for user
+  @SerializeOptions({
+    groups: ['admin'],
+  })
+  @Get('user/upcoming')
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
+  @HttpCode(HttpStatus.OK)
+  @ApiQuery({
+    name: 'days',
+    required: false,
+    description: 'Number of days ahead to fetch (default: 7)',
+  })
+  findUpcomingRidesForUser(
+    @Query('days', new DefaultValuePipe(7), ParseIntPipe) days: number,
+    @Req() req: any,
+  ): Promise<DailyRide[]> {
+    const userJwtPayload: JwtPayloadType = req.user;
+    return this.dailyRidesService.findUpcomingDailyRidesForUser(
+      days,
+      userJwtPayload,
+    );
   }
 
   // returns daily-rides by status

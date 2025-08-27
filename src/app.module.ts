@@ -28,15 +28,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { OnboardingModule } from './onboarding/onboarding.module';
 import brevoConfig from './mail/config/brevo.config';
 
-//Tracking Modules
-// import { RedisPubSubService } from './redis/redis.service';
-// import { RedisModule } from '@nestjs-modules/ioredis';
-// import { DriverGateway } from './gateways/driver.gateway';
-// import { ParentGateway } from './gateways/parent.gateway';
-// import { AdminGateway } from './gateways/admin.gateway';
 import { LocationModule } from './location/location.module';
-// import { EventEmitterModule } from '@nestjs/event-emitter';
-// import { AppConfigModule } from './config/appconfig.module';
 
 const infrastructureDatabaseModule = TypeOrmModule.forRootAsync({
   useClass: TypeOrmConfigService,
@@ -76,31 +68,6 @@ const infrastructureDatabaseModule = TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
     }),
-    // EventEmitterModule.forRoot(),
-    // RedisModule.forRootAsync({
-    //   imports: [ConfigModule],
-    //   inject: [ConfigService],
-    //   useFactory: (config: ConfigService) => ({
-    //     type: 'single',
-    //     options: {
-    //       host: config.get<string>('REDIS_HOST'),
-    //       port: config.get<number>('REDIS_PORT'),
-    //       password: config.get<string>('REDIS_PASSWORD'),
-    //       maxRetriesPerRequest: null,
-    //       enableReadyCheck: true,
-    //       keepAlive: 5000, // TCP keep-alive interval (ms)
-    //       reconnectOnError: (err) => {
-    //         console.error('🔁 Reconnecting due to error:', err);
-    //         return true; // always reconnect
-    //       },
-    //       retryStrategy: (times) => {
-    //         const delay = Math.min(times * 500, 5000);
-    //         console.log(`🔁 Retry attempt #${times}, waiting ${delay}ms`);
-    //         return delay;
-    //       },
-    //     },
-    //   }),
-    // }),
 
     UsersModule,
     FilesModule,
@@ -119,15 +86,6 @@ const infrastructureDatabaseModule = TypeOrmModule.forRootAsync({
     NotificationsModule,
     OnboardingModule,
     LocationModule,
-    // RedisModule,
-    // AppConfigModule,
-  ],
-  providers: [
-    // 🚀 Tracking providers
-    // DriverGateway,
-    // ParentGateway,
-    // AdminGateway,
-    // RedisPubSubService,
   ],
 })
 export class AppModule {}

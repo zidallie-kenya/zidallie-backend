@@ -6,6 +6,7 @@ import { RidesModule } from '../rides/rides.module';
 import { UsersModule } from '../users/users.module';
 import { VehicleModule } from '../vehicles/vehicles.module';
 import { RelationalDailyRidePersistenceModule } from './infrastructure/persistence/relational/relational-persistence.module';
+import { ExpoPushService } from './expopush.service';
 
 @Module({
   imports: [
@@ -15,7 +16,7 @@ import { RelationalDailyRidePersistenceModule } from './infrastructure/persisten
     UsersModule,
   ],
   controllers: [DailyRidesController],
-  providers: [DailyRidesService],
+  providers: [DailyRidesService, ExpoPushService],
   exports: [DailyRidesService],
 })
 export class DailyRidesModule {}

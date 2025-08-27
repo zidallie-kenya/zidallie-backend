@@ -2,7 +2,8 @@ import { Notification } from '../../../../domain/notification';
 import { NotificationEntity } from '../entities/notification.entity';
 import { UserMapper } from '../../../../../users/infrastructure/persistence/relational/mappers/user.mapper';
 import { DeepPartial } from '../../../../../utils/types/deep-partial.type';
-import { User } from '../../../../../users/domain/user';
+import { mapRelation } from '../../../../../utils/relation.mapper';
+import { UserEntity } from '../../../../../users/infrastructure/persistence/relational/entities/user.entity';
 
 export class NotificationMapper {
   static toDomain(raw: NotificationEntity): Notification {
@@ -23,54 +24,49 @@ export class NotificationMapper {
 
   static toPersistence(
     domainEntity: DeepPartial<Notification>,
-  ): NotificationEntity {
-    const persistenceEntity = new NotificationEntity();
+  ): Partial<NotificationEntity> {
+    const persistence: Partial<NotificationEntity> = {};
 
     if (domainEntity.id !== undefined) {
-      persistenceEntity.id = domainEntity.id;
+      persistence.id = domainEntity.id;
     }
 
-    if (domainEntity.user?.id !== undefined) {
-      persistenceEntity.user = UserMapper.toPersistence(
-        domainEntity.user as User,
-      );
+    if (domainEntity.sender !== undefined) {
+      persistence.sender = domainEntity.sender;
     }
 
-    if (domainEntity.sender) {
-      persistenceEntity.sender = domainEntity.sender;
-    }
-
-    if (domainEntity.receiver) {
-      persistenceEntity.receiver = domainEntity.receiver;
+    if (domainEntity.receiver !== undefined) {
+      persistence.receiver = domainEntity.receiver;
     }
     if (domainEntity.title !== undefined) {
-      persistenceEntity.title = domainEntity.title;
+      persistence.title = domainEntity.title;
     }
 
     if (domainEntity.message !== undefined) {
-      persistenceEntity.message = domainEntity.message;
+      persistence.message = domainEntity.message;
     }
 
     if (domainEntity.meta !== undefined) {
-      persistenceEntity.meta = domainEntity.meta;
+      persistence.meta = domainEntity.meta;
     }
 
     if (domainEntity.is_read !== undefined) {
-      persistenceEntity.is_read = domainEntity.is_read;
+      persistence.is_read = domainEntity.is_read;
     }
 
     if (domainEntity.kind !== undefined) {
-      persistenceEntity.kind = domainEntity.kind;
+      persistence.kind = domainEntity.kind;
     }
 
     if (domainEntity.section !== undefined) {
-      persistenceEntity.section = domainEntity.section;
+      persistence.section = domainEntity.section;
     }
 
-    if (domainEntity.created_at instanceof Date) {
-      persistenceEntity.created_at = domainEntity.created_at;
+    if (domainEntity.user !== undefined) {
+      persistence.user =
+        (mapRelation(domainEntity.user, UserMapper) as UserEntity) || undefined;
     }
 
-    return persistenceEntity;
+    return persistence;
   }
 }

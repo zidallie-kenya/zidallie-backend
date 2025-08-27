@@ -4,6 +4,7 @@ import { RideEntity } from '../../../../../rides/infrastructure/persistence/rela
 import { RideMapper } from '../../../../../rides/infrastructure/persistence/relational/mappers/ride.mapper';
 import { UserEntity } from '../../../../../users/infrastructure/persistence/relational/entities/user.entity';
 import { UserMapper } from '../../../../../users/infrastructure/persistence/relational/mappers/user.mapper';
+import { mapRelation } from '../../../../../utils/relation.mapper';
 import { Vehicle } from '../../../../domain/vehicles';
 import { VehicleEntity } from '../entities/vehicle.entity';
 
@@ -59,51 +60,71 @@ export class VehicleMapper {
     return domainEntity;
   }
 
-  static toPersistence(domainEntity: Vehicle): VehicleEntity {
-    let user: UserEntity | undefined | null = undefined;
-    if (domainEntity.user) {
-      user = UserMapper.toPersistence(domainEntity.user);
-    } else if (domainEntity.user === null) {
-      user = null;
-    }
+  static toPersistence(domainEntity: Partial<Vehicle>): Partial<VehicleEntity> {
+    const persistence: Partial<VehicleEntity> = {};
 
-    let rides: RideEntity[] | undefined = undefined;
-    if (domainEntity.rides) {
-      rides = domainEntity.rides.map((ride) => RideMapper.toPersistence(ride));
-    }
+    if (domainEntity.id !== undefined) persistence.id = domainEntity.id;
+    if (domainEntity.vehicle_name !== undefined)
+      persistence.vehicle_name = domainEntity.vehicle_name;
+    if (domainEntity.registration_number !== undefined)
+      persistence.registration_number = domainEntity.registration_number;
 
-    let daily_rides: DailyRideEntity[] | undefined = undefined;
-    if (domainEntity.daily_rides) {
-      daily_rides = domainEntity.daily_rides.map((dailyRide) =>
-        DailyRideMapper.toPersistence(dailyRide),
+    if (domainEntity.vehicle_type !== undefined)
+      persistence.vehicle_type = domainEntity.vehicle_type;
+
+    if (domainEntity.vehicle_model !== undefined)
+      persistence.vehicle_model = domainEntity.vehicle_model;
+
+    if (domainEntity.vehicle_year !== undefined)
+      persistence.vehicle_year = domainEntity.vehicle_year;
+
+    if (domainEntity.vehicle_image_url !== undefined)
+      persistence.vehicle_image_url = domainEntity.vehicle_image_url;
+
+    if (domainEntity.seat_count !== undefined)
+      persistence.seat_count = domainEntity.seat_count;
+
+    if (domainEntity.available_seats !== undefined)
+      persistence.available_seats = domainEntity.available_seats;
+
+    if (domainEntity.is_inspected !== undefined)
+      persistence.is_inspected = domainEntity.is_inspected;
+
+    if (domainEntity.comments !== undefined)
+      persistence.comments = domainEntity.comments;
+
+    if (domainEntity.meta !== undefined) persistence.meta = domainEntity.meta;
+
+    if (domainEntity.vehicle_registration !== undefined)
+      persistence.vehicle_registration = domainEntity.vehicle_registration;
+
+    if (domainEntity.insurance_certificate !== undefined)
+      persistence.insurance_certificate = domainEntity.insurance_certificate;
+
+    if (domainEntity.vehicle_data !== undefined)
+      persistence.vehicle_data = domainEntity.vehicle_data;
+
+    if (domainEntity.status !== undefined)
+      persistence.status = domainEntity.status;
+
+    //arrays
+    if (domainEntity.rides !== undefined) {
+      persistence.rides = domainEntity.rides.map(
+        (ride) => RideMapper.toPersistence(ride) as RideEntity,
+      );
+    }
+    if (domainEntity.daily_rides !== undefined) {
+      persistence.daily_rides = domainEntity.daily_rides.map(
+        (dailyRide) =>
+          DailyRideMapper.toPersistence(dailyRide) as DailyRideEntity,
       );
     }
 
-    const persistenceEntity = new VehicleEntity();
-    if (domainEntity.id && typeof domainEntity.id === 'number') {
-      persistenceEntity.id = domainEntity.id;
-    }
-    persistenceEntity.user = user === undefined ? null : user;
-    persistenceEntity.vehicle_name = domainEntity.vehicle_name;
-    persistenceEntity.registration_number = domainEntity.registration_number;
-    persistenceEntity.vehicle_type = domainEntity.vehicle_type;
-    persistenceEntity.vehicle_model = domainEntity.vehicle_model;
-    persistenceEntity.vehicle_year = domainEntity.vehicle_year;
-    persistenceEntity.vehicle_image_url = domainEntity.vehicle_image_url;
-    persistenceEntity.seat_count = domainEntity.seat_count;
-    persistenceEntity.available_seats = domainEntity.available_seats;
-    persistenceEntity.is_inspected = domainEntity.is_inspected;
-    persistenceEntity.comments = domainEntity.comments;
-    persistenceEntity.meta = domainEntity.meta;
-    persistenceEntity.vehicle_registration = domainEntity.vehicle_registration;
-    persistenceEntity.insurance_certificate =
-      domainEntity.insurance_certificate;
-    persistenceEntity.vehicle_data = domainEntity.vehicle_data;
-    persistenceEntity.status = domainEntity.status;
-    persistenceEntity.rides = rides ?? [];
-    persistenceEntity.daily_rides = daily_rides ?? [];
-    persistenceEntity.created_at = domainEntity.created_at;
-    persistenceEntity.updated_at = domainEntity.updated_at;
-    return persistenceEntity;
+    //relations
+    //user
+    persistence.user =
+      (mapRelation(domainEntity.user, UserMapper) as UserEntity) || undefined;
+
+    return persistence;
   }
 }

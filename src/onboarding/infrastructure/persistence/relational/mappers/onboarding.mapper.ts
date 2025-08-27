@@ -1,5 +1,6 @@
 import { SchoolEntity } from '../../../../../schools/infrastructure/persistence/relational/entities/school.entity';
 import { SchoolMapper } from '../../../../../schools/infrastructure/persistence/relational/mappers/schools.mapper';
+import { mapRelation } from '../../../../../utils/relation.mapper';
 import { Onboarding } from '../../../../domain/onboarding';
 import { OnboardingFormEntity } from '../entities/onboarding.entity';
 
@@ -24,32 +25,42 @@ export class OnboardingMapper {
     return domainEntity;
   }
 
-  static toPersistence(domainEntity: Onboarding): OnboardingFormEntity {
-    let school: SchoolEntity | undefined = undefined;
-    if (domainEntity.school) {
-      school = SchoolMapper.toPersistence(domainEntity.school);
-    }
+  static toPersistence(
+    domainEntity: Partial<Onboarding>,
+  ): Partial<OnboardingFormEntity> {
+    const persistence: Partial<OnboardingFormEntity> = {};
 
-    const persistenceEntity = new OnboardingFormEntity();
-    if (domainEntity.id && typeof domainEntity.id === 'number') {
-      persistenceEntity.id = domainEntity.id;
-    }
-    persistenceEntity.parent_name = domainEntity.parent_name;
-    persistenceEntity.parent_email = domainEntity.parent_email;
-    persistenceEntity.parent_phone = domainEntity.parent_phone;
-    persistenceEntity.address = domainEntity.address;
-    persistenceEntity.student_name = domainEntity.student_name;
-    persistenceEntity.student_gender = domainEntity.student_gender;
-    if (school) {
-      persistenceEntity.school = school;
-    }
-    persistenceEntity.ride_type = domainEntity.ride_type;
-    persistenceEntity.pickup = domainEntity.pickup;
-    persistenceEntity.dropoff = domainEntity.dropoff;
-    persistenceEntity.start_date = domainEntity.start_date;
-    persistenceEntity.mid_term = domainEntity.mid_term;
-    persistenceEntity.end_date = domainEntity.end_date;
-    persistenceEntity.created_at = domainEntity.created_at;
-    return persistenceEntity;
+    if (domainEntity.id !== undefined) persistence.id = domainEntity.id;
+    if (domainEntity.parent_name !== undefined)
+      persistence.parent_name = domainEntity.parent_name;
+    if (domainEntity.parent_email !== undefined)
+      persistence.parent_email = domainEntity.parent_email;
+    if (domainEntity.parent_phone !== undefined)
+      persistence.parent_phone = domainEntity.parent_phone;
+    if (domainEntity.address !== undefined)
+      persistence.address = domainEntity.address;
+    if (domainEntity.student_name !== undefined)
+      persistence.student_name = domainEntity.student_name;
+    if (domainEntity.student_gender !== undefined)
+      persistence.student_gender = domainEntity.student_gender;
+    if (domainEntity.ride_type !== undefined)
+      persistence.ride_type = domainEntity.ride_type;
+    if (domainEntity.pickup !== undefined)
+      persistence.pickup = domainEntity.pickup;
+    if (domainEntity.dropoff !== undefined)
+      persistence.dropoff = domainEntity.dropoff;
+    if (domainEntity.start_date !== undefined)
+      persistence.start_date = domainEntity.start_date;
+    if (domainEntity.mid_term !== undefined)
+      persistence.mid_term = domainEntity.mid_term;
+    if (domainEntity.end_date !== undefined)
+      persistence.mid_term = domainEntity.end_date;
+
+    //relations
+    persistence.school = mapRelation(
+      domainEntity.school,
+      SchoolMapper,
+    ) as SchoolEntity;
+    return persistence;
   }
 }

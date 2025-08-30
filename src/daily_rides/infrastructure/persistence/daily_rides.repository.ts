@@ -162,10 +162,20 @@ export abstract class DailyRideRepository {
    * @param status - Optional DailyRideStatus to filter by
    * @returns Promise resolving to an array of DailyRide objects
    */
+  /**
+   * Find upcoming rides for a parent within a date range, optionally filtered by status.
+   */
   abstract findUpcomingRidesForParent(
     parentId: number,
     startDate: Date,
     endDate: Date,
     status?: DailyRideStatus,
   ): Promise<DailyRide[]>;
+
+  /**
+   * Save multiple DailyRides at once.
+   * @param rides - Array of DailyRide domain objects
+   * @returns Promise resolving to the saved DailyRide objects
+   */
+  abstract saveAll(rides: DailyRide[]): Promise<DailyRide[]>;
 }

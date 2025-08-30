@@ -15,7 +15,7 @@ export class CreateSchoolDto {
     example: 'Nairobi Primary School',
   })
   @IsString()
-  @IsNotEmpty()
+  @IsNotEmpty() 
   name: string;
 
   @ApiProperty({

@@ -29,7 +29,7 @@ export enum DailyRideKind {
 }
 
 export enum DailyRideStatus {
-  Active = 'Active',
+  Active = 'Ongoing',
   Inactive = 'Inactive',
   Started = 'Started',
   Finished = 'Finished',

@@ -1,12 +1,12 @@
 // location/dto/create-location.dto.ts
-import { ApiProperty } from '@nestjs/swagger';
-import { IsNumber, IsNotEmpty, IsDateString } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsNumber, IsNotEmpty, IsDateString, IsOptional } from 'class-validator';
 
 export class CreateLocationDto {
-  @ApiProperty({ type: Number })
+  @ApiPropertyOptional({ type: Number })
+  @IsOptional() // <-- allows missing or null
   @IsNumber()
-  @IsNotEmpty()
-  dailyRideId: number;
+  dailyRideId?: number; // <-- optional
 
   @ApiProperty({ type: Number })
   @IsNumber()

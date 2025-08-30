@@ -12,30 +12,31 @@ import { AppModule } from './app.module';
 import validationOptions from './utils/validation-options';
 import { AllConfigType } from './config/config.type';
 import { ResolvePromisesInterceptor } from './utils/serializer.interceptor';
-
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { cors: true });
   useContainer(app.select(AppModule), { fallbackOnErrors: true });
   const configService = app.get(ConfigService<AllConfigType>);
 
+  // Log every request
+  // app.use((req, res, next) => {
+  //   console.log(`[Request] ${req.method} ${req.originalUrl}`);
+  //   next();
+  // });
+
   app.use((req, res, next) => {
     res.setTimeout(120000); // 120 seconds
     next();
   });
+
   app.enableShutdownHooks();
   app.setGlobalPrefix(
     configService.getOrThrow('app.apiPrefix', { infer: true }),
-    {
-      exclude: ['/'],
-    },
+    { exclude: ['/'] },
   );
-  app.enableVersioning({
-    type: VersioningType.URI,
-  });
+
+  app.enableVersioning({ type: VersioningType.URI });
   app.useGlobalPipes(new ValidationPipe(validationOptions));
   app.useGlobalInterceptors(
-    // ResolvePromisesInterceptor is used to resolve promises in responses because class-transformer can't do it
-    // https://github.com/typestack/class-transformer/issues/549
     new ResolvePromisesInterceptor(),
     new ClassSerializerInterceptor(app.get(Reflector)),
   );
@@ -49,15 +50,20 @@ async function bootstrap() {
       in: 'header',
       required: false,
       name: process.env.APP_HEADER_LANGUAGE || 'x-custom-lang',
-      schema: {
-        example: 'en',
-      },
+      schema: { example: 'en' },
     })
     .build();
 
   const document = SwaggerModule.createDocument(app, options);
-  SwaggerModule.setup('docs', app, document);
+  SwaggerModule.setup(
+    `${configService.getOrThrow('app.apiPrefix', { infer: true })}/docs`,
+    app,
+    document,
+  );
 
-  await app.listen(configService.getOrThrow('app.port', { infer: true }));
+  const port = configService.getOrThrow('app.port', { infer: true });
+  await app.listen(port, '0.0.0.0');
+  console.log(`Server running at http://192.168.100.17:${port}`);
 }
+
 void bootstrap();

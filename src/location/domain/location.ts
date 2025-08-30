@@ -7,9 +7,9 @@ export class Location {
   @ApiProperty({ type: Number })
   id: number;
 
-  @ApiProperty({ type: () => DailyRide })
+  @ApiProperty({ type: () => DailyRide, nullable: true }) // <-- mark nullable
   @Expose({ groups: ['me', 'admin'] })
-  daily_ride: DailyRide;
+  daily_ride: DailyRide | null = null; // <-- allow null
 
   @ApiProperty({ type: () => User })
   @Expose({ groups: ['me', 'admin'] })

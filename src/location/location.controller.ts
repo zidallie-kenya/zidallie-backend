@@ -149,11 +149,6 @@ export class LocationsController {
     type: String,
     required: true,
   })
-  findByDailyRideId(
-    @Param('dailyRideId') dailyRideId: Location['daily_ride']['id'],
-  ): Promise<Location[]> {
-    return this.locationsService.findByDailyRideId(dailyRideId);
-  }
 
   @ApiOkResponse({
     type: [Location],

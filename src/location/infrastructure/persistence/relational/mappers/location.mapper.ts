@@ -10,8 +10,15 @@ export class LocationMapper {
   static toDomain(raw: LocationEntity): Location {
     const domainEntity = new Location();
     domainEntity.id = raw.id;
-    domainEntity.daily_ride = DailyRideMapper.toDomain(raw.daily_ride);
-    domainEntity.driver = UserMapper.toDomain(raw.driver);
+
+    // Safely map daily ride relation
+    domainEntity.daily_ride = raw.daily_ride
+      ? DailyRideMapper.toDomain(raw.daily_ride)
+      : null;
+
+    // Safely map driver relation
+    domainEntity.driver = UserMapper.toDomain(raw.driver)
+
     domainEntity.latitude = raw.latitude;
     domainEntity.longitude = raw.longitude;
     domainEntity.timestamp = raw.timestamp;
@@ -22,25 +29,19 @@ export class LocationMapper {
   static toPersistence(domainEntity: Location): Partial<LocationEntity> {
     const persistence: Partial<LocationEntity> = {};
 
-    //simple fields
+    // Simple fields
     if (domainEntity.id !== undefined) persistence.id = domainEntity.id;
-    if (domainEntity.latitude !== undefined)
-      persistence.latitude = domainEntity.latitude;
-    if (domainEntity.longitude !== undefined)
-      persistence.longitude = domainEntity.longitude;
-    if (domainEntity.timestamp !== undefined)
-      persistence.timestamp = domainEntity.timestamp;
+    if (domainEntity.latitude !== undefined) persistence.latitude = domainEntity.latitude;
+    if (domainEntity.longitude !== undefined) persistence.longitude = domainEntity.longitude;
+    if (domainEntity.timestamp !== undefined) persistence.timestamp = domainEntity.timestamp;
 
-    // relations
+    // Relations
 
-    //daily_ride
+    // daily_ride
     persistence.daily_ride =
-      (mapRelation(
-        domainEntity.daily_ride,
-        DailyRideMapper,
-      ) as DailyRideEntity) || undefined;
+      (mapRelation(domainEntity.daily_ride, DailyRideMapper) as DailyRideEntity) || undefined;
 
-    //driver
+    // driver
     persistence.driver =
       (mapRelation(domainEntity.driver, UserMapper) as UserEntity) || undefined;
 

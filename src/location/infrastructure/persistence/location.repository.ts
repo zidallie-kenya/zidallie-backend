@@ -24,10 +24,6 @@ export abstract class LocationRepository {
 
   abstract findByIds(ids: Location['id'][]): Promise<Location[]>;
 
-  abstract findByDailyRideId(
-    dailyRideId: Location['daily_ride']['id'],
-  ): Promise<Location[]>;
-
   abstract findByDriverId(
     driverId: Location['driver']['id'],
   ): Promise<Location[]>;

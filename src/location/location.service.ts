@@ -21,7 +21,7 @@ export class LocationsService {
     private readonly locationsRepository: LocationRepository,
     private readonly dailyRidesService: DailyRidesService,
     private readonly usersService: UsersService,
-  ) {}
+  ) { }
 
   async create(createLocationDto: CreateLocationDto): Promise<Location> {
     let dailyRide: DailyRide | undefined = undefined;
@@ -89,11 +89,6 @@ export class LocationsService {
     return this.locationsRepository.findByIds(ids);
   }
 
-  findByDailyRideId(
-    dailyRideId: Location['daily_ride']['id'],
-  ): Promise<Location[]> {
-    return this.locationsRepository.findByDailyRideId(dailyRideId);
-  }
 
   findByDriverId(driverId: Location['driver']['id']): Promise<Location[]> {
     return this.locationsRepository.findByDriverId(driverId);

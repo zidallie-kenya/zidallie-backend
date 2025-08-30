@@ -29,6 +29,7 @@ import { CreateDailyRideDto } from './dto/create-daily_ride.dto';
 import { DailyRidesService } from './daily_rides.service';
 import { JwtPayloadType } from '../auth/strategies/types/jwt-payload.type';
 import { MyRidesResponseDto } from './dto/response.dto';
+import { BatchUpdateDailyRideDto } from './dto/batch-update-daily_ride.dto';
 
 const parseDate = (dateStr: string): Date => {
   const [day, month, year] = dateStr.split('-').map(Number);
@@ -53,7 +54,7 @@ const parseDate = (dateStr: string): Date => {
 @ApiTags('DailyRides')
 @Controller({ path: 'daily-rides', version: '1' })
 export class DailyRidesController {
-  constructor(private readonly dailyRidesService: DailyRidesService) {}
+  constructor(private readonly dailyRidesService: DailyRidesService) { }
 
   //create the daily ride
   @SerializeOptions({
@@ -65,6 +66,21 @@ export class DailyRidesController {
   create(@Body() createDailyRideDto: CreateDailyRideDto): Promise<DailyRide> {
     return this.dailyRidesService.create(createDailyRideDto);
   }
+
+  // batch update ride statuses
+  @SerializeOptions({ groups: ['admin'] })
+  @Patch('batch-update-status')
+  @Roles(RoleEnum.admin, RoleEnum.driver)
+  @HttpCode(HttpStatus.OK)
+  batchUpdateStatus(
+    @Body() batchUpdateDto: BatchUpdateDailyRideDto,
+  ): Promise<DailyRide[]> {
+    return this.dailyRidesService.batchUpdateStatus(
+      batchUpdateDto.ids,
+      batchUpdateDto.status,
+    );
+  }
+
 
   //returns all the upcoming daily rides => dashboard
   @SerializeOptions({
@@ -85,9 +101,8 @@ export class DailyRidesController {
   }
 
   //return all upcoming rides for user
-  @SerializeOptions({
-    groups: ['admin'],
-  })
+  //return all upcoming rides for user
+  @SerializeOptions({ groups: ['admin'] })
   @Get('user/upcoming')
   @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @HttpCode(HttpStatus.OK)
@@ -96,16 +111,26 @@ export class DailyRidesController {
     required: false,
     description: 'Number of days ahead to fetch (default: 7)',
   })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    description: 'Filter rides by status',
+    enum: DailyRideStatus,
+  })
   findUpcomingRidesForUser(
+    @Req() req: any, // required first
     @Query('days', new DefaultValuePipe(7), ParseIntPipe) days: number,
-    @Req() req: any,
+    @Query('status') status?: DailyRideStatus, // optional
   ): Promise<DailyRide[]> {
     const userJwtPayload: JwtPayloadType = req.user;
     return this.dailyRidesService.findUpcomingDailyRidesForUser(
       days,
       userJwtPayload,
+      status,
     );
   }
+
+
 
   // returns daily-rides by status
   @SerializeOptions({

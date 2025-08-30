@@ -10,6 +10,7 @@ import { DailyRidesModule } from '../daily_rides/daily_rides.module';
 import { LocationsController } from './location.controller';
 import { LocationsService } from './location.service';
 import { LocationsRelationalRepository } from './infrastructure/persistence/relational/repositories/location.repository';
+import { LocationGateway } from './location.gateway';   
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { LocationsRelationalRepository } from './infrastructure/persistence/rela
       provide: LocationRepository,
       useClass: LocationsRelationalRepository,
     },
+    LocationGateway, // 👈 register gateway as provider
   ],
   exports: [LocationsService],
 })

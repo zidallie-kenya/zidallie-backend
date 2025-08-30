@@ -38,7 +38,7 @@ export class DailyRidesService {
     private readonly usersService: UsersService,
     private readonly expoPushService: ExpoPushService,
     private readonly dataSource: DataSource, // Add for transactions
-  ) {}
+  ) { }
 
   // Helper method to format date
   private formatDateToString(date: Date): string {
@@ -624,10 +624,8 @@ export class DailyRidesService {
   async findUpcomingDailyRidesForUser(
     daysAhead: number = 7,
     userJwtPayload: JwtPayloadType,
+    status?: DailyRideStatus, // optional
   ): Promise<DailyRide[]> {
-    //only get inactive status
-    const status = DailyRideStatus.Inactive;
-
     // Get full user details
     const user = await this.usersService.findById(userJwtPayload.id);
     if (!user) {
@@ -646,19 +644,20 @@ export class DailyRidesService {
         user.id,
         today,
         endDate,
-        status,
+        status, // pass optional status
       );
     } else if (user.kind === 'Parent') {
       return this.dailyRideRepository.findUpcomingRidesForParent(
         user.id,
         today,
         endDate,
-        status,
+        status, // pass optional status
       );
     } else {
       return [];
     }
   }
+
 
   findDailyRidesByStatus(status: DailyRideStatus): Promise<DailyRide[]> {
     return this.findManyWithPagination({
@@ -667,6 +666,26 @@ export class DailyRidesService {
       paginationOptions: { page: 1, limit: 1000 },
     });
   }
+
+  async batchUpdateStatus(ids: number[], status: DailyRideStatus): Promise<DailyRide[]> {
+    const rides = await this.dailyRideRepository.findByIds(ids);
+
+    if (rides.length === 0) {
+      throw new NotFoundException(`No rides found for given IDs`);
+    }
+
+    // update statuses
+    const updatedRides = rides.map((ride) => {
+      ride.status = status;
+      return ride;
+    });
+
+    // use saveAll if you have it implemented
+    return this.dailyRideRepository.saveAll(updatedRides);
+  }
+
+
+
 
   private formatDailyRideResponse(dailyRide: DailyRide): MyRidesResponseDto {
     return {

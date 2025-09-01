@@ -31,7 +31,7 @@ export class DailyRidesRelationalRepository implements DailyRideRepository {
   constructor(
     @InjectRepository(DailyRideEntity)
     private readonly dailyRidesRepository: Repository<DailyRideEntity>,
-  ) { }
+  ) {}
 
   async create(data: DailyRide): Promise<DailyRide> {
     const persistenceModel = DailyRideMapper.toPersistence(data);
@@ -370,8 +370,6 @@ export class DailyRidesRelationalRepository implements DailyRideRepository {
     await this.dailyRidesRepository.softDelete(id);
   }
 
-
-
   async saveAll(rides: DailyRide[]): Promise<DailyRide[]> {
     const persistenceModels = rides.map(DailyRideMapper.toPersistence);
     const savedEntities = await this.dailyRidesRepository.save(
@@ -384,10 +382,6 @@ export class DailyRidesRelationalRepository implements DailyRideRepository {
       relations: DAILY_RIDE_RELATIONS,
     });
 
-    return completeEntities.map((entity) =>
-      DailyRideMapper.toDomain(entity),
-    );
+    return completeEntities.map((entity) => DailyRideMapper.toDomain(entity));
   }
-
-
 }

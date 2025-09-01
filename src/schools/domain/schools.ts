@@ -6,7 +6,7 @@ import { Ride } from '../../rides/domain/rides';
 import { Onboarding } from '../../onboarding/domain/onboarding';
 import { IsOptional } from 'class-validator';
 
-export class School { 
+export class School {
   @ApiProperty({ type: Number })
   id: number;
 

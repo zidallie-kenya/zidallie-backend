@@ -17,7 +17,7 @@ export class LocationMapper {
       : null;
 
     // Safely map driver relation
-    domainEntity.driver = UserMapper.toDomain(raw.driver)
+    domainEntity.driver = UserMapper.toDomain(raw.driver);
 
     domainEntity.latitude = raw.latitude;
     domainEntity.longitude = raw.longitude;
@@ -31,15 +31,21 @@ export class LocationMapper {
 
     // Simple fields
     if (domainEntity.id !== undefined) persistence.id = domainEntity.id;
-    if (domainEntity.latitude !== undefined) persistence.latitude = domainEntity.latitude;
-    if (domainEntity.longitude !== undefined) persistence.longitude = domainEntity.longitude;
-    if (domainEntity.timestamp !== undefined) persistence.timestamp = domainEntity.timestamp;
+    if (domainEntity.latitude !== undefined)
+      persistence.latitude = domainEntity.latitude;
+    if (domainEntity.longitude !== undefined)
+      persistence.longitude = domainEntity.longitude;
+    if (domainEntity.timestamp !== undefined)
+      persistence.timestamp = domainEntity.timestamp;
 
     // Relations
 
     // daily_ride
     persistence.daily_ride =
-      (mapRelation(domainEntity.daily_ride, DailyRideMapper) as DailyRideEntity) || undefined;
+      (mapRelation(
+        domainEntity.daily_ride,
+        DailyRideMapper,
+      ) as DailyRideEntity) || undefined;
 
     // driver
     persistence.driver =

@@ -10,7 +10,7 @@ import { DailyRidesModule } from '../daily_rides/daily_rides.module';
 import { LocationsController } from './location.controller';
 import { LocationsService } from './location.service';
 import { LocationsRelationalRepository } from './infrastructure/persistence/relational/repositories/location.repository';
-import { LocationGateway } from './location.gateway';   
+import { LocationGateway } from './location.gateway';
 
 @Module({
   imports: [

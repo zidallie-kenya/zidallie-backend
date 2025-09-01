@@ -40,7 +40,9 @@ export class LocationGateway
 
     @SubscribeMessage('locationUpdate')
     async handleLocationUpdate(client: Socket, payload: any) {
-      
+
+        console.log('Received location payload:', payload);
+
         // Broadcast: if there's a ride, send to ride room; otherwise, just emit globally
         if (payload.dailyRideId) {
             this.server.to(`ride_${payload.dailyRideId}`).emit('locationBroadcast', payload);

@@ -10,11 +10,17 @@ export class RolesGuard implements CanActivate {
       'roles',
       [context.getClass(), context.getHandler()],
     );
-    if (!roles.length) {
-      return true;
-    }
-    const request = context.switchToHttp().getRequest();
 
-    return roles.map(String).includes(String(request.user?.role?.id));
+    const request = context.switchToHttp().getRequest();
+    const user = request.user;
+
+    // console.log('JWT payload in RolesGuard:', user); // log full JWT payload
+    // console.log('Roles required for route:', roles); // log roles decorator
+    // console.log('User role id being checked:', user?.role?.id); // current check
+
+    if (!roles?.length) return true;
+
+    return roles.map(String).includes(String(user?.role?.id));
   }
 }
+

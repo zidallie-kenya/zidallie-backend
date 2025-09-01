@@ -638,6 +638,7 @@ export class DailyRidesService {
     const today = new Date();
     const endDate = new Date();
     endDate.setDate(today.getDate() + daysAhead);
+    console.log("first")
 
     if (user.kind === 'Driver') {
       return this.dailyRideRepository.findUpcomingRidesForDriver(
@@ -647,6 +648,7 @@ export class DailyRidesService {
         status, // pass optional status
       );
     } else if (user.kind === 'Parent') {
+      console.log("is parent")
       return this.dailyRideRepository.findUpcomingRidesForParent(
         user.id,
         today,

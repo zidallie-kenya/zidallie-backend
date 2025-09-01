@@ -100,7 +100,7 @@ export class DailyRidesController {
     return this.dailyRidesService.findUpcomingDailyRides(days);
   }
 
-  //return all upcoming rides for user
+
   //return all upcoming rides for user
   @SerializeOptions({ groups: ['admin'] })
   @Get('user/upcoming')
@@ -122,6 +122,7 @@ export class DailyRidesController {
     @Query('days', new DefaultValuePipe(7), ParseIntPipe) days: number,
     @Query('status') status?: DailyRideStatus, // optional
   ): Promise<DailyRide[]> {
+
     const userJwtPayload: JwtPayloadType = req.user;
     return this.dailyRidesService.findUpcomingDailyRidesForUser(
       days,

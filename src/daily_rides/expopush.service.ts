@@ -1,10 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Expo, ExpoPushMessage, ExpoPushTicket } from 'expo-server-sdk';
+import axios from 'axios';
+import { Expo } from 'expo-server-sdk';
 
 @Injectable()
 export class ExpoPushService {
   private readonly logger = new Logger(ExpoPushService.name);
   private readonly expo: Expo;
+  private readonly EXPO_URL = 'https://exp.host/--/api/v2/push/send';
 
   constructor() {
     // Create a new Expo SDK client
@@ -14,6 +16,7 @@ export class ExpoPushService {
     });
   }
 
+
   async sendPushNotification(
     pushTokens: string | string[],
     title: string,
@@ -21,71 +24,48 @@ export class ExpoPushService {
     data?: Record<string, any>,
   ): Promise<void> {
     try {
-      // Convert to array if single token
+      // Ensure array
       const tokens = Array.isArray(pushTokens) ? pushTokens : [pushTokens];
 
-      // Validate push tokens and create messages
-      const messages: ExpoPushMessage[] = [];
+      // Filter only valid expo push tokens
+      const validTokens = tokens.filter(
+        (t) => t && t.startsWith('ExpoPushToken'),
+      );
 
-      for (const pushToken of tokens) {
-        // Check that all your push tokens appear to be valid Expo push tokens
-        if (!Expo.isExpoPushToken(pushToken)) {
-          this.logger.error(
-            `Push token ${pushToken} is not a valid Expo push token`,
-          );
-          continue;
-        }
-
-        // Construct a message
-        messages.push({
-          to: pushToken,
-          sound: 'default',
-          title,
-          body,
-          data,
-        });
-      }
-
-      if (messages.length === 0) {
-        this.logger.warn('No valid push tokens found');
+      if (validTokens.length === 0) {
+        this.logger.warn('No valid Expo push tokens found');
         return;
       }
 
-      // Chunk the notifications to reduce the number of requests
-      const chunks = this.expo.chunkPushNotifications(messages);
-      const tickets: ExpoPushTicket[] = [];
+      // Build messages payload
+      const messages = validTokens.map((token) => ({
+        to: token,
+        sound: 'default',
+        title,
+        body,
+        data,
+      }));
 
-      // Send the chunks to the Expo push notification service
-      for (const chunk of chunks) {
-        try {
-          const ticketChunk = await this.expo.sendPushNotificationsAsync(chunk);
-          this.logger.log(`Sent chunk of ${chunk.length} notifications`);
-          tickets.push(...ticketChunk);
-        } catch (error) {
-          this.logger.error(`Error sending notification chunk: ${error}`);
-        }
-      }
+      // Send bulk request to Expo API
+      const response = await axios.post(this.EXPO_URL, messages, {
+        headers: {
+          'Accept': 'application/json',
+          'Accept-Encoding': 'gzip, deflate',
+          'Content-Type': 'application/json',
+        },
+      });
 
-      // Handle tickets and collect receipt IDs
-      const receiptIds: string[] = [];
-      for (const ticket of tickets) {
-        if (ticket.status === 'ok') {
-          receiptIds.push(ticket.id);
-        } else {
-          this.logger.error(`Error in ticket: ${JSON.stringify(ticket)}`);
-        }
-      }
-
-      this.logger.log(`Successfully sent ${receiptIds.length} notifications`);
-
-      // Optionally, you can check receipts later
-      // For now, we'll just log the receipt IDs
-      if (receiptIds.length > 0) {
-        this.logger.log(`Receipt IDs: ${receiptIds.join(', ')}`);
-      }
+      this.logger.log(
+        `Sent ${messages.length} notifications, got response: ${JSON.stringify(
+          response.data,
+        )}`,
+      );
     } catch (error: any) {
-      this.logger.error(`Failed to send push notification: ${error.message}`);
-      throw error; // Re-throw to maintain existing error handling in your service
+      this.logger.error(
+        `Failed to send push notification: ${error.message}`,
+        error.stack,
+      );
+      throw error;
     }
   }
 

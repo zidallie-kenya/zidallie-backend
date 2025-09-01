@@ -70,7 +70,7 @@ export class DailyRidesController {
   // batch update ride statuses
   @SerializeOptions({ groups: ['admin'] })
   @Patch('batch-update-status')
-  @Roles(RoleEnum.admin, RoleEnum.driver)
+  // @Roles(RoleEnum.admin, RoleEnum.driver)
   @HttpCode(HttpStatus.OK)
   batchUpdateStatus(
     @Body() batchUpdateDto: BatchUpdateDailyRideDto,

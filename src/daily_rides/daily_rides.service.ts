@@ -28,6 +28,7 @@ import { MyRidesResponseDto } from './dto/response.dto';
 import { ExpoPushService } from './expopush.service';
 import { DataSource } from 'typeorm'; // Add for transactions
 import { DailyRideEntity } from './infrastructure/persistence/relational/entities/daily_ride.entity';
+import axios from 'axios';
 
 @Injectable()
 export class DailyRidesService {
@@ -38,7 +39,7 @@ export class DailyRidesService {
     private readonly usersService: UsersService,
     private readonly expoPushService: ExpoPushService,
     private readonly dataSource: DataSource, // Add for transactions
-  ) {}
+  ) { }
 
   // Helper method to format date
   private formatDateToString(date: Date): string {
@@ -667,7 +668,6 @@ export class DailyRidesService {
       paginationOptions: { page: 1, limit: 1000 },
     });
   }
-
   async batchUpdateStatus(
     ids: number[],
     status: DailyRideStatus,
@@ -684,9 +684,37 @@ export class DailyRidesService {
       return ride;
     });
 
-    // use saveAll if you have it implemented
-    return this.dailyRideRepository.saveAll(updatedRides);
+  
+    const savedRides = await this.dailyRideRepository.saveAll(updatedRides);
+
+    //collect Expo push tokens from parent users
+    const pushTokens = savedRides
+      .map((r) => r.ride?.parent?.push_token)
+      .filter(
+        (token): token is string =>
+          !!token && token.startsWith('ExpoPushToken'),
+      );
+
+    if (pushTokens.length > 0) {
+      // send notifications in parallel
+      const notificationPromises = pushTokens.map((token) =>
+        this.expoPushService
+          .sendPushNotification(
+            token,
+            'Ride Status Updated',
+            `Your ride status is now ${status}`,
+            { status },
+          )
+          .catch((err) => console.error('Push send error:', err)),
+      );
+
+      await Promise.allSettled(notificationPromises);
+    }
+
+    return savedRides;
   }
+
+
 
   private formatDailyRideResponse(dailyRide: DailyRide): MyRidesResponseDto {
     return {

@@ -38,7 +38,7 @@ export class DailyRidesService {
     private readonly usersService: UsersService,
     private readonly expoPushService: ExpoPushService,
     private readonly dataSource: DataSource, // Add for transactions
-  ) { }
+  ) {}
 
   // Helper method to format date
   private formatDateToString(date: Date): string {
@@ -658,7 +658,6 @@ export class DailyRidesService {
     }
   }
 
-
   findDailyRidesByStatus(status: DailyRideStatus): Promise<DailyRide[]> {
     return this.findManyWithPagination({
       filterOptions: { status },
@@ -667,7 +666,10 @@ export class DailyRidesService {
     });
   }
 
-  async batchUpdateStatus(ids: number[], status: DailyRideStatus): Promise<DailyRide[]> {
+  async batchUpdateStatus(
+    ids: number[],
+    status: DailyRideStatus,
+  ): Promise<DailyRide[]> {
     const rides = await this.dailyRideRepository.findByIds(ids);
 
     if (rides.length === 0) {
@@ -683,9 +685,6 @@ export class DailyRidesService {
     // use saveAll if you have it implemented
     return this.dailyRideRepository.saveAll(updatedRides);
   }
-
-
-
 
   private formatDailyRideResponse(dailyRide: DailyRide): MyRidesResponseDto {
     return {

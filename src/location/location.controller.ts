@@ -149,7 +149,6 @@ export class LocationsController {
     type: String,
     required: true,
   })
-
   @ApiOkResponse({
     type: [Location],
   })

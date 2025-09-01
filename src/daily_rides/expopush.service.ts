@@ -16,7 +16,6 @@ export class ExpoPushService {
     });
   }
 
-
   async sendPushNotification(
     pushTokens: string | string[],
     title: string,
@@ -27,13 +26,24 @@ export class ExpoPushService {
       // Ensure array
       const tokens = Array.isArray(pushTokens) ? pushTokens : [pushTokens];
 
+      console.log('=== PUSH NOTIFICATION DEBUG ===');
+      console.log('Received tokens:', tokens);
+
       // Filter only valid expo push tokens
       const validTokens = tokens.filter(
-        (t) => t && t.startsWith('ExpoPushToken'),
+        (t) =>
+          t &&
+          (t.startsWith('ExpoPushToken') || t.startsWith('ExponentPushToken')),
       );
+
+      console.log('Valid tokens after filter:', validTokens);
+      console.log('Title:', title);
+      console.log('Body:', body);
+      console.log('Data:', data);
 
       if (validTokens.length === 0) {
         this.logger.warn('No valid Expo push tokens found');
+        console.log('❌ NO VALID TOKENS - stopping here');
         return;
       }
 
@@ -46,14 +56,18 @@ export class ExpoPushService {
         data,
       }));
 
+      console.log('Messages to send:', JSON.stringify(messages, null, 2));
+
       // Send bulk request to Expo API
       const response = await axios.post(this.EXPO_URL, messages, {
         headers: {
-          'Accept': 'application/json',
+          Accept: 'application/json',
           'Accept-Encoding': 'gzip, deflate',
           'Content-Type': 'application/json',
         },
       });
+
+      console.log('✅ Expo API Response:', response.data);
 
       this.logger.log(
         `Sent ${messages.length} notifications, got response: ${JSON.stringify(
@@ -61,6 +75,11 @@ export class ExpoPushService {
         )}`,
       );
     } catch (error: any) {
+      console.log('❌ ERROR sending push notification:', error.message);
+      if (error.response) {
+        console.log('Error response data:', error.response.data);
+        console.log('Error response status:', error.response.status);
+      }
       this.logger.error(
         `Failed to send push notification: ${error.message}`,
         error.stack,

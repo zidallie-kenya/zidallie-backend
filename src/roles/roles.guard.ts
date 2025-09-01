@@ -23,4 +23,3 @@ export class RolesGuard implements CanActivate {
     return roles.map(String).includes(String(user?.role?.id));
   }
 }
-

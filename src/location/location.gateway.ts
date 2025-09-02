@@ -8,18 +8,15 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { LocationsService } from './location.service';
-import { ValidationPipe, UsePipes } from '@nestjs/common';
-import { LocationUpdatePayloadDto } from './dto/location-update-payload.dto';
 
 @WebSocketGateway({ cors: true })
 export class LocationGateway
-  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
-{
+  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server: Server;
 
   private lastSaved: Record<string, number> = {};
 
-  constructor(private readonly locationsService: LocationsService) {}
+  constructor(private readonly locationsService: LocationsService) { }
 
   afterInit(server: Server) {
     console.log('Socket server initialized');
@@ -33,29 +30,28 @@ export class LocationGateway
     console.log(`Client disconnected: ${client.id}`);
   }
 
-  @SubscribeMessage('joinRide')
-  async handleJoinRide(client: Socket, rideId: number) {
-    await client.join(`ride_${rideId}`);
-    console.log(`Client ${client.id} joined ride_${rideId}`);
+  // Client (e.g. parent app) joins a driver's room to get live updates
+  @SubscribeMessage('joinDriver')
+  async handleJoinDriver(client: Socket, driverId: number) {
+    await client.join(`driver_${driverId}`);
+    console.log(`Client ${client.id} joined driver_${driverId}`);
   }
 
   @SubscribeMessage('locationUpdate')
   async handleLocationUpdate(client: Socket, payload: any) {
-    // Broadcast: if there's a ride, send to ride room; otherwise, just emit globally
-    if (payload.dailyRideId) {
-      this.server
-        .to(`ride_${payload.dailyRideId}`)
-        .emit('locationBroadcast', payload);
-    } else {
-      this.server.emit('locationBroadcast', payload);
-    }
+    const driverRoom = `driver_${payload.driverId}`;
 
-    // Throttle saving: unique per driver, not per ride
+    // Ensure driver is in their own room
+    await client.join(driverRoom);
+
+    // Broadcast location only to this driver's room
+    this.server.to(driverRoom).emit('locationBroadcast', payload);
+
+    // Throttle saving to DB (per driver)
     const now = Date.now();
     const last = this.lastSaved[payload.driverId] || 0;
 
     if (now - last >= 2 * 60 * 1000) {
-      // 2 minutes
       this.lastSaved[payload.driverId] = now;
 
       try {
@@ -64,7 +60,6 @@ export class LocationGateway
           latitude: payload.latitude,
           longitude: payload.longitude,
           timestamp: payload.timestamp,
-          dailyRideId: payload.dailyRideId,
         });
       } catch (err) {
         console.error('Failed to save location:', err);

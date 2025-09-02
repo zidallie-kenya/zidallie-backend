@@ -638,7 +638,7 @@ export class DailyRidesService {
     const today = new Date();
     const endDate = new Date();
     endDate.setDate(today.getDate() + daysAhead);
-    console.log('first');
+   
 
     if (user.kind === 'Driver') {
       return this.dailyRideRepository.findUpcomingRidesForDriver(

@@ -38,7 +38,7 @@ export class DailyRidesService {
     private readonly usersService: UsersService,
     private readonly expoPushService: ExpoPushService,
     private readonly dataSource: DataSource, // Add for transactions
-  ) {}
+  ) { }
 
   // Helper method to format date
   private formatDateToString(date: Date): string {
@@ -638,7 +638,7 @@ export class DailyRidesService {
     const today = new Date();
     const endDate = new Date();
     endDate.setDate(today.getDate() + daysAhead);
-   
+
 
     if (user.kind === 'Driver') {
       return this.dailyRideRepository.findUpcomingRidesForDriver(
@@ -685,7 +685,7 @@ export class DailyRidesService {
 
     const savedRides = await this.dailyRideRepository.saveAll(updatedRides);
 
-    //collect Expo push tokens from parent users
+    // collect Expo push tokens from parent users
     const pushTokens = savedRides
       .map((r) => r.ride?.parent?.push_token)
       .filter(
@@ -695,6 +695,19 @@ export class DailyRidesService {
             token.startsWith('ExponentPushToken')),
       );
 
+    // pick notification message based on status
+    let message: string;
+    switch (status) {
+      case DailyRideStatus.Active:
+        message = "Your child has safely boarded and is on their way.";
+        break;
+      case DailyRideStatus.Finished:
+        message = "Your child has safely arrived at their destination.";
+        break;
+      default:
+        message = `Your ride status is now ${status}`;
+    }
+
     if (pushTokens.length > 0) {
       // send notifications in parallel
       const notificationPromises = pushTokens.map((token) =>
@@ -702,7 +715,7 @@ export class DailyRidesService {
           .sendPushNotification(
             token,
             'Ride Status Updated',
-            `Your ride status is now ${status}`,
+            message,
             { status },
           )
           .catch((err) => console.error('Push send error:', err)),

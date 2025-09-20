@@ -118,6 +118,7 @@ export class UsersService {
       provider: createUserDto.provider ?? AuthProvidersEnum.email,
       socialId: createUserDto.socialId,
       photo: createUserDto.photo ?? null,
+      school_id: createUserDto.school_id ?? null,
       role,
       status,
     });
@@ -266,6 +267,7 @@ export class UsersService {
       socialId: updateUserDto.socialId,
       name: `${updateUserDto.firstName ?? ''} ${updateUserDto.lastName ?? ''}`.trim(), // required
       photo: updateUserDto.photo,
+      school_id: updateUserDto.school_id,
       role,
       status,
     });

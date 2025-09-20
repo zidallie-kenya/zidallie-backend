@@ -37,9 +37,11 @@ export class AuthService {
     private sessionService: SessionService,
     private brevoService: BrevoMailService,
     private configService: ConfigService<AllConfigType>,
-  ) { }
+  ) {}
 
   async validateLogin(loginDto: AuthEmailLoginDto): Promise<LoginResponseDto> {
+    const now = Date.now();
+    console.log(now);
     const user = await this.usersService.findByEmail(loginDto.email);
 
     if (!user) {
@@ -349,7 +351,6 @@ export class AuthService {
       });
     }
 
-
     const tokenExpiresIn = this.configService.getOrThrow('auth.forgotExpires', {
       infer: true,
     });
@@ -578,7 +579,6 @@ export class AuthService {
     sessionId: Session['id'];
     hash: Session['hash'];
   }) {
-
     const tokenExpiresIn = this.configService.getOrThrow('auth.expires', {
       infer: true,
     });

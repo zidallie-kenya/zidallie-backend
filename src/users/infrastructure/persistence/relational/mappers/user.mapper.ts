@@ -23,6 +23,7 @@ export class UserMapper {
     domainEntity.photo = raw.photo;
     domainEntity.role = raw.role;
     domainEntity.status = raw.status;
+    domainEntity.school_id = raw.school_id;
     domainEntity.created_at = raw.created_at;
     domainEntity.updated_at = raw.updated_at;
     domainEntity.deleted_at = raw.deleted_at;
@@ -70,6 +71,8 @@ export class UserMapper {
       persistence.wallet_balance = domainEntity.wallet_balance;
     if (domainEntity.is_kyc_verified !== undefined)
       persistence.is_kyc_verified = domainEntity.is_kyc_verified;
+    if (domainEntity.school_id !== undefined)
+      persistence.school_id = domainEntity.school_id;
 
     return persistence;
   }

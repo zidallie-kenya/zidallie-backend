@@ -142,7 +142,9 @@ export class LocationsService {
     return this.locationsRepository.update(id, {
       latitude: updateLocationDto.latitude,
       longitude: updateLocationDto.longitude,
-      timestamp: updateLocationDto.timestamp,
+      timestamp: updateLocationDto.timestamp
+        ? new Date(updateLocationDto.timestamp)
+        : new Date(),
       daily_ride: dailyRide,
       driver: driver,
     });

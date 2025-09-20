@@ -59,6 +59,14 @@ export class CreateUserDto {
   @IsString()
   push_token?: string | null;
 
+  @ApiPropertyOptional({
+    example: 1,
+    type: Number,
+  })
+  @IsOptional()
+  @IsNumber()
+  school_id?: number | null;
+
   @ApiProperty({ enum: ['Parent', 'Driver', 'Admin'] })
   @IsNotEmpty()
   @IsEnum(['Parent', 'Driver', 'Admin'])

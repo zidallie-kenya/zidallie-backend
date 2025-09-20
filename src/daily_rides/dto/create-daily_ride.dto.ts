@@ -93,6 +93,16 @@ export class CreateDailyRideDto {
   @IsDateString()
   end_time?: string;
 
+  @Transform(transformDateTime)
+  @IsOptional()
+  @IsDateString()
+  embark_time?: string;
+
+  @Transform(transformDateTime)
+  @IsOptional()
+  @IsDateString()
+  disembark_time?: string;
+
   @IsOptional()
   comments?: string;
 

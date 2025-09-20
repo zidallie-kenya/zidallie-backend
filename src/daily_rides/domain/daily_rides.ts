@@ -63,6 +63,14 @@ export class DailyRide {
 
   @ApiProperty()
   @Expose({ groups: ['me', 'admin'] })
+  embark_time: Date | null;
+
+  @ApiProperty()
+  @Expose({ groups: ['me', 'admin'] })
+  disembark_time: Date | null;
+
+  @ApiProperty()
+  @Expose({ groups: ['me', 'admin'] })
   created_at: Date;
 
   @ApiProperty()

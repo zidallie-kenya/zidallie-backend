@@ -31,6 +31,8 @@ export class DailyRideMapper {
     domainEntity.comments = raw.comments;
     domainEntity.meta = raw.meta;
     domainEntity.status = raw.status;
+    domainEntity.embark_time = raw.embark_time;
+    domainEntity.disembark_time = raw.disembark_time;
 
     if (raw.locations && raw.locations.length > 0) {
       domainEntity.locations = raw.locations.map((location) =>
@@ -63,6 +65,10 @@ export class DailyRideMapper {
     if (domainEntity.meta !== undefined) persistence.meta = domainEntity.meta;
     if (domainEntity.status !== undefined)
       persistence.status = domainEntity.status;
+    if (domainEntity.embark_time !== undefined)
+      persistence.embark_time = domainEntity.embark_time;
+    if (domainEntity.disembark_time !== undefined)
+      persistence.disembark_time = domainEntity.disembark_time;
 
     //relations
 

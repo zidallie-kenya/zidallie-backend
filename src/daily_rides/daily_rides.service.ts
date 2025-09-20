@@ -38,7 +38,7 @@ export class DailyRidesService {
     private readonly usersService: UsersService,
     private readonly expoPushService: ExpoPushService,
     private readonly dataSource: DataSource, // Add for transactions
-  ) { }
+  ) {}
 
   // Helper method to format date
   private formatDateToString(date: Date): string {
@@ -134,6 +134,12 @@ export class DailyRidesService {
         createDailyRideDto.locations?.map(
           (location) => ({ id: location.id }) as LocationEntity,
         ) ?? [],
+      embark_time: createDailyRideDto.embark_time
+        ? new Date(createDailyRideDto.embark_time)
+        : null,
+      disembark_time: createDailyRideDto.disembark_time
+        ? new Date(createDailyRideDto.disembark_time)
+        : null,
     });
 
     return dailyRide;
@@ -337,9 +343,12 @@ export class DailyRidesService {
       });
     }
 
+    const embarkTime = new Date();
+
     const updated = await this.update(id, {
       status: DailyRideStatus.Active,
       start_time: new Date().toISOString(),
+      embark_time: embarkTime.toISOString(),
     });
 
     if (updated?.ride?.parent?.push_token && updated.ride.student?.name) {
@@ -379,9 +388,12 @@ export class DailyRidesService {
       });
     }
 
+    const disembarkTime = new Date();
+
     const updated = await this.update(id, {
       status: DailyRideStatus.Finished,
       end_time: new Date().toISOString(),
+      disembark_time: disembarkTime.toISOString(),
     });
 
     if (updated?.ride?.parent?.push_token && updated.ride.student?.name) {
@@ -595,6 +607,8 @@ export class DailyRidesService {
       meta: updateDailyRideDto.meta,
       status: updateDailyRideDto.status,
       locations: updateDailyRideDto.locations,
+      embark_time: updateDailyRideDto.embark_time,
+      disembark_time: updateDailyRideDto.disembark_time,
     });
   }
 
@@ -639,7 +653,6 @@ export class DailyRidesService {
     const endDate = new Date();
     endDate.setDate(today.getDate() + daysAhead);
 
-
     if (user.kind === 'Driver') {
       return this.dailyRideRepository.findUpcomingRidesForDriver(
         user.id,
@@ -677,9 +690,21 @@ export class DailyRidesService {
       throw new NotFoundException(`No rides found for given IDs`);
     }
 
+    const currentTime = new Date();
+
     // update statuses
     const updatedRides = rides.map((ride) => {
       ride.status = status;
+
+      // Set embark_time when status changes to Active
+      if (status === DailyRideStatus.Active) {
+        ride.embark_time = currentTime;
+      }
+
+      // Set disembark_time when status changes to Finished
+      if (status === DailyRideStatus.Finished) {
+        ride.disembark_time = currentTime;
+      }
       return ride;
     });
 
@@ -699,10 +724,10 @@ export class DailyRidesService {
     let message: string;
     switch (status) {
       case DailyRideStatus.Active:
-        message = "Your child has safely boarded and is on their way.";
+        message = 'Your child has safely boarded and is on their way.';
         break;
       case DailyRideStatus.Finished:
-        message = "Your child has safely arrived at their destination.";
+        message = 'Your child has safely arrived at their destination.';
         break;
       default:
         message = `Your ride status is now ${status}`;
@@ -712,12 +737,9 @@ export class DailyRidesService {
       // send notifications in parallel
       const notificationPromises = pushTokens.map((token) =>
         this.expoPushService
-          .sendPushNotification(
-            token,
-            'Ride Status Updated',
-            message,
-            { status },
-          )
+          .sendPushNotification(token, 'Ride Status Updated', message, {
+            status,
+          })
           .catch((err) => console.error('Push send error:', err)),
       );
 

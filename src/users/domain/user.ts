@@ -48,6 +48,13 @@ export class User {
   @Expose({ groups: ['me', 'admin'] })
   push_token: string | null;
 
+  @ApiProperty({
+    type: Number,
+    example: 1,
+  })
+  @Expose({ groups: ['me', 'admin'] })
+  school_id: number | null;
+
   @ApiProperty({ enum: ['Parent', 'Driver'] })
   @Expose({ groups: ['me', 'admin'] })
   kind: UserKind;

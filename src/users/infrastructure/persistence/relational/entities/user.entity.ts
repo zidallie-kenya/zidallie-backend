@@ -80,6 +80,9 @@ export class UserEntity extends EntityRelationalHelper {
   @Column({ type: 'varchar', nullable: true })
   push_token: string | null;
 
+  @Column({ type: 'int', nullable: true })
+  school_id: number | null;
+
   @Column({
     type: 'varchar',
     nullable: true,

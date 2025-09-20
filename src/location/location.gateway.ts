@@ -11,12 +11,13 @@ import { LocationsService } from './location.service';
 
 @WebSocketGateway({ cors: true })
 export class LocationGateway
-  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
+  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer() server: Server;
 
   private lastSaved: Record<string, number> = {};
 
-  constructor(private readonly locationsService: LocationsService) { }
+  constructor(private readonly locationsService: LocationsService) {}
 
   afterInit(server: Server) {
     console.log('Socket server initialized');
@@ -49,6 +50,7 @@ export class LocationGateway
 
     // Throttle saving to DB (per driver)
     const now = Date.now();
+    console.log(now);
     const last = this.lastSaved[payload.driverId] || 0;
 
     if (now - last >= 2 * 60 * 1000) {

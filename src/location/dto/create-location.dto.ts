@@ -31,5 +31,5 @@ export class CreateLocationDto {
   @ApiProperty({ type: String, format: 'date-time' })
   @IsDateString()
   @IsNotEmpty()
-  timestamp: string;
+  timestamp: Date;
 }

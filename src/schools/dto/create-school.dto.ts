@@ -44,6 +44,15 @@ export class CreateSchoolDto {
   url?: string | null;
 
   @ApiProperty({
+    type: String,
+    example: 'https://nairobiprimary.ac.ke',
+    required: false,
+  })
+  @IsUrl()
+  @IsOptional()
+  smart_card_url?: string | null;
+
+  @ApiProperty({
     type: () => SchoolMetaDto,
     required: false,
   })

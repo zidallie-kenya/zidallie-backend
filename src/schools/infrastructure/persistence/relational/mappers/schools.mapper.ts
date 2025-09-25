@@ -16,6 +16,7 @@ export class SchoolMapper {
     domainEntity.comments = raw.comments;
     domainEntity.url = raw.url;
     domainEntity.meta = raw.meta;
+    domainEntity.smart_card_url = raw.smart_card_url;
 
     if (raw.students) {
       domainEntity.students = raw.students.map((student) =>
@@ -71,6 +72,8 @@ export class SchoolMapper {
           OnboardingMapper.toPersistence(onboarding) as OnboardingFormEntity,
       );
     }
+    if (domainEntity.smart_card_url !== undefined)
+      persistence.smart_card_url = domainEntity.smart_card_url;
     return persistence;
   }
 }

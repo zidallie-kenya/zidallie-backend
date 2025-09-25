@@ -42,6 +42,15 @@ export class School {
   @Expose({ groups: ['me', 'admin'] })
   url: string | null;
 
+  @ApiProperty({
+    type: String,
+    example: 'https://smartcard.nairobiprimary.ac.ke',
+    required: false,
+    nullable: true,
+  })
+  @Expose({ groups: ['me', 'admin'] })
+  smart_card_url: string | null;
+
   @ApiProperty({ type: () => SchoolMetaDto, required: false, nullable: true })
   @Expose({ groups: ['me', 'admin'] })
   meta: SchoolMetaDto | null;

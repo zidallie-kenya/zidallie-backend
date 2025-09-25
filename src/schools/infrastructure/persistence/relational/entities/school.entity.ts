@@ -28,6 +28,9 @@ export class SchoolEntity extends EntityRelationalHelper {
   @Column({ type: 'text', nullable: true })
   url: string | null;
 
+  @Column({ type: 'text', nullable: true })
+  smart_card_url: string | null;
+
   @Column({ type: 'jsonb', nullable: true })
   meta: SchoolMeta | null;
 

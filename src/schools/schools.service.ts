@@ -41,6 +41,7 @@ export class SchoolsService {
       students: [],
       rides: [],
       onboardings: [],
+      smart_card_url: createSchoolDto.smart_card_url ?? null,
     });
   }
 
@@ -110,6 +111,7 @@ export class SchoolsService {
       comments: updateSchoolDto.comments,
       url: updateSchoolDto.url,
       meta: updateSchoolDto.meta,
+      smart_card_url: updateSchoolDto.smart_card_url,
     });
   }
 

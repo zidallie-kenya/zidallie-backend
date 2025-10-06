@@ -42,6 +42,8 @@ export class SchoolsService {
       rides: [],
       onboardings: [],
       smart_card_url: createSchoolDto.smart_card_url ?? null,
+      terra_email: createSchoolDto.terra_email ?? null,
+      terra_password: createSchoolDto.terra_password ?? null,
     });
   }
 
@@ -112,6 +114,8 @@ export class SchoolsService {
       url: updateSchoolDto.url,
       meta: updateSchoolDto.meta,
       smart_card_url: updateSchoolDto.smart_card_url,
+      terra_email: updateSchoolDto.terra_email,
+      terra_password: updateSchoolDto.terra_password,
     });
   }
 

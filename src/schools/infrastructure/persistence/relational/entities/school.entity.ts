@@ -29,6 +29,12 @@ export class SchoolEntity extends EntityRelationalHelper {
   url: string | null;
 
   @Column({ type: 'text', nullable: true })
+  terra_email: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  terra_password: string | null;
+
+  @Column({ type: 'text', nullable: true })
   smart_card_url: string | null;
 
   @Column({ type: 'jsonb', nullable: true })

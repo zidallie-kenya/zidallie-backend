@@ -17,6 +17,8 @@ export class SchoolMapper {
     domainEntity.url = raw.url;
     domainEntity.meta = raw.meta;
     domainEntity.smart_card_url = raw.smart_card_url;
+    domainEntity.terra_email = raw.terra_email;
+    domainEntity.terra_password = raw.terra_password;
 
     if (raw.students) {
       domainEntity.students = raw.students.map((student) =>
@@ -74,6 +76,12 @@ export class SchoolMapper {
     }
     if (domainEntity.smart_card_url !== undefined)
       persistence.smart_card_url = domainEntity.smart_card_url;
+
+    if (domainEntity.terra_email !== undefined)
+      persistence.terra_email = domainEntity.terra_email;
+
+    if (domainEntity.terra_password !== undefined)
+      persistence.terra_password = domainEntity.terra_password;
     return persistence;
   }
 }

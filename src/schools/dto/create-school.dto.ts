@@ -53,6 +53,24 @@ export class CreateSchoolDto {
   smart_card_url?: string | null;
 
   @ApiProperty({
+    type: String,
+    example: 'nairobiprimary@gmail.com',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  terra_email?: string | null;
+
+  @ApiProperty({
+    type: String,
+    example: '@nairobiprimary',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  terra_password?: string | null;
+
+  @ApiProperty({
     type: () => SchoolMetaDto,
     required: false,
   })

@@ -46,6 +46,7 @@ import { QueryLocationDto } from './dto/query-location.dto';
 export class LocationsController {
   constructor(private readonly locationsService: LocationsService) {}
 
+  //creates a new location
   @ApiCreatedResponse({
     type: Location,
   })
@@ -58,6 +59,7 @@ export class LocationsController {
     return this.locationsService.create(createLocationDto);
   }
 
+  //returns all the location data with a limit of 50
   @ApiOkResponse({
     type: InfinityPaginationResponse(Location),
   })
@@ -88,6 +90,7 @@ export class LocationsController {
     );
   }
 
+  //get one specific location using id
   @ApiOkResponse({
     type: Location,
   })
@@ -105,6 +108,7 @@ export class LocationsController {
     return this.locationsService.findById(id);
   }
 
+  // to update location data
   @ApiOkResponse({
     type: Location,
   })
@@ -125,6 +129,7 @@ export class LocationsController {
     return this.locationsService.update(id, updateLocationDto);
   }
 
+  // delete location data
   @Delete(':id')
   @ApiParam({
     name: 'id',
@@ -136,6 +141,7 @@ export class LocationsController {
     return this.locationsService.remove(id);
   }
 
+  //get location data of a daily ride
   @ApiOkResponse({
     type: [Location],
   })
@@ -149,6 +155,8 @@ export class LocationsController {
     type: String,
     required: true,
   })
+
+  //get location data for a specific driver
   @ApiOkResponse({
     type: [Location],
   })
@@ -168,6 +176,7 @@ export class LocationsController {
     return this.locationsService.findByDriverId(driverId);
   }
 
+  // get location data in a certain time range
   @ApiOkResponse({
     type: [Location],
   })
@@ -186,6 +195,7 @@ export class LocationsController {
     );
   }
 
+  //get the latest location data for a driver
   @ApiOkResponse({
     type: Location,
   })

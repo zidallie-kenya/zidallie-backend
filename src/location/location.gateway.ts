@@ -38,15 +38,52 @@ export class LocationGateway
     console.log(`Client ${client.id} joined driver_${driverId}`);
   }
 
+  // School dashboard joins school room
+  @SubscribeMessage('joinSchool')
+  async handleJoinSchool(client: Socket, schoolId: number) {
+    await client.join(`school_${schoolId}`);
+    console.log(`✅ School ${schoolId} dashboard joined: ${client.id}`);
+
+    client.emit('schoolJoined', {
+      success: true,
+      schoolId,
+      message: `Connected to school ${schoolId} tracking room`,
+    });
+  }
+
+  // Admin joins admin room for ALL drivers
+  @SubscribeMessage('joinAdmin')
+  async handleJoinAdmin(client: Socket) {
+    await client.join('admin_room');
+    console.log(`✅ Admin client ${client.id} joined admin_room`);
+
+    client.emit('adminJoined', {
+      success: true,
+      message: 'Connected to admin tracking room',
+    });
+  }
+
   @SubscribeMessage('locationUpdate')
   async handleLocationUpdate(client: Socket, payload: any) {
+    console.log('📍 Received location update:', payload);
+
     const driverRoom = `driver_${payload.driverId}`;
 
     // Ensure driver is in their own room
     await client.join(driverRoom);
 
-    // Broadcast location only to this driver's room
+    // Log who's in the room
+    const socketsInRoom = await this.server.in(driverRoom).fetchSockets();
+    console.log(`👥 Clients in ${driverRoom}:`, socketsInRoom.length);
+
+    // Broadcast to specific driver's room (for parents)
     this.server.to(driverRoom).emit('locationBroadcast', payload);
+
+    // Broadcast to admin room (all drivers)
+    this.server.to('admin_room').emit('locationBroadcast', payload);
+
+    // Broadcast to ALL school rooms - let clients filter
+    this.server.emit('locationBroadcast', payload);
 
     // Throttle saving to DB (per driver)
     const now = Date.now();

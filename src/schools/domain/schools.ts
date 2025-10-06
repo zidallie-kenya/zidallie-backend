@@ -51,6 +51,24 @@ export class School {
   @Expose({ groups: ['me', 'admin'] })
   smart_card_url: string | null;
 
+  @ApiProperty({
+    type: String,
+    example: 'nairobiprimary@gmail.com',
+    required: false,
+    nullable: true,
+  })
+  @Expose({ groups: ['me', 'admin'] })
+  terra_email: string | null;
+
+  @ApiProperty({
+    type: String,
+    example: '@nairobiprimary',
+    required: false,
+    nullable: true,
+  })
+  @Expose({ groups: ['me', 'admin'] })
+  terra_password: string | null;
+
   @ApiProperty({ type: () => SchoolMetaDto, required: false, nullable: true })
   @Expose({ groups: ['me', 'admin'] })
   meta: SchoolMetaDto | null;

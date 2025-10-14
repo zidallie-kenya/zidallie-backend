@@ -44,6 +44,7 @@ export class SchoolsService {
       smart_card_url: createSchoolDto.smart_card_url ?? null,
       terra_email: createSchoolDto.terra_email ?? null,
       terra_password: createSchoolDto.terra_password ?? null,
+      terra_tag_id: createSchoolDto.terra_tag_id ?? null,
     });
   }
 
@@ -116,6 +117,7 @@ export class SchoolsService {
       smart_card_url: updateSchoolDto.smart_card_url,
       terra_email: updateSchoolDto.terra_email,
       terra_password: updateSchoolDto.terra_password,
+      terra_tag_id: updateSchoolDto.terra_tag_id,
     });
   }
 

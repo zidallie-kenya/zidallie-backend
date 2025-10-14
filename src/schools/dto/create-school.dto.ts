@@ -63,6 +63,15 @@ export class CreateSchoolDto {
 
   @ApiProperty({
     type: String,
+    example: 'nhjjjk565e5hdjk',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  terra_tag_id?: string | null;
+
+  @ApiProperty({
+    type: String,
     example: '@nairobiprimary',
     required: false,
   })

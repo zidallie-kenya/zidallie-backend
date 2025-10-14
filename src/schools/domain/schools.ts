@@ -69,6 +69,15 @@ export class School {
   @Expose({ groups: ['me', 'admin'] })
   terra_password: string | null;
 
+  @ApiProperty({
+    type: String,
+    example: 'hfjltoit56565e5hdjk',
+    required: false,
+    nullable: true,
+  })
+  @Expose({ groups: ['me', 'admin'] })
+  terra_tag_id: string | null;
+
   @ApiProperty({ type: () => SchoolMetaDto, required: false, nullable: true })
   @Expose({ groups: ['me', 'admin'] })
   meta: SchoolMetaDto | null;

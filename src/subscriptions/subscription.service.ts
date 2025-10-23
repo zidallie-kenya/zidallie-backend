@@ -8,6 +8,8 @@ import { PendingPaymentRepository } from './infrastructure/persistence/relationa
 import { PaymentRepository } from '../payments/infrastructure/persistence/payment.repository';
 import { SubscriptionRepository } from './infrastructure/persistence/relational/repositories/subscription.repository';
 import { SubscriptionPlanRepository } from './infrastructure/persistence/relational/repositories/subscriptionplan.repository';
+const fs = require('fs');
+const crypto = require('crypto');
 
 @Injectable()
 export class SubscriptionService {
@@ -92,45 +94,43 @@ export class SubscriptionService {
         }
     }
 
+
     // -------------------------------
     // HANDLE CALLBACK
     // -------------------------------
     async handlePaymentCallback(receivedData: any) {
         const stkCallback = receivedData?.Body?.stkCallback;
 
-        // If invalid callback, just log and acknowledge
         if (!stkCallback) {
-            console.log('Received invalid M-Pesa callback.')
+            console.log('Received invalid M-Pesa callback.');
             return { ResultCode: 0, ResultDesc: 'Accepted' };
         }
 
         if (stkCallback.ResultCode !== 0) {
-            console.log(`M-Pesa payment failed: ${stkCallback.ResultDesc}`)
+            console.log(`M-Pesa payment failed: ${stkCallback.ResultDesc}`);
             return { ResultCode: 0, ResultDesc: 'Accepted' };
         }
 
         const metadata = stkCallback.CallbackMetadata?.Item || [];
         const amount = metadata[0]?.Value;
-        const phoneNumber = metadata[3]?.Value;
         const checkoutRequestID = stkCallback.CheckoutRequestID;
 
         // Find pending payment
         const pending = await this.pendingPaymentsRepository.findByCheckoutId(checkoutRequestID);
         if (!pending) {
-            console.log(`Pending payment not found for CheckoutRequestID: ${checkoutRequestID}`)
+            console.log(`Pending payment not found for CheckoutRequestID: ${checkoutRequestID}`);
             return { ResultCode: 0, ResultDesc: 'Accepted' };
         }
 
-        // Find student
+        // Find student and subscription plan
         const student = await this.studentsService.findById(pending.studentId);
-        if (!student) {
-            console.log(`Student not found for pending payment id ${pending.id}`)
-            return { ResultCode: 0, ResultDesc: 'Accepted' };
-        }
-
         const plan = await this.subscriptionPlanRepository.findById(pending.subscriptionPlanId);
 
-        // Execute transaction
+        if (!student || !plan) {
+            console.log(`Student or plan not found for pending payment id ${pending.id}`);
+            return { ResultCode: 0, ResultDesc: 'Accepted' };
+        }
+
         try {
             await this.dataSource.transaction(async (manager) => {
                 // Create subscription
@@ -150,11 +150,72 @@ export class SubscriptionService {
                 await this.pendingPaymentsRepository.remove(pending);
             });
 
-            console.log(`Payment processed successfully for CheckoutRequestID: ${checkoutRequestID}`)
-            return { ResultCode: 0, ResultDesc: 'Accepted' }; // Always acknowledge M-Pesa
+            console.log(`Payment processed successfully for CheckoutRequestID: ${checkoutRequestID}`);
+
+            // DISBURSE FUNDS TO SCHOOL (16% of amount)
+            // if (student.school?.disbursement_phone_number) {
+            //     try {
+            //         await this.disburseFunds(
+            //             checkoutRequestID,
+            //             student.school.disbursement_phone_number,
+            //             0.16 * amount
+            //         );
+            //         console.log(`Funds disbursed to school: ${student.school.name}`);
+            //     } catch (b2cError) {
+            //         console.error('Error disbursing funds to school:', b2cError);
+            //     }
+            // }
+
+            return { ResultCode: 0, ResultDesc: 'Accepted' };
         } catch (error) {
-            console.log('Error processing payment callback', error)
-            return { ResultCode: 0, ResultDesc: 'Accepted' }; // Still acknowledge to avoid retries
+            console.error('Error processing payment callback:', error);
+            return { ResultCode: 0, ResultDesc: 'Accepted' };
+        }
+    }
+
+    // -------------------------------
+    // DISBURSE FUNDS TO SCHOOL
+    // -------------------------------
+    private async disburseFunds(transactionId: string, phoneNumber: string, amount: number) {
+        const B2C_CONSUMER_KEY = process.env.B2C_CONSUMER_KEY;
+        const B2C_CONSUMER_SECRET_KEY = process.env.B2C_CONSUMER_SECRET_KEY;
+        const BULK_SHORTCODE = process.env.BULK_SHORTCODE;
+        const B2C_INITIATOR_NAME = process.env.B2C_INITIATOR_NAME;
+        const B2C_INITIATOR_PASSWORD = process.env.B2C_INITIATOR_PASSWORD;
+        const REMARKS = 'School disbursement';
+        const COMMAND_ID = 'BusinessPayment';
+
+        if (!B2C_CONSUMER_KEY || !B2C_CONSUMER_SECRET_KEY)
+            throw new Error('Missing M-Pesa credentials in environment');
+
+        const accessToken = await this.getAccessToken(B2C_CONSUMER_KEY, B2C_CONSUMER_SECRET_KEY);
+        const securityCredential = await this.generateSecurityCredentials(B2C_INITIATOR_PASSWORD);
+        const OriginatorConversationID = await this.generateReference(transactionId);
+
+        const requestData = {
+            InitiatorName: B2C_INITIATOR_NAME,
+            SecurityCredential: securityCredential,
+            CommandID: COMMAND_ID,
+            Amount: amount,
+            PartyA: BULK_SHORTCODE,
+            PartyB: parseInt(phoneNumber),
+            Remarks: REMARKS,
+            QueueTimeOutURL: `${process.env.BACKEND_DOMAIN}/api/v1/subscriptions/b2c-timeout`,
+            ResultURL: `${process.env.BACKEND_DOMAIN}/api/v1/subscriptions/mpesa-b2c-result`,
+            Occassion: 'Disbursement',
+            OriginatorConversationID,
+        };
+
+        const url = `${this.MPESA_BASEURL}/mpesa/b2c/v3/paymentrequest`;
+
+        try {
+            const response = await axios.post(url, requestData, {
+                headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+            });
+            return response.data;
+        } catch (error) {
+            console.error('B2C disbursement error:', error.response?.data || error.message);
+            throw new Error('Failed to disburse funds to school');
         }
     }
 
@@ -187,4 +248,48 @@ export class SubscriptionService {
             String(date.getSeconds()).padStart(2, '0')
         );
     }
+
+
+    //generate b2c security credentials
+    private async generateSecurityCredentials(password) {
+        try {
+            const certPath = 'assets/certs/ProductionCertificate.cer';
+            // Read the certificate file
+            const cert = fs.readFileSync(certPath, 'utf8');
+
+            // Encrypt the password using the public key
+            const encryptedBuffer = crypto.publicEncrypt(
+                {
+                    key: cert,
+                    padding: crypto.constants.RSA_PKCS1_PADDING,
+                },
+                Buffer.from(password)
+            );
+
+            // Convert to base64
+            return encryptedBuffer.toString('base64');
+        } catch (error) {
+            console.error('Error generating security credentials:', error);
+            throw error;
+        }
+    }
+
+
+
+    //generate reference number
+    private async generateReference(loan_id) {
+        const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let result = '';
+        // Generate the first random part (5 digits)
+        for (let i = 0; i < 5; i++) {
+            result += characters.charAt(Math.floor(Math.random() * characters.length));
+        }
+        // Generate the second random part (8 digits)
+        let middlePart = '';
+        for (let i = 0; i < 8; i++) {
+            middlePart += characters.charAt(Math.floor(Math.random() * characters.length));
+        }
+        // Combine everything in the format: "XXXXX-XXXXXXXX-transaction_id"
+        return `${result}-${middlePart}-${loan_id}`;
+    };
 }

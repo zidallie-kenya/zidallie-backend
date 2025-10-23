@@ -28,6 +28,14 @@ export class CreateSchoolDto {
 
   @ApiProperty({
     type: String,
+    example: '254722222222',
+    required: false,
+    nullable: true,
+  })
+  disbursement_phone_number: string | null;
+
+  @ApiProperty({
+    type: String,
     example: 'School opens at 7:00 AM',
     required: false,
   })

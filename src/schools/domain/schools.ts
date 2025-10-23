@@ -54,6 +54,17 @@ export class School {
 
   @ApiProperty({
     type: String,
+    example: '254722222222',
+    required: false,
+    nullable: true,
+  })
+  @Expose({ groups: ['me', 'admin'] })
+  disbursement_phone_number: string | null;
+
+
+
+  @ApiProperty({
+    type: String,
     example: 'nairobiprimary@gmail.com',
     required: false,
     nullable: true,

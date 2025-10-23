@@ -24,6 +24,9 @@ export class SchoolEntity extends EntityRelationalHelper {
   location: string | null;
 
   @Column({ type: 'text', nullable: true })
+  disbursement_phone_number: string | null;
+
+  @Column({ type: 'text', nullable: true })
   comments: string | null;
 
   @Column({ type: 'text', nullable: true })

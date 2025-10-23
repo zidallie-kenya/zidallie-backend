@@ -18,6 +18,7 @@ export class SchoolMapper {
     domainEntity.comments = raw.comments;
     domainEntity.url = raw.url;
     domainEntity.meta = raw.meta;
+    domainEntity.disbursement_phone_number = raw.disbursement_phone_number;
     domainEntity.smart_card_url = raw.smart_card_url;
     domainEntity.terra_email = raw.terra_email;
     domainEntity.terra_password = raw.terra_password;
@@ -63,6 +64,7 @@ export class SchoolMapper {
     //simple fields
     if (domainEntity.id !== undefined) persistence.id = domainEntity.id;
     if (domainEntity.name !== undefined) persistence.name = domainEntity.name;
+    if (domainEntity.disbursement_phone_number !== undefined) persistence.disbursement_phone_number = domainEntity.disbursement_phone_number
     if (domainEntity.location !== undefined)
       persistence.location = domainEntity.location;
     if (domainEntity.comments !== undefined)
@@ -85,7 +87,7 @@ export class SchoolMapper {
           OnboardingMapper.toPersistence(onboarding) as OnboardingFormEntity,
       );
     }
-    
+
     if (domainEntity.subscription_plans !== undefined) {
       persistence.subscription_plans = domainEntity.subscription_plans.map(
         (onboarding) =>

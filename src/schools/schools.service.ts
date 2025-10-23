@@ -45,6 +45,7 @@ export class SchoolsService {
       terra_email: createSchoolDto.terra_email ?? null,
       terra_password: createSchoolDto.terra_password ?? null,
       terra_tag_id: createSchoolDto.terra_tag_id ?? null,
+      disbursement_phone_number: createSchoolDto.disbursement_phone_number ?? null, 
     });
   }
 

@@ -5,6 +5,7 @@ import { SchoolMetaDto } from '../dto/school-meta.dto';
 import { Ride } from '../../rides/domain/rides';
 import { Onboarding } from '../../onboarding/domain/onboarding';
 import { IsOptional } from 'class-validator';
+import { SubscriptionPlan } from '../../subscriptions/domain/subscription-plan';
 
 export class School {
   @ApiProperty({ type: Number })
@@ -93,6 +94,11 @@ export class School {
   @ApiProperty({ type: () => [Onboarding] })
   @Expose({ groups: ['me', 'admin'] })
   onboardings: Onboarding[];
+
+  @ApiProperty({ type: () => [SubscriptionPlan], required: false })
+  @Expose({ groups: ['me', 'admin'] })
+  subscription_plans?: SubscriptionPlan[];
+
 
   @ApiProperty()
   @Expose({ groups: ['me', 'admin'] })

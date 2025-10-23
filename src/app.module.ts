@@ -29,6 +29,7 @@ import { OnboardingModule } from './onboarding/onboarding.module';
 import brevoConfig from './mail/config/brevo.config';
 
 import { LocationModule } from './location/location.module';
+import { SubscriptionModule } from './subscriptions/subscription.module';
 
 const infrastructureDatabaseModule = TypeOrmModule.forRootAsync({
   useClass: TypeOrmConfigService,
@@ -86,6 +87,7 @@ const infrastructureDatabaseModule = TypeOrmModule.forRootAsync({
     NotificationsModule,
     OnboardingModule,
     LocationModule,
+    SubscriptionModule
   ],
 })
 export class AppModule {}

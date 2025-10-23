@@ -4,6 +4,8 @@ import { RideEntity } from '../../../../../rides/infrastructure/persistence/rela
 import { RideMapper } from '../../../../../rides/infrastructure/persistence/relational/mappers/ride.mapper';
 import { StudentEntity } from '../../../../../students/infrastructure/persistence/relational/entities/student.entity';
 import { StudentMapper } from '../../../../../students/infrastructure/persistence/relational/mappers/student.mapper';
+import { SubscriptionPlanEntity } from '../../../../../subscriptions/infrastructure/persistence/relational/entities/subscription_plans.entity';
+import { SubscriptionPlanMapper } from '../../../../../subscriptions/infrastructure/persistence/relational/mappers/subscription-plan.mapper';
 import { School } from '../../../../domain/schools';
 import { SchoolEntity } from '../entities/school.entity';
 
@@ -43,6 +45,14 @@ export class SchoolMapper {
       domainEntity.onboardings = [];
     }
 
+    if (raw.subscription_plans) {
+      domainEntity.subscription_plans = raw.subscription_plans.map((plan) =>
+        SubscriptionPlanMapper.toDomain(plan),
+      );
+    } else {
+      domainEntity.onboardings = [];
+    }
+
     domainEntity.created_at = raw.created_at;
     return domainEntity;
   }
@@ -73,6 +83,13 @@ export class SchoolMapper {
       persistence.onboardings = domainEntity.onboardings.map(
         (onboarding) =>
           OnboardingMapper.toPersistence(onboarding) as OnboardingFormEntity,
+      );
+    }
+    
+    if (domainEntity.subscription_plans !== undefined) {
+      persistence.subscription_plans = domainEntity.subscription_plans.map(
+        (onboarding) =>
+          SubscriptionPlanMapper.toPersistence(onboarding) as SubscriptionPlanEntity,
       );
     }
     if (domainEntity.smart_card_url !== undefined)

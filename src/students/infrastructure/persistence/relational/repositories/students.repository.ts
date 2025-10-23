@@ -95,13 +95,19 @@ export class StudentsRelationalRepository implements StudentRepository {
   }
 
   async findByParentId(parentId: number): Promise<Student[]> {
-    const entities = await this.studentsRepository.find({
-      where: { parent: { id: parentId } },
-      relations: ['school', 'parent', 'rides'],
-      order: { name: 'ASC' },
-    });
-    console.log('Found students for parent ID:', parentId, entities);
+    const entities = await this.studentsRepository
+      .createQueryBuilder('student')
+      .leftJoinAndSelect('student.school', 'school')
+      .leftJoinAndSelect('school.subscription_plans', 'subscription_plans')
+      .leftJoinAndSelect('student.parent', 'parent')
+      .leftJoinAndSelect('student.rides', 'rides')
+      .leftJoinAndSelect('student.subscriptions', 'subscriptions')
+      .leftJoinAndSelect('subscriptions.plan', 'plan')
+      .where('parent.id = :parentId', { parentId })
+      .orderBy('student.name', 'ASC')
+      .getMany();
 
+    console.log('Found students for parent ID:', parentId, entities);
     return entities.map((student) => StudentMapper.toDomain(student));
   }
 

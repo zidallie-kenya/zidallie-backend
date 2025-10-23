@@ -10,6 +10,7 @@ import { SchoolMeta } from '../../../../../utils/types/school-meta';
 import { StudentEntity } from '../../../../../students/infrastructure/persistence/relational/entities/student.entity';
 import { RideEntity } from '../../../../../rides/infrastructure/persistence/relational/entities/ride.entity';
 import { OnboardingFormEntity } from '../../../../../onboarding/infrastructure/persistence/relational/entities/onboarding.entity';
+import { SubscriptionPlanEntity } from '../../../../../subscriptions/infrastructure/persistence/relational/entities/subscription_plans.entity';
 
 @Entity({ name: 'school' })
 export class SchoolEntity extends EntityRelationalHelper {
@@ -55,4 +56,8 @@ export class SchoolEntity extends EntityRelationalHelper {
 
   @OneToMany(() => OnboardingFormEntity, (onboarding) => onboarding.school)
   onboardings: OnboardingFormEntity[];
+
+  @OneToMany(() => SubscriptionPlanEntity, (plan) => plan.school)
+  subscription_plans?: SubscriptionPlanEntity[];
+
 }

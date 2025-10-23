@@ -12,6 +12,7 @@ import { SchoolEntity } from '../../../../../schools/infrastructure/persistence/
 import { UserEntity } from '../../../../../users/infrastructure/persistence/relational/entities/user.entity';
 import { Gender } from '../../../../../utils/types/enums';
 import { RideEntity } from '../../../../../rides/infrastructure/persistence/relational/entities/ride.entity';
+import { SubscriptionEntity } from '../../../../../subscriptions/infrastructure/persistence/relational/entities/subscription.entity';
 
 @Entity({ name: 'student' })
 export class StudentEntity extends EntityRelationalHelper {
@@ -49,4 +50,7 @@ export class StudentEntity extends EntityRelationalHelper {
 
   @OneToMany(() => RideEntity, (ride) => ride.student)
   rides: RideEntity[];
+
+  @OneToMany(() => SubscriptionEntity, (subscription) => subscription.student)
+  subscriptions?: SubscriptionEntity[];
 }

@@ -11,10 +11,10 @@ import { Public } from '../auth/decorators/public.decorator';
 
 @ApiTags('Subscriptions')
 @Roles(RoleEnum.parent)
-@UseGuards(JwtAuthGuard) // <- Use the custom guard
+@UseGuards(JwtAuthGuard) //  custom guard
 @Controller({ path: 'subscriptions', version: '1' })
 export class SubscriptionController {
-  constructor(private readonly subscriptionService: SubscriptionService) {}
+  constructor(private readonly subscriptionService: SubscriptionService) { }
 
   @Post()
   async create(@Body() dto: CreateSubscriptionDto) {
@@ -22,8 +22,9 @@ export class SubscriptionController {
   }
 
   @Post('express-callback')
-  @Public() // <- bypass JWT
-  async expressCallback(@Req() req: Request, @Res() res: Response) {
-   await this.subscriptionService.handlePaymentCallback(req.body);
+  @Public()
+  async expressCallback(@Req() req: Request) {
+    return this.subscriptionService.handlePaymentCallback(req.body);
   }
+
 }

@@ -4,6 +4,7 @@ import { School } from '../../schools/domain/schools';
 import { User } from '../../users/domain/user';
 import { Gender } from '../../utils/types/enums';
 import { Ride } from '../../rides/domain/rides';
+import { Subscription } from '../../subscriptions/domain/subscription';
 
 export class Student {
   @ApiProperty({ type: Number })
@@ -59,6 +60,10 @@ export class Student {
   @ApiProperty({ type: () => [Ride] })
   @Expose({ groups: ['me', 'admin'] })
   rides: Ride[];
+
+  @ApiProperty({ type: () => [Subscription], required: false })
+  @Expose({ groups: ['me', 'admin'] })
+  subscriptions?: Subscription[];
 
   @ApiProperty()
   @Expose({ groups: ['me', 'admin'] })

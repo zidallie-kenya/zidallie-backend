@@ -10,8 +10,8 @@ export class PendingPaymentRepository extends Repository<PendingPaymentEntity> {
     super(PendingPaymentEntity, dataSource.createEntityManager());
   }
 
-  async createPendingPayment(studentId: number, amount: number, checkoutId: string) {
-    const pendingPayment = this.create({ studentId, amount, checkoutId });
+  async createPendingPayment(studentId: number, amount: number, checkoutId: string, subscriptionPlanId: number) {
+    const pendingPayment = this.create({ studentId, amount, checkoutId, subscriptionPlanId });
     return await this.save(pendingPayment);
   }
 

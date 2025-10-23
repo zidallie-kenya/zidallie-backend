@@ -5,7 +5,8 @@ export class PendingPaymentMapper {
     static toDomain(entity: PendingPaymentEntity): PendingPayment {
         return new PendingPayment({
             id: entity.id,
-            studentId: entity.studentId, 
+            studentId: entity.studentId,
+            subscriptionPlanId: entity.subscriptionPlanId,
             amount: entity.amount,
             checkoutId: entity.checkoutId,
             createdAt: entity.created_at,
@@ -15,7 +16,8 @@ export class PendingPaymentMapper {
 
     static toPersistence(domain: PendingPayment): PendingPaymentEntity {
         const entity = new PendingPaymentEntity();
-        entity.studentId = domain.studentId; 
+        entity.studentId = domain.studentId;
+        entity.subscriptionPlanId = domain.subscriptionPlanId;
         entity.amount = domain.amount;
         entity.checkoutId = domain.checkoutId;
         entity.created_at = domain.createdAt ?? new Date();

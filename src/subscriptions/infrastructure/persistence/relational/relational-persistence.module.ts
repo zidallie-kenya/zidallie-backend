@@ -4,11 +4,13 @@ import { DataSource } from 'typeorm';
 
 import { PendingPaymentEntity } from './entities/pending_payment.entity';
 import { SubscriptionEntity } from './entities/subscription.entity';
+import { SubscriptionPlanEntity } from './entities/subscription_plans.entity';
 import { PaymentEntity } from '../../../../payments/infrastructure/persistence/relational/entities/payment.entity';
 import { StudentEntity } from '../../../../students/infrastructure/persistence/relational/entities/student.entity';
 
 import { PendingPaymentRepository } from './repositories/pending_payment.repository';
 import { SubscriptionRepository } from './repositories/subscription.repository';
+import { SubscriptionPlanRepository } from './repositories/subscriptionplan.repository'; 
 import { PaymentRepository } from '../../../../payments/infrastructure/persistence/payment.repository';
 import { StudentRepository } from '../../../../students/infrastructure/persistence/student.repository';
 import { StudentsRelationalRepository } from '../../../../students/infrastructure/persistence/relational/repositories/students.repository';
@@ -19,6 +21,7 @@ import { PaymentsRelationalRepository } from '../../../../payments/infrastructur
     TypeOrmModule.forFeature([
       PendingPaymentEntity,
       SubscriptionEntity,
+      SubscriptionPlanEntity, 
       PaymentEntity,
       StudentEntity,
     ]),
@@ -34,12 +37,15 @@ import { PaymentsRelationalRepository } from '../../../../payments/infrastructur
       useFactory: (dataSource: DataSource) => new SubscriptionRepository(dataSource),
       inject: [DataSource],
     },
-    // bind abstract PaymentRepository to concrete PaymentsRelationalRepository
+    {
+      provide: SubscriptionPlanRepository,  
+      useFactory: (dataSource: DataSource) => new SubscriptionPlanRepository(dataSource),
+      inject: [DataSource],
+    },
     {
       provide: PaymentRepository,
       useClass: PaymentsRelationalRepository,
     },
-
     {
       provide: StudentRepository,
       useClass: StudentsRelationalRepository,
@@ -48,6 +54,7 @@ import { PaymentsRelationalRepository } from '../../../../payments/infrastructur
   exports: [
     PendingPaymentRepository,
     SubscriptionRepository,
+    SubscriptionPlanRepository, // <-- export it too
     PaymentRepository,
     StudentRepository,
   ],

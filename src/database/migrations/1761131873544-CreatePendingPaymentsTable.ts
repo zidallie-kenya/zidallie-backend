@@ -19,6 +19,11 @@ export class CreatePendingPaymentsTable1678901234567 implements MigrationInterfa
                         isNullable: false,
                     },
                     {
+                        name: 'subscriptionPlanId',
+                        type: 'int',
+                        isNullable: false,
+                    },
+                    {
                         name: 'amount',
                         type: 'float',
                         isNullable: false,
@@ -55,14 +60,32 @@ export class CreatePendingPaymentsTable1678901234567 implements MigrationInterfa
                 onDelete: 'CASCADE',
             }),
         );
+
+        // Add foreign key to subscription_plans table
+        await queryRunner.createForeignKey(
+            'pending_payments',
+            new TableForeignKey({
+                columnNames: ['subscriptionPlanId'],
+                referencedColumnNames: ['id'],
+                referencedTableName: 'subscription_plans',
+                onDelete: 'CASCADE',
+            }),
+        );
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
         const table = await queryRunner.getTable('pending_payments');
-        // Drop foreign key for student_id
+
+        // Drop foreign key for studentId
         const studentForeignKey = table?.foreignKeys.find(fk => fk.columnNames.indexOf('studentId') !== -1);
         if (studentForeignKey) {
             await queryRunner.dropForeignKey('pending_payments', studentForeignKey);
+        }
+
+        // Drop foreign key for subscriptionPlanId
+        const planForeignKey = table?.foreignKeys.find(fk => fk.columnNames.indexOf('subscriptionPlanId') !== -1);
+        if (planForeignKey) {
+            await queryRunner.dropForeignKey('pending_payments', planForeignKey);
         }
 
         await queryRunner.dropTable('pending_payments');

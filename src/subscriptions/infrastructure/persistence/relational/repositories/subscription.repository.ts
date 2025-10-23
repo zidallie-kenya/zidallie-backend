@@ -14,11 +14,12 @@ export class SubscriptionRepository {
     async createSubscription(
         manager: EntityManager,
         student: any,
-        phoneNumber: string,
+        plan: any,
         amount?: number,
     ): Promise<Subscription> {
         const subscription = manager.create(SubscriptionEntity, {
             student,
+            plan,
             amount: amount ?? 0,
             status: 'active',
             start_date: new Date(),

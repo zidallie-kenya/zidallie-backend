@@ -31,7 +31,7 @@ export class SubscriptionPlanMapper {
         if (domain.created_at !== undefined) entity.created_at = domain.created_at;
         if (domain.updated_at !== undefined) entity.updated_at = domain.updated_at;
 
-        // ✅ FIX: assign school relation (TypeORM expects this)
+       
         if (domain.school_id !== undefined && domain.school_id !== null) {
             entity.school = { id: domain.school_id } as SchoolEntity;
         }

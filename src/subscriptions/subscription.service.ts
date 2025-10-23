@@ -7,6 +7,7 @@ import { PaymentKind, TransactionType } from '../utils/types/enums';
 import { PendingPaymentRepository } from './infrastructure/persistence/relational/repositories/pending_payment.repository';
 import { PaymentRepository } from '../payments/infrastructure/persistence/payment.repository';
 import { SubscriptionRepository } from './infrastructure/persistence/relational/repositories/subscription.repository';
+import { SubscriptionPlanRepository } from './infrastructure/persistence/relational/repositories/subscriptionplan.repository';
 
 @Injectable()
 export class SubscriptionService {
@@ -16,6 +17,7 @@ export class SubscriptionService {
         private readonly pendingPaymentsRepository: PendingPaymentRepository,
         private readonly paymentsRepository: PaymentRepository,
         private readonly subscriptionsRepository: SubscriptionRepository,
+        private readonly subscriptionPlanRepository: SubscriptionPlanRepository,
         private readonly studentsService: StudentsService,
         private readonly dataSource: DataSource,
     ) { }
@@ -77,6 +79,7 @@ export class SubscriptionService {
                     student.id,
                     dto.amount,
                     data.CheckoutRequestID,
+                    dto.subscriptionPlanId
                 );
 
             return {
@@ -94,54 +97,67 @@ export class SubscriptionService {
     // -------------------------------
     async handlePaymentCallback(receivedData: any) {
         const stkCallback = receivedData?.Body?.stkCallback;
-        if (!stkCallback) throw new BadRequestException('Invalid callback data');
 
-        if (stkCallback.ResultCode !== 0)
-            throw new BadRequestException('Payment failed');
+        // If invalid callback, just log and acknowledge
+        if (!stkCallback) {
+            console.log('Received invalid M-Pesa callback.')
+            return { ResultCode: 0, ResultDesc: 'Accepted' };
+        }
+
+        if (stkCallback.ResultCode !== 0) {
+            console.log(`M-Pesa payment failed: ${stkCallback.ResultDesc}`)
+            return { ResultCode: 0, ResultDesc: 'Accepted' };
+        }
 
         const metadata = stkCallback.CallbackMetadata?.Item || [];
         const amount = metadata[0]?.Value;
         const phoneNumber = metadata[3]?.Value;
         const checkoutRequestID = stkCallback.CheckoutRequestID;
 
-        // Find the pending payment
-        const pending =
-            await this.pendingPaymentsRepository.findByCheckoutId(checkoutRequestID);
-        if (!pending) throw new BadRequestException('Pending payment not found');
+        // Find pending payment
+        const pending = await this.pendingPaymentsRepository.findByCheckoutId(checkoutRequestID);
+        if (!pending) {
+            console.log(`Pending payment not found for CheckoutRequestID: ${checkoutRequestID}`)
+            return { ResultCode: 0, ResultDesc: 'Accepted' };
+        }
 
-        // Find the associated student
+        // Find student
         const student = await this.studentsService.findById(pending.studentId);
-        if (!student) throw new BadRequestException('Student not found');
+        if (!student) {
+            console.log(`Student not found for pending payment id ${pending.id}`)
+            return { ResultCode: 0, ResultDesc: 'Accepted' };
+        }
 
-        // Execute everything in a single transaction
-        return await this.dataSource.transaction(async (manager) => {
-            // --- Create subscription ---
-            const subscription = await this.subscriptionsRepository.createSubscription(
-                manager,
-                student,
-                phoneNumber,
-            );
+        const plan = await this.subscriptionPlanRepository.findById(pending.subscriptionPlanId);
 
-            // --- Record payment ---
-            const payment = await this.paymentsRepository.create({
-                user: { id: student.parent?.id } as any,
-                amount,
-                kind: PaymentKind.MPesa,
-                transaction_type: TransactionType.Deposit,
-                comments: 'Subscription payment via MPESA',
-                transaction_id: checkoutRequestID,
+        // Execute transaction
+        try {
+            await this.dataSource.transaction(async (manager) => {
+                // Create subscription
+                await this.subscriptionsRepository.createSubscription(manager, student, plan, amount);
+
+                // Record payment
+                await this.paymentsRepository.create({
+                    user: { id: student.parent?.id } as any,
+                    amount,
+                    kind: PaymentKind.MPesa,
+                    transaction_type: TransactionType.Deposit,
+                    comments: 'Subscription payment via MPESA',
+                    transaction_id: checkoutRequestID,
+                });
+
+                // Remove pending payment
+                await this.pendingPaymentsRepository.remove(pending);
             });
 
-            // --- Remove pending payment ---
-            await this.pendingPaymentsRepository.remove(pending);
-
-            return {
-                message: 'Subscription activated and payment recorded successfully.',
-                subscription,
-                payment,
-            };
-        });
+            console.log(`Payment processed successfully for CheckoutRequestID: ${checkoutRequestID}`)
+            return { ResultCode: 0, ResultDesc: 'Accepted' }; // Always acknowledge M-Pesa
+        } catch (error) {
+            console.log('Error processing payment callback', error)
+            return { ResultCode: 0, ResultDesc: 'Accepted' }; // Still acknowledge to avoid retries
+        }
     }
+
 
     // -------------------------------
     // HELPER: Get access token

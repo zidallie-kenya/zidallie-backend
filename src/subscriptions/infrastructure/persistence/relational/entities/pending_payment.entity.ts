@@ -6,7 +6,10 @@ export class PendingPaymentEntity {
   id: number;
 
   @Column()
-  studentId: number; // store only the ID, no relation
+  studentId: number;
+
+  @Column()
+  subscriptionPlanId: number;
 
   @Column('float')
   amount: number;

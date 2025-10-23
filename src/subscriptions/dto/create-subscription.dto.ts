@@ -6,6 +6,9 @@ export class CreateSubscriptionDto {
     student_id: number;
 
     @IsNumber()
+    subscriptionPlanId: number;
+
+    @IsNumber()
     amount: number;
 
     @IsPhoneNumber('KE') // assuming Kenyan phone numbers

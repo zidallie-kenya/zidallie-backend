@@ -2,6 +2,8 @@ import { RideEntity } from '../../../../../rides/infrastructure/persistence/rela
 import { RideMapper } from '../../../../../rides/infrastructure/persistence/relational/mappers/ride.mapper';
 import { SchoolEntity } from '../../../../../schools/infrastructure/persistence/relational/entities/school.entity';
 import { SchoolMapper } from '../../../../../schools/infrastructure/persistence/relational/mappers/schools.mapper';
+import { SubscriptionEntity } from '../../../../../subscriptions/infrastructure/persistence/relational/entities/subscription.entity';
+import { SubscriptionMapper } from '../../../../../subscriptions/infrastructure/persistence/relational/mappers/subscription.mapper';
 import { UserEntity } from '../../../../../users/infrastructure/persistence/relational/entities/user.entity';
 import { UserMapper } from '../../../../../users/infrastructure/persistence/relational/mappers/user.mapper';
 import { mapRelation } from '../../../../../utils/relation.mapper';
@@ -38,6 +40,12 @@ export class StudentMapper {
       domainEntity.rides = [];
     }
 
+    if (raw.subscriptions) {
+      domainEntity.subscriptions = raw.subscriptions.map((subscription) => SubscriptionMapper.toDomain(subscription));
+    } else {
+      domainEntity.subscriptions = [];
+    }
+
     domainEntity.created_at = raw.created_at;
     return domainEntity;
   }
@@ -58,6 +66,10 @@ export class StudentMapper {
     if (domainEntity.rides !== undefined)
       persistence.rides = domainEntity.rides.map(
         (ride) => RideMapper.toPersistence(ride) as RideEntity,
+      );
+    if (domainEntity.subscriptions !== undefined)
+      persistence.subscriptions = domainEntity.subscriptions.map(
+        (subscription) => SubscriptionMapper.toPersistence(subscription) as SubscriptionEntity,
       );
     //relations
     //school

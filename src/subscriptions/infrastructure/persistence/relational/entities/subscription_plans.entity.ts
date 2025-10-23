@@ -54,4 +54,5 @@ export class SubscriptionPlanEntity {
     onUpdate: 'CURRENT_TIMESTAMP',
   })
   updated_at: Date;
+  
 }

@@ -44,7 +44,7 @@ import { QueryLocationDto } from './dto/query-location.dto';
   version: '1',
 })
 export class LocationsController {
-  constructor(private readonly locationsService: LocationsService) {}
+  constructor(private readonly locationsService: LocationsService) { }
 
   //creates a new location
   @ApiCreatedResponse({
@@ -54,10 +54,21 @@ export class LocationsController {
     groups: ['admin'],
   })
   @Post()
+  @Post()
   @HttpCode(HttpStatus.CREATED)
-  create(@Body() createLocationDto: CreateLocationDto): Promise<Location> {
-    return this.locationsService.create(createLocationDto);
+  async create(@Body() body: any): Promise<Location> {
+    // Manually construct the DTO-like object
+    const payload = {
+      ...body,
+      driverId: Number(body.driverId),
+      latitude: body.latitude,
+      longitude: body.longitude,
+      timestamp: body.timestamp,
+    };
+
+    return this.locationsService.create(payload);
   }
+
 
   //returns all the location data with a limit of 50
   @ApiOkResponse({

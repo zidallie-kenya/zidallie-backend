@@ -41,7 +41,9 @@ export class StudentMapper {
     }
 
     if (raw.subscriptions) {
-      domainEntity.subscriptions = raw.subscriptions.map((subscription) => SubscriptionMapper.toDomain(subscription));
+      domainEntity.subscriptions = raw.subscriptions.map((subscription) =>
+        SubscriptionMapper.toDomain(subscription),
+      );
     } else {
       domainEntity.subscriptions = [];
     }
@@ -69,7 +71,8 @@ export class StudentMapper {
       );
     if (domainEntity.subscriptions !== undefined)
       persistence.subscriptions = domainEntity.subscriptions.map(
-        (subscription) => SubscriptionMapper.toPersistence(subscription) as SubscriptionEntity,
+        (subscription) =>
+          SubscriptionMapper.toPersistence(subscription) as SubscriptionEntity,
       );
     //relations
     //school

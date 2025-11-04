@@ -10,7 +10,7 @@ import { StudentEntity } from '../../../../students/infrastructure/persistence/r
 
 import { PendingPaymentRepository } from './repositories/pending_payment.repository';
 import { SubscriptionRepository } from './repositories/subscription.repository';
-import { SubscriptionPlanRepository } from './repositories/subscriptionplan.repository'; 
+import { SubscriptionPlanRepository } from './repositories/subscriptionplan.repository';
 import { PaymentRepository } from '../../../../payments/infrastructure/persistence/payment.repository';
 import { StudentRepository } from '../../../../students/infrastructure/persistence/student.repository';
 import { StudentsRelationalRepository } from '../../../../students/infrastructure/persistence/relational/repositories/students.repository';
@@ -21,7 +21,7 @@ import { PaymentsRelationalRepository } from '../../../../payments/infrastructur
     TypeOrmModule.forFeature([
       PendingPaymentEntity,
       SubscriptionEntity,
-      SubscriptionPlanEntity, 
+      SubscriptionPlanEntity,
       PaymentEntity,
       StudentEntity,
     ]),
@@ -29,17 +29,20 @@ import { PaymentsRelationalRepository } from '../../../../payments/infrastructur
   providers: [
     {
       provide: PendingPaymentRepository,
-      useFactory: (dataSource: DataSource) => new PendingPaymentRepository(dataSource),
+      useFactory: (dataSource: DataSource) =>
+        new PendingPaymentRepository(dataSource),
       inject: [DataSource],
     },
     {
       provide: SubscriptionRepository,
-      useFactory: (dataSource: DataSource) => new SubscriptionRepository(dataSource),
+      useFactory: (dataSource: DataSource) =>
+        new SubscriptionRepository(dataSource),
       inject: [DataSource],
     },
     {
-      provide: SubscriptionPlanRepository,  
-      useFactory: (dataSource: DataSource) => new SubscriptionPlanRepository(dataSource),
+      provide: SubscriptionPlanRepository,
+      useFactory: (dataSource: DataSource) =>
+        new SubscriptionPlanRepository(dataSource),
       inject: [DataSource],
     },
     {

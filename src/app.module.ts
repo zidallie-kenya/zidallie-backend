@@ -87,7 +87,7 @@ const infrastructureDatabaseModule = TypeOrmModule.forRootAsync({
     NotificationsModule,
     OnboardingModule,
     LocationModule,
-    SubscriptionModule
+    SubscriptionModule,
   ],
 })
 export class AppModule {}

@@ -2,15 +2,15 @@
 import { IsNotEmpty, IsNumber, IsPhoneNumber } from 'class-validator';
 
 export class CreateSubscriptionDto {
-    @IsNumber()
-    student_id: number;
+  @IsNumber()
+  student_id: number;
 
-    @IsNumber()
-    subscriptionPlanId: number;
+  @IsNumber()
+  subscriptionPlanId: number;
 
-    @IsNumber()
-    amount: number;
+  @IsNumber()
+  amount: number;
 
-    @IsPhoneNumber('KE') // assuming Kenyan phone numbers
-    phone_number: string;
+  @IsPhoneNumber('KE') // assuming Kenyan phone numbers
+  phone_number: string;
 }

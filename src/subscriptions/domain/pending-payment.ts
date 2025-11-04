@@ -1,7 +1,6 @@
-
 export class PendingPayment {
   id?: number;
-  studentId: number;  
+  studentId: number;
   subscriptionPlanId: number;
   amount: number;
   checkoutId: string;
@@ -9,15 +8,15 @@ export class PendingPayment {
   updatedAt?: Date;
 
   constructor(params: {
-    studentId: number; 
-    subscriptionPlanId: number,
+    studentId: number;
+    subscriptionPlanId: number;
     amount: number;
     checkoutId: string;
     id?: number;
     createdAt?: Date;
     updatedAt?: Date;
   }) {
-    this.studentId = params.studentId; 
+    this.studentId = params.studentId;
     this.subscriptionPlanId = params.subscriptionPlanId;
     this.amount = params.amount;
     this.checkoutId = params.checkoutId;

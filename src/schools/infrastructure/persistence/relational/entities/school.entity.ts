@@ -62,5 +62,4 @@ export class SchoolEntity extends EntityRelationalHelper {
 
   @OneToMany(() => SubscriptionPlanEntity, (plan) => plan.school)
   subscription_plans?: SubscriptionPlanEntity[];
-
 }

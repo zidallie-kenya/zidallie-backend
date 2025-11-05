@@ -153,33 +153,33 @@ export class SubscriptionService {
             console.log(`Payment processed successfully for CheckoutRequestID: ${checkoutRequestID}`);
 
             // DISBURSE FUNDS TO SCHOOL (16% of amount)
-            // if (student.school?.disbursement_phone_number) {
-            //     try {
-            //         await this.disburseFunds(
-            //             checkoutRequestID,
-            //             student.school.disbursement_phone_number,
-            //             0.16 * amount
-            //         );
-            //         console.log(`Funds disbursed to school: ${student.school.name}`);
-            //     } catch (b2cError) {
-            //         console.error('Error disbursing funds to school:', b2cError);
-            //     }
-            // }
+            if (student.school?.disbursement_phone_number) {
+                try {
+                    await this.disburseFunds(
+                        checkoutRequestID,
+                        student.school.disbursement_phone_number,
+                        0.16 * amount
+                    );
+                    console.log(`Funds disbursed to school: ${student.school.name}`);
+                } catch (b2cError) {
+                    console.error('Error disbursing funds to school:', b2cError);
+                }
+            }
 
             return { ResultCode: 0, ResultDesc: 'Accepted' };
         } catch (error) {
             console.error('Error processing payment callback:', error);
             return { ResultCode: 0, ResultDesc: 'Accepted' };
         }
-    }
+    } 
 
     // -------------------------------
     // DISBURSE FUNDS TO SCHOOL
     // -------------------------------
     private async disburseFunds(transactionId: string, phoneNumber: string, amount: number) {
-        const B2C_CONSUMER_KEY = process.env.B2C_CONSUMER_KEY;
-        const B2C_CONSUMER_SECRET_KEY = process.env.B2C_CONSUMER_SECRET_KEY;
-        const BULK_SHORTCODE = process.env.BULK_SHORTCODE;
+        const B2C_CONSUMER_KEY = process.env.MPESA_CONSUMER_KEY;
+        const B2C_CONSUMER_SECRET_KEY = process.env.MPESA_SECRET_KEY;
+        const BULK_SHORTCODE = process.env.MPESA_C2B_PAYBILL;
         const B2C_INITIATOR_NAME = process.env.B2C_INITIATOR_NAME;
         const B2C_INITIATOR_PASSWORD = process.env.B2C_INITIATOR_PASSWORD;
         const REMARKS = 'School disbursement';

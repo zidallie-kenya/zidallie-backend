@@ -44,7 +44,7 @@ import { QueryLocationDto } from './dto/query-location.dto';
   version: '1',
 })
 export class LocationsController {
-  constructor(private readonly locationsService: LocationsService) { }
+  constructor(private readonly locationsService: LocationsService) {}
 
   //creates a new location
   @ApiCreatedResponse({
@@ -68,7 +68,6 @@ export class LocationsController {
 
     return this.locationsService.create(payload);
   }
-
 
   //returns all the location data with a limit of 50
   @ApiOkResponse({

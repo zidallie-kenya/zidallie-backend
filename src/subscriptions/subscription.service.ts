@@ -8,8 +8,8 @@ import { PendingPaymentRepository } from './infrastructure/persistence/relationa
 import { PaymentRepository } from '../payments/infrastructure/persistence/payment.repository';
 import { SubscriptionRepository } from './infrastructure/persistence/relational/repositories/subscription.repository';
 import { SubscriptionPlanRepository } from './infrastructure/persistence/relational/repositories/subscriptionplan.repository';
-const fs = require('fs');
-const crypto = require('crypto');
+import fs from 'fs';
+import crypto from 'crypto';
 
 @Injectable()
 export class SubscriptionService {
@@ -57,6 +57,7 @@ export class SubscriptionService {
             TransactionDesc: 'STUDENT SUBSCRIPTION',
         };
 
+        // sends the STK Push request to M-Pesa API
         try {
             const response = await axios.post(
                 `${this.MPESA_BASEURL}/mpesa/stkpush/v1/processrequest`,
@@ -76,24 +77,26 @@ export class SubscriptionService {
                 );
             }
 
-            const pending =
-                await this.pendingPaymentsRepository.createPendingPayment(
-                    student.id,
-                    dto.amount,
-                    data.CheckoutRequestID,
-                    dto.subscriptionPlanId
-                );
+
+            const pending = await this.pendingPaymentsRepository.createPendingPayment(
+                student.id,
+                dto.amount,
+                data.CheckoutRequestID,
+                dto.subscriptionPlanId,
+            );
 
             return {
                 message: 'Payment initiated successfully. Complete on your phone.',
                 pendingPayment: pending,
             };
         } catch (error) {
-            console.error('MPESA STK Push Error:', error.response?.data || error.message);
+            console.error(
+                'MPESA STK Push Error:',
+                error.response?.data || error.message,
+            );
             throw new BadRequestException('Failed to initiate payment');
         }
     }
-
 
     // -------------------------------
     // HANDLE CALLBACK
@@ -101,40 +104,60 @@ export class SubscriptionService {
     async handlePaymentCallback(receivedData: any) {
         const stkCallback = receivedData?.Body?.stkCallback;
 
+        // Even if failed, you must always return { ResultCode: 0 } to M-Pesa, otherwise M-Pesa will keep retrying.
+
+        // Check if callback data is valid
         if (!stkCallback) {
             console.log('Received invalid M-Pesa callback.');
             return { ResultCode: 0, ResultDesc: 'Accepted' };
         }
 
+        // ResultCode = 0 means success anything else = failed, cancelled, insufficient balance etc.
         if (stkCallback.ResultCode !== 0) {
             console.log(`M-Pesa payment failed: ${stkCallback.ResultDesc}`);
             return { ResultCode: 0, ResultDesc: 'Accepted' };
         }
 
+        // Extract metadata
         const metadata = stkCallback.CallbackMetadata?.Item || [];
+
+        // get the amount and checkoutRequestID
         const amount = metadata[0]?.Value;
         const checkoutRequestID = stkCallback.CheckoutRequestID;
 
         // Find pending payment
-        const pending = await this.pendingPaymentsRepository.findByCheckoutId(checkoutRequestID);
+        const pending =
+            await this.pendingPaymentsRepository.findByCheckoutId(checkoutRequestID);
         if (!pending) {
-            console.log(`Pending payment not found for CheckoutRequestID: ${checkoutRequestID}`);
+            console.log(
+                `Pending payment not found for CheckoutRequestID: ${checkoutRequestID}`,
+            );
             return { ResultCode: 0, ResultDesc: 'Accepted' };
         }
 
         // Find student and subscription plan
         const student = await this.studentsService.findById(pending.studentId);
-        const plan = await this.subscriptionPlanRepository.findById(pending.subscriptionPlanId);
+        const plan = await this.subscriptionPlanRepository.findById(
+            pending.subscriptionPlanId,
+        );
 
         if (!student || !plan) {
-            console.log(`Student or plan not found for pending payment id ${pending.id}`);
+            console.log(
+                `Student or plan not found for pending payment id ${pending.id}`,
+            );
             return { ResultCode: 0, ResultDesc: 'Accepted' };
         }
 
         try {
+            //the whole block has to excute successfully or none at all
             await this.dataSource.transaction(async (manager) => {
                 // Create subscription
-                await this.subscriptionsRepository.createSubscription(manager, student, plan, amount);
+                await this.subscriptionsRepository.createSubscription(
+                    manager,
+                    student,
+                    plan,
+                    amount,
+                );
 
                 // Record payment
                 await this.paymentsRepository.create({
@@ -150,9 +173,11 @@ export class SubscriptionService {
                 await this.pendingPaymentsRepository.remove(pending);
             });
 
-            console.log(`Payment processed successfully for CheckoutRequestID: ${checkoutRequestID}`);
+            console.log(
+                `Payment processed successfully for CheckoutRequestID: ${checkoutRequestID}`,
+            );
 
-            // DISBURSE FUNDS TO SCHOOL (16% of amount)
+            //   DISBURSE FUNDS TO SCHOOL (16% of amount)
             if (student.school?.disbursement_phone_number) {
                 try {
                     await this.disburseFunds(
@@ -171,12 +196,17 @@ export class SubscriptionService {
             console.error('Error processing payment callback:', error);
             return { ResultCode: 0, ResultDesc: 'Accepted' };
         }
-    } 
+    }
 
     // -------------------------------
     // DISBURSE FUNDS TO SCHOOL
     // -------------------------------
-    private async disburseFunds(transactionId: string, phoneNumber: string, amount: number) {
+    private async disburseFunds(
+        transactionId: string,
+        phoneNumber: string,
+        amount: number,
+    ) {
+      
         const B2C_CONSUMER_KEY = process.env.MPESA_CONSUMER_KEY;
         const B2C_CONSUMER_SECRET_KEY = process.env.MPESA_SECRET_KEY;
         const BULK_SHORTCODE = process.env.MPESA_C2B_PAYBILL;
@@ -188,9 +218,15 @@ export class SubscriptionService {
         if (!B2C_CONSUMER_KEY || !B2C_CONSUMER_SECRET_KEY)
             throw new Error('Missing M-Pesa credentials in environment');
 
-        const accessToken = await this.getAccessToken(B2C_CONSUMER_KEY, B2C_CONSUMER_SECRET_KEY);
-        const securityCredential = await this.generateSecurityCredentials(B2C_INITIATOR_PASSWORD);
-        const OriginatorConversationID = await this.generateReference(transactionId);
+        const accessToken = await this.getAccessToken(
+            B2C_CONSUMER_KEY,
+            B2C_CONSUMER_SECRET_KEY,
+        );
+        const securityCredential = await this.generateSecurityCredentials(
+            B2C_INITIATOR_PASSWORD,
+        );
+        const OriginatorConversationID =
+            await this.generateReference(transactionId);
 
         const requestData = {
             InitiatorName: B2C_INITIATOR_NAME,
@@ -200,8 +236,8 @@ export class SubscriptionService {
             PartyA: BULK_SHORTCODE,
             PartyB: parseInt(phoneNumber),
             Remarks: REMARKS,
-            QueueTimeOutURL: `${process.env.BACKEND_DOMAIN}/api/v1/subscriptions/b2c-timeout`,
-            ResultURL: `${process.env.BACKEND_DOMAIN}/api/v1/subscriptions/mpesa-b2c-result`,
+            QueueTimeOutURL: `https://api.zidallie.co.ke/api/v1/subscriptions/b2c-timeout`,
+            ResultURL: `https://api.zidallie.co.ke/api/v1/subscriptions/b2c-result`,
             Occassion: 'Disbursement',
             OriginatorConversationID,
         };
@@ -210,15 +246,20 @@ export class SubscriptionService {
 
         try {
             const response = await axios.post(url, requestData, {
-                headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+                headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json',
+                },
             });
             return response.data;
         } catch (error) {
-            console.error('B2C disbursement error:', error.response?.data || error.message);
+            console.error(
+                'B2C disbursement error:',
+                error.response?.data || error.message,
+            );
             throw new Error('Failed to disburse funds to school');
         }
     }
-
 
     // -------------------------------
     // HELPER: Get access token
@@ -232,7 +273,10 @@ export class SubscriptionService {
             );
             return response.data.access_token;
         } catch (error) {
-            console.error('Access token error:', error.response?.data || error.message);
+            console.error(
+                'Access token error:',
+                error.response?.data || error.message,
+            );
             throw new BadRequestException('Failed to get MPESA access token');
         }
     }
@@ -249,9 +293,8 @@ export class SubscriptionService {
         );
     }
 
-
     //generate b2c security credentials
-    private async generateSecurityCredentials(password) {
+    private generateSecurityCredentials(password) {
         try {
             const certPath = 'assets/certs/ProductionCertificate.cer';
             // Read the certificate file
@@ -263,7 +306,7 @@ export class SubscriptionService {
                     key: cert,
                     padding: crypto.constants.RSA_PKCS1_PADDING,
                 },
-                Buffer.from(password)
+                Buffer.from(password),
             );
 
             // Convert to base64
@@ -274,22 +317,24 @@ export class SubscriptionService {
         }
     }
 
-
-
     //generate reference number
-    private async generateReference(loan_id) {
+    private generateReference(loan_id) {
         const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
         let result = '';
         // Generate the first random part (5 digits)
         for (let i = 0; i < 5; i++) {
-            result += characters.charAt(Math.floor(Math.random() * characters.length));
+            result += characters.charAt(
+                Math.floor(Math.random() * characters.length),
+            );
         }
         // Generate the second random part (8 digits)
         let middlePart = '';
         for (let i = 0; i < 8; i++) {
-            middlePart += characters.charAt(Math.floor(Math.random() * characters.length));
+            middlePart += characters.charAt(
+                Math.floor(Math.random() * characters.length),
+            );
         }
         // Combine everything in the format: "XXXXX-XXXXXXXX-transaction_id"
         return `${result}-${middlePart}-${loan_id}`;
-    };
+    }
 }

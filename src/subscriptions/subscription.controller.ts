@@ -1,4 +1,12 @@
-import { Controller, Post, Body, Req, Res, HttpStatus, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Req,
+  Res,
+  HttpStatus,
+  UseGuards,
+} from '@nestjs/common';
 import { SubscriptionService } from './subscription.service';
 import { CreateSubscriptionDto } from './dto/create-subscription.dto';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
@@ -14,7 +22,7 @@ import { Public } from '../auth/decorators/public.decorator';
 @UseGuards(JwtAuthGuard) //  custom guard
 @Controller({ path: 'subscriptions', version: '1' })
 export class SubscriptionController {
-  constructor(private readonly subscriptionService: SubscriptionService) { }
+  constructor(private readonly subscriptionService: SubscriptionService) {}
 
   @Post()
   async create(@Body() dto: CreateSubscriptionDto) {
@@ -27,4 +35,9 @@ export class SubscriptionController {
     return this.subscriptionService.handlePaymentCallback(req.body);
   }
 
+  @Post('b2c-result')
+  @Public()
+  async b2cCallback(@Req() req: Request) {
+    return this.subscriptionService.handlePaymentCallback(req.body);
+  }
 }

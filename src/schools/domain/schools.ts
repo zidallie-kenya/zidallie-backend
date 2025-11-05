@@ -61,8 +61,6 @@ export class School {
   @Expose({ groups: ['me', 'admin'] })
   disbursement_phone_number: string | null;
 
-
-
   @ApiProperty({
     type: String,
     example: 'nairobiprimary@gmail.com',
@@ -109,7 +107,6 @@ export class School {
   @ApiProperty({ type: () => [SubscriptionPlan], required: false })
   @Expose({ groups: ['me', 'admin'] })
   subscription_plans?: SubscriptionPlan[];
-
 
   @ApiProperty()
   @Expose({ groups: ['me', 'admin'] })

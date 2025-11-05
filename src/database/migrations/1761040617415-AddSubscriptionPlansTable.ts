@@ -1,10 +1,12 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AddSubscriptionPlansTable1754921023456 implements MigrationInterface {
-    name = 'AddSubscriptionPlansTable1754920023456'; 
+export class AddSubscriptionPlansTable1754921023456
+  implements MigrationInterface
+{
+  name = 'AddSubscriptionPlansTable1754920023456';
 
-    public async up(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`
+  public async up(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(`
       CREATE TABLE "subscription_plans" (
         "id" SERIAL PRIMARY KEY,
         "school_id" INTEGER NOT NULL,
@@ -20,9 +22,9 @@ export class AddSubscriptionPlansTable1754921023456 implements MigrationInterfac
           ON DELETE CASCADE ON UPDATE CASCADE
       );
     `);
-    }
+  }
 
-    public async down(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`DROP TABLE "subscription_plans"`);
-    }
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(`DROP TABLE "subscription_plans"`);
+  }
 }

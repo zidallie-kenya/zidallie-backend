@@ -64,7 +64,9 @@ export class SchoolMapper {
     //simple fields
     if (domainEntity.id !== undefined) persistence.id = domainEntity.id;
     if (domainEntity.name !== undefined) persistence.name = domainEntity.name;
-    if (domainEntity.disbursement_phone_number !== undefined) persistence.disbursement_phone_number = domainEntity.disbursement_phone_number
+    if (domainEntity.disbursement_phone_number !== undefined)
+      persistence.disbursement_phone_number =
+        domainEntity.disbursement_phone_number;
     if (domainEntity.location !== undefined)
       persistence.location = domainEntity.location;
     if (domainEntity.comments !== undefined)
@@ -91,7 +93,9 @@ export class SchoolMapper {
     if (domainEntity.subscription_plans !== undefined) {
       persistence.subscription_plans = domainEntity.subscription_plans.map(
         (onboarding) =>
-          SubscriptionPlanMapper.toPersistence(onboarding) as SubscriptionPlanEntity,
+          SubscriptionPlanMapper.toPersistence(
+            onboarding,
+          ) as SubscriptionPlanEntity,
       );
     }
     if (domainEntity.smart_card_url !== undefined)

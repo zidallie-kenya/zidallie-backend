@@ -2,12 +2,15 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 
+// --- Entities ---
 import { PendingPaymentEntity } from './entities/pending_payment.entity';
 import { SubscriptionEntity } from './entities/subscription.entity';
 import { SubscriptionPlanEntity } from './entities/subscription_plans.entity';
 import { PaymentEntity } from '../../../../payments/infrastructure/persistence/relational/entities/payment.entity';
 import { StudentEntity } from '../../../../students/infrastructure/persistence/relational/entities/student.entity';
+import { B2cMpesaTransactionEntity } from './entities/b2c_mpesa_transaction.entity';
 
+// --- Repositories ---
 import { PendingPaymentRepository } from './repositories/pending_payment.repository';
 import { SubscriptionRepository } from './repositories/subscription.repository';
 import { SubscriptionPlanRepository } from './repositories/subscriptionplan.repository';
@@ -15,6 +18,7 @@ import { PaymentRepository } from '../../../../payments/infrastructure/persisten
 import { StudentRepository } from '../../../../students/infrastructure/persistence/student.repository';
 import { StudentsRelationalRepository } from '../../../../students/infrastructure/persistence/relational/repositories/students.repository';
 import { PaymentsRelationalRepository } from '../../../../payments/infrastructure/persistence/relational/repositories/payment.repository';
+import { B2cMpesaTransactionRepository } from './repositories/b2c_mpesa_transaction.repository';
 
 @Module({
   imports: [
@@ -24,6 +28,7 @@ import { PaymentsRelationalRepository } from '../../../../payments/infrastructur
       SubscriptionPlanEntity,
       PaymentEntity,
       StudentEntity,
+      B2cMpesaTransactionEntity, // 👈 add this entity
     ]),
   ],
   providers: [
@@ -46,6 +51,12 @@ import { PaymentsRelationalRepository } from '../../../../payments/infrastructur
       inject: [DataSource],
     },
     {
+      provide: B2cMpesaTransactionRepository, 
+      useFactory: (dataSource: DataSource) =>
+        new B2cMpesaTransactionRepository(dataSource),
+      inject: [DataSource],
+    },
+    {
       provide: PaymentRepository,
       useClass: PaymentsRelationalRepository,
     },
@@ -57,9 +68,10 @@ import { PaymentsRelationalRepository } from '../../../../payments/infrastructur
   exports: [
     PendingPaymentRepository,
     SubscriptionRepository,
-    SubscriptionPlanRepository, // <-- export it too
+    SubscriptionPlanRepository,
     PaymentRepository,
     StudentRepository,
+    B2cMpesaTransactionRepository,
   ],
 })
 export class RelationalSubscriptionPersistenceModule {}

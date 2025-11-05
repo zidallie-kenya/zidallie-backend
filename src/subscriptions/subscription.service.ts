@@ -10,6 +10,8 @@ import { SubscriptionRepository } from './infrastructure/persistence/relational/
 import { SubscriptionPlanRepository } from './infrastructure/persistence/relational/repositories/subscriptionplan.repository';
 import fs from 'fs';
 import crypto from 'crypto';
+import { B2cMpesaTransactionRepository } from './infrastructure/persistence/relational/repositories/b2c_mpesa_transaction.repository';
+import { CreateB2cMpesaTransactionDto } from './dto/create-b2c-mpesa-transaction.dto';
 
 @Injectable()
 export class SubscriptionService {
@@ -20,6 +22,7 @@ export class SubscriptionService {
         private readonly paymentsRepository: PaymentRepository,
         private readonly subscriptionsRepository: SubscriptionRepository,
         private readonly subscriptionPlanRepository: SubscriptionPlanRepository,
+        private readonly b2cMpesaTransactionRepository: B2cMpesaTransactionRepository,
         private readonly studentsService: StudentsService,
         private readonly dataSource: DataSource,
     ) { }
@@ -198,6 +201,67 @@ export class SubscriptionService {
         }
     }
 
+
+    // HANDLE B2C CALLBACK
+    // -------------------------------
+    async handleB2cPaymentCallback(receivedData: any) {
+        try {
+            // Validate incoming data
+            if (!receivedData?.Result) {
+                console.log('Invalid B2C callback payload:', receivedData);
+                return { ResultCode: 0, ResultDesc: 'Accepted' };
+            }
+
+            const result = receivedData.Result;
+
+            // Extract relevant fields
+            const dto: CreateB2cMpesaTransactionDto = {
+                transaction_id: result.TransactionID,
+                conversation_id: result.ConversationID,
+                originator_conversation_id: result.OriginatorConversationID,
+                result_type: result.ResultType,
+                result_code: result.ResultCode,
+                result_desc: result.ResultDesc,
+                transaction_amount: undefined,
+                receiver_party_public_name: undefined,
+                transaction_completed_at: undefined,
+
+                raw_result: result,
+            };
+
+            // Extract deeper parameters if available
+            const params = result?.ResultParameters?.ResultParameter || [];
+            for (const p of params) {
+                switch (p.Key) {
+                    case 'TransactionAmount':
+                        dto.transaction_amount = Number(p.Value);
+                        break;
+                    case 'ReceiverPartyPublicName':
+                        dto.receiver_party_public_name = p.Value;
+                        break;
+                    case 'TransactionCompletedDateTime':
+                        dto.transaction_completed_at = p.Value;
+                        break;
+                }
+            }
+
+            // Save transaction record
+            await this.b2cMpesaTransactionRepository.createTransaction(dto);
+
+            console.log(
+                `B2C transaction saved: ${dto.transaction_id || 'unknown ID'}`
+            );
+
+            // Always return success to M-Pesa
+            return { ResultCode: 0, ResultDesc: 'Accepted' };
+        } catch (error) {
+            console.error('Error saving B2C transaction:', error);
+            // Still return success so M-Pesa doesn't retry
+            return { ResultCode: 0, ResultDesc: 'Accepted' };
+        }
+    }
+
+
     // -------------------------------
     // DISBURSE FUNDS TO SCHOOL
     // -------------------------------
@@ -206,7 +270,7 @@ export class SubscriptionService {
         phoneNumber: string,
         amount: number,
     ) {
-      
+
         const B2C_CONSUMER_KEY = process.env.MPESA_CONSUMER_KEY;
         const B2C_CONSUMER_SECRET_KEY = process.env.MPESA_SECRET_KEY;
         const BULK_SHORTCODE = process.env.MPESA_C2B_PAYBILL;
@@ -225,8 +289,6 @@ export class SubscriptionService {
         const securityCredential = await this.generateSecurityCredentials(
             B2C_INITIATOR_PASSWORD,
         );
-        const OriginatorConversationID =
-            await this.generateReference(transactionId);
 
         const requestData = {
             InitiatorName: B2C_INITIATOR_NAME,
@@ -236,10 +298,10 @@ export class SubscriptionService {
             PartyA: BULK_SHORTCODE,
             PartyB: parseInt(phoneNumber),
             Remarks: REMARKS,
-            QueueTimeOutURL: `https://api.zidallie.co.ke/api/v1/subscriptions/b2c-timeout`,
-            ResultURL: `https://api.zidallie.co.ke/api/v1/subscriptions/b2c-result`,
+            QueueTimeOutURL: `https://zidallie-backend.onrender.com/api/v1/subscriptions/b2c-timeout`,
+            ResultURL: `https://zidallie-backend.onrender.com/api/v1/subscriptions/b2c-result`,
             Occassion: 'Disbursement',
-            OriginatorConversationID,
+            OriginatorConversationID: transactionId,
         };
 
         const url = `${this.MPESA_BASEURL}/mpesa/b2c/v3/paymentrequest`;
@@ -337,4 +399,6 @@ export class SubscriptionService {
         // Combine everything in the format: "XXXXX-XXXXXXXX-transaction_id"
         return `${result}-${middlePart}-${loan_id}`;
     }
+
+
 }

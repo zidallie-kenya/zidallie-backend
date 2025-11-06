@@ -29,7 +29,7 @@ export class SubscriptionPlan {
 
   @ApiProperty({ type: Number, example: 500 })
   @Expose()
-  comission_amount: number;
+  commission_amount: number;
 
   @ApiProperty({ type: Number, example: 30 })
   @Expose()

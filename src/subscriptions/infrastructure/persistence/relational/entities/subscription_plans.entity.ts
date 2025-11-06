@@ -31,6 +31,9 @@ export class SubscriptionPlanEntity {
   @Column({ type: 'float' })
   price: number;
 
+  @Column({ type: 'float' })
+  comission_amount: number;
+
   @Column({ default: true })
   is_active: boolean;
 

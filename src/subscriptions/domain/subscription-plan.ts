@@ -27,6 +27,10 @@ export class SubscriptionPlan {
   @Expose()
   price: number;
 
+  @ApiProperty({ type: Number, example: 500 })
+  @Expose()
+  comission_amount: number;
+
   @ApiProperty({ type: Number, example: 30 })
   @Expose()
   duration_days: number;

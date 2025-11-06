@@ -10,6 +10,7 @@ export class SubscriptionPlanMapper {
     plan.name = entity.name;
     plan.description = entity.description ?? undefined;
     plan.price = entity.price;
+    plan.comission_amount = entity.comission_amount;
     plan.duration_days = entity.duration_days;
     plan.is_active = entity.is_active;
     plan.created_at = entity.created_at;
@@ -27,6 +28,7 @@ export class SubscriptionPlanMapper {
     if (domain.description !== undefined)
       entity.description = domain.description ?? undefined;
     if (domain.price !== undefined) entity.price = domain.price;
+    if(domain.comission_amount !== undefined) entity.comission_amount = domain.comission_amount;
     if (domain.duration_days !== undefined)
       entity.duration_days = domain.duration_days;
     if (domain.is_active !== undefined) entity.is_active = domain.is_active;

@@ -186,7 +186,7 @@ export class SubscriptionService {
                     await this.disburseFunds(
                         checkoutRequestID,
                         student.school.disbursement_phone_number,
-                        0.16 * amount
+                        amount - plan.comission_amount
                     );
                     console.log(`Funds disbursed to school: ${student.school.name}`);
                 } catch (b2cError) {

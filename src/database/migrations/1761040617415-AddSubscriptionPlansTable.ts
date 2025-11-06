@@ -1,8 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class AddSubscriptionPlansTable1754921023456
-  implements MigrationInterface
-{
+  implements MigrationInterface {
   name = 'AddSubscriptionPlansTable1754920023456';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
@@ -14,6 +13,7 @@ export class AddSubscriptionPlansTable1754921023456
         "description" TEXT,
         "duration_days" INTEGER NOT NULL, -- number of days this plan lasts
         "price" DOUBLE PRECISION NOT NULL,
+        "comission_amount" DOUBLE PRECISION NOT NULL,
         "is_active" BOOLEAN DEFAULT true,
         "created_at" TIMESTAMP NOT NULL DEFAULT now(),
         "updated_at" TIMESTAMP NOT NULL DEFAULT now(),

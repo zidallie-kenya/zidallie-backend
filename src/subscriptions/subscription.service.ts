@@ -403,8 +403,8 @@ export class SubscriptionService {
             PartyB: bank_paybill_number,
             AccountReference: bank_account_number,
             Remarks: REMARKS,
-            QueueTimeOutURL: `https://zidallie-backend.onrender.com/api/v1/subscriptions/b2c-timeout`,
-            ResultURL: `https://zidallie-backend.onrender.com/api/v1/subscriptions/b2c-result`,
+            QueueTimeOutURL: `https://api.pumzi.co.ke/api/payments/v1/confirm-payment-callback`,
+            ResultURL: `https://api.pumzi.co.ke/api/payments/v1/confirm-payment-callback`
         };
 
         const url = `${this.MPESA_BASEURL}/mpesa/b2b/v1/paymentrequest`;

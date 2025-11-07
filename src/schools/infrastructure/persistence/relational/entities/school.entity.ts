@@ -27,6 +27,12 @@ export class SchoolEntity extends EntityRelationalHelper {
   disbursement_phone_number: string | null;
 
   @Column({ type: 'text', nullable: true })
+  bank_paybill_number: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  bank_account_number: string | null;
+
+  @Column({ type: 'text', nullable: true })
   comments: string | null;
 
   @Column({ type: 'text', nullable: true })

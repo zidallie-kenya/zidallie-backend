@@ -36,6 +36,22 @@ export class CreateSchoolDto {
 
   @ApiProperty({
     type: String,
+    example: '247247',
+    required: false,
+    nullable: true,
+  })
+  bank_paybill_number: string | null;
+
+  @ApiProperty({
+    type: String,
+    example: '0232324',
+    required: false,
+    nullable: true,
+  })
+  bank_account_number: string | null;
+
+  @ApiProperty({
+    type: String,
     example: 'School opens at 7:00 AM',
     required: false,
   })

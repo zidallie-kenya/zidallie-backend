@@ -152,7 +152,7 @@ export class SubscriptionService {
         }
 
         try {
-            //the whole block has to excute successfully or none at all
+            // the whole block has to excute successfully or none at all
             await this.dataSource.transaction(async (manager) => {
                 // Create subscription
                 await this.subscriptionsRepository.createSubscription(
@@ -180,19 +180,42 @@ export class SubscriptionService {
                 `Payment processed successfully for CheckoutRequestID: ${checkoutRequestID}`,
             );
 
-            //   DISBURSE FUNDS TO SCHOOL (16% of amount)
-            if (student.school?.disbursement_phone_number) {
+            //DISBURSE FUNDS TO SCHOOL
+            if (student.school) {
+                const amountToDisburse = amount - plan.commission_amount;
+
                 try {
-                    await this.disburseFunds(
-                        checkoutRequestID,
-                        student.school.disbursement_phone_number,
-                        amount - plan.commission_amount
-                    );
-                    console.log(`Funds disbursed to school: ${student.school.name}`);
-                } catch (b2cError) {
-                    console.error('Error disbursing funds to school:', b2cError);
+                    if (student.school.disbursement_phone_number) {
+                        // B2C to phone
+                        await this.disburseFunds(
+                            checkoutRequestID,
+                            student.school.disbursement_phone_number,
+                            amountToDisburse
+                        );
+                        console.log(`Funds disbursed to school (via phone): ${student.school.name}`);
+                    } else if (
+                        student.school.bank_account_number &&
+                        student.school.bank_paybill_number
+                    ) {
+                        //B2B to bank
+                        await this.disbursebankFunds(
+                            checkoutRequestID,
+                            student.school.bank_paybill_number,
+                            student.school.bank_account_number,
+                            amountToDisburse
+                        );
+                        console.log(`Funds disbursed to school (via bank): ${student.school.name}`);
+                    } else {
+                        console.warn(
+                            `No valid disbursement method found for school: ${student.school.name}`
+                        );
+                    }
+                } catch (error) {
+                    console.error("Error disbursing funds to school:", error);
                 }
             }
+
+
 
             return { ResultCode: 0, ResultDesc: 'Accepted' };
         } catch (error) {
@@ -201,20 +224,20 @@ export class SubscriptionService {
         }
     }
 
+    // HANDLE M-PESA CALLBACK (Universal for B2C and B2B)
+    async handleMpesaBusinessCallback(receivedData: any) {
+        console.log("Received M-Pesa callback");
 
-    // HANDLE B2C CALLBACK
-    // -------------------------------
-    async handleB2cPaymentCallback(receivedData: any) {
         try {
-            // Validate incoming data
+            // Validate payload
             if (!receivedData?.Result) {
-                console.log('Invalid B2C callback payload:', receivedData);
-                return { ResultCode: 0, ResultDesc: 'Accepted' };
+                console.warn("Invalid M-Pesa callback payload:", receivedData);
+                return { ResultCode: 0, ResultDesc: "Accepted" };
             }
 
             const result = receivedData.Result;
 
-            // Extract relevant fields
+            // Construct DTO
             const dto: CreateB2cMpesaTransactionDto = {
                 transaction_id: result.TransactionID,
                 conversation_id: result.ConversationID,
@@ -225,41 +248,56 @@ export class SubscriptionService {
                 transaction_amount: undefined,
                 receiver_party_public_name: undefined,
                 transaction_completed_at: undefined,
-
                 raw_result: result,
             };
 
-            // Extract deeper parameters if available
+            // Flatten ResultParameters into a map
             const params = result?.ResultParameters?.ResultParameter || [];
+            const paramMap: Record<string, any> = {};
             for (const p of params) {
-                switch (p.Key) {
-                    case 'TransactionAmount':
-                        dto.transaction_amount = Number(p.Value);
-                        break;
-                    case 'ReceiverPartyPublicName':
-                        dto.receiver_party_public_name = p.Value;
-                        break;
-                    case 'TransactionCompletedDateTime':
-                        dto.transaction_completed_at = p.Value;
-                        break;
-                }
+                if (p.Key) paramMap[p.Key] = p.Value;
             }
 
-            // Save transaction record
-            await this.b2cMpesaTransactionRepository.createTransaction(dto);
+            // Detect transaction type (B2C or B2B)
+            if (paramMap["TransactionAmount"]) {
+                // B2C
+                dto.transaction_amount = Number(paramMap["TransactionAmount"]);
+                dto.receiver_party_public_name = paramMap["ReceiverPartyPublicName"];
+                dto.transaction_completed_at =
+                    paramMap["TransactionCompletedDateTime"] || new Date().toISOString();
+            } else if (paramMap["Amount"]) {
+                // B2B
+                dto.transaction_amount = Number(paramMap["Amount"]);
+                dto.receiver_party_public_name = paramMap["ReceiverPartyPublicName"];
+                dto.transaction_completed_at =
+                    paramMap["TransCompletedTime"] || new Date().toISOString();
+            }
 
-            console.log(
-                `B2C transaction saved: ${dto.transaction_id || 'unknown ID'}`
+            //Check for duplicate TransactionID
+            const existing = await this.b2cMpesaTransactionRepository.findByTransactionId(
+                result.TransactionID
             );
 
-            // Always return success to M-Pesa
-            return { ResultCode: 0, ResultDesc: 'Accepted' };
+            if (existing) {
+                console.log(`Duplicate callback ignored for TransactionID: ${result.TransactionID}`);
+                return { ResultCode: 0, ResultDesc: "Accepted" }; // Prevent M-Pesa retries
+            }
+
+            //Save to DB
+            await this.b2cMpesaTransactionRepository.createTransaction(dto);
+            console.log(`Transaction saved successfully: ${result.TransactionID}`);
+
+            // Always respond success to M-Pesa
+            return { ResultCode: 0, ResultDesc: "Accepted" };
         } catch (error) {
-            console.error('Error saving B2C transaction:', error);
-            // Still return success so M-Pesa doesn't retry
-            return { ResultCode: 0, ResultDesc: 'Accepted' };
+            console.error("Error processing M-Pesa callback:", error);
+            // Still return success so M-Pesa doesn’t retry
+            return { ResultCode: 0, ResultDesc: "Accepted" };
         }
     }
+
+
+
 
 
     // -------------------------------
@@ -323,6 +361,73 @@ export class SubscriptionService {
         }
     }
 
+
+
+    // -------------------------------
+    // DISBURSE FUNDS TO SCHOOL VIA BANK
+    // -------------------------------
+    private async disbursebankFunds(
+        transactionId: string,
+        bank_paybill_number: string,
+        bank_account_number: string,
+        amount: number,
+    ) {
+
+        const B2C_CONSUMER_KEY = process.env.MPESA_CONSUMER_KEY;
+        const B2C_CONSUMER_SECRET_KEY = process.env.MPESA_SECRET_KEY;
+        const BULK_SHORTCODE = process.env.MPESA_C2B_PAYBILL;
+        const B2C_INITIATOR_NAME = process.env.B2C_INITIATOR_NAME;
+        const B2C_INITIATOR_PASSWORD = process.env.B2C_INITIATOR_PASSWORD;
+        const REMARKS = 'School disbursement';
+        const COMMAND_ID = 'BusinessPayBill';
+
+        if (!B2C_CONSUMER_KEY || !B2C_CONSUMER_SECRET_KEY)
+            throw new Error('Missing M-Pesa credentials in environment');
+
+        const accessToken = await this.getAccessToken(
+            B2C_CONSUMER_KEY,
+            B2C_CONSUMER_SECRET_KEY,
+        );
+        const securityCredential = await this.generateSecurityCredentials(
+            B2C_INITIATOR_PASSWORD,
+        );
+
+        const requestData = {
+            Initiator: B2C_INITIATOR_NAME,
+            SecurityCredential: securityCredential,
+            CommandID: COMMAND_ID,
+            SenderIdentifierType: "4",
+            RecieverIdentifierType: "4",
+            Amount: amount,
+            PartyA: BULK_SHORTCODE,
+            PartyB: bank_paybill_number,
+            AccountReference: bank_account_number,
+            Remarks: REMARKS,
+            QueueTimeOutURL: `https://zidallie-backend.onrender.com/api/v1/subscriptions/b2c-timeout`,
+            ResultURL: `https://zidallie-backend.onrender.com/api/v1/subscriptions/b2c-result`,
+        };
+
+        const url = `${this.MPESA_BASEURL}/mpesa/b2b/v1/paymentrequest`;
+
+        try {
+            const response = await axios.post(url, requestData, {
+                headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+            console.log(response.data)
+            return response.data;
+        } catch (error) {
+            console.error(
+                'B2C disbursement error:',
+                error.response?.data || error.message,
+            );
+            throw new Error('Failed to disburse funds to school');
+        }
+    }
+
+
     // -------------------------------
     // HELPER: Get access token
     // -------------------------------
@@ -379,26 +484,6 @@ export class SubscriptionService {
         }
     }
 
-    //generate reference number
-    private generateReference(loan_id) {
-        const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-        let result = '';
-        // Generate the first random part (5 digits)
-        for (let i = 0; i < 5; i++) {
-            result += characters.charAt(
-                Math.floor(Math.random() * characters.length),
-            );
-        }
-        // Generate the second random part (8 digits)
-        let middlePart = '';
-        for (let i = 0; i < 8; i++) {
-            middlePart += characters.charAt(
-                Math.floor(Math.random() * characters.length),
-            );
-        }
-        // Combine everything in the format: "XXXXX-XXXXXXXX-transaction_id"
-        return `${result}-${middlePart}-${loan_id}`;
-    }
 
 
 }

@@ -19,6 +19,8 @@ export class SchoolMapper {
     domainEntity.url = raw.url;
     domainEntity.meta = raw.meta;
     domainEntity.disbursement_phone_number = raw.disbursement_phone_number;
+    domainEntity.bank_paybill_number = raw.bank_paybill_number;
+    domainEntity.bank_account_number = raw.bank_account_number;
     domainEntity.smart_card_url = raw.smart_card_url;
     domainEntity.terra_email = raw.terra_email;
     domainEntity.terra_password = raw.terra_password;
@@ -67,6 +69,12 @@ export class SchoolMapper {
     if (domainEntity.disbursement_phone_number !== undefined)
       persistence.disbursement_phone_number =
         domainEntity.disbursement_phone_number;
+    if (domainEntity.bank_paybill_number !== undefined)
+      persistence.bank_paybill_number =
+        domainEntity.bank_paybill_number;
+    if (domainEntity.bank_account_number !== undefined)
+      persistence.bank_account_number =
+        domainEntity.bank_account_number;
     if (domainEntity.location !== undefined)
       persistence.location = domainEntity.location;
     if (domainEntity.comments !== undefined)

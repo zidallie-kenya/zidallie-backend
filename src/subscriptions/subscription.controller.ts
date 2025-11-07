@@ -38,6 +38,6 @@ export class SubscriptionController {
   @Post('b2c-result')
   @Public()
   async b2cCallback(@Req() req: Request) {
-    return this.subscriptionService.handleB2cPaymentCallback(req.body);
+    return this.subscriptionService.handleMpesaBusinessCallback(req.body);
   }
 }

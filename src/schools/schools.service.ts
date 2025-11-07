@@ -13,7 +13,7 @@ import { CreateSchoolDto } from './dto/create-school.dto';
 
 @Injectable()
 export class SchoolsService {
-  constructor(private readonly schoolsRepository: SchoolRepository) {}
+  constructor(private readonly schoolsRepository: SchoolRepository) { }
 
   async create(createSchoolDto: CreateSchoolDto): Promise<School> {
     // Check if school with same name already exists
@@ -45,8 +45,9 @@ export class SchoolsService {
       terra_email: createSchoolDto.terra_email ?? null,
       terra_password: createSchoolDto.terra_password ?? null,
       terra_tag_id: createSchoolDto.terra_tag_id ?? null,
-      disbursement_phone_number:
-        createSchoolDto.disbursement_phone_number ?? null,
+      disbursement_phone_number: createSchoolDto.disbursement_phone_number ?? null,
+      bank_paybill_number: createSchoolDto.bank_paybill_number ?? null,
+      bank_account_number: createSchoolDto.bank_account_number ?? null
     });
   }
 

@@ -13,6 +13,8 @@ import crypto from 'crypto';
 import { B2cMpesaTransactionRepository } from './infrastructure/persistence/relational/repositories/b2c_mpesa_transaction.repository';
 import { CreateB2cMpesaTransactionDto } from './dto/create-b2c-mpesa-transaction.dto';
 
+
+
 @Injectable()
 export class SubscriptionService {
     private readonly MPESA_BASEURL = process.env.MPESA_BASE_URL;
@@ -255,22 +257,27 @@ export class SubscriptionService {
             const params = result?.ResultParameters?.ResultParameter || [];
             const paramMap: Record<string, any> = {};
             for (const p of params) {
-                if (p.Key) paramMap[p.Key] = p.Value;
+                if (!p.Key) continue;
+                // Convert numeric "Value" to string to preserve leading zeros and prevent precision loss
+                if (typeof p.Value === 'number') {
+                    p.Value = p.Value.toString();
+                }
+
+                paramMap[p.Key] = p.Value;
             }
+
 
             // Detect transaction type (B2C or B2B)
             if (paramMap["TransactionAmount"]) {
                 // B2C
                 dto.transaction_amount = Number(paramMap["TransactionAmount"]);
                 dto.receiver_party_public_name = paramMap["ReceiverPartyPublicName"];
-                dto.transaction_completed_at =
-                    paramMap["TransactionCompletedDateTime"] || new Date().toISOString();
+                dto.transaction_completed_at = paramMap["TransactionCompletedDateTime"] || new Date().toISOString();
             } else if (paramMap["Amount"]) {
                 // B2B
                 dto.transaction_amount = Number(paramMap["Amount"]);
                 dto.receiver_party_public_name = paramMap["ReceiverPartyPublicName"];
-                dto.transaction_completed_at =
-                    paramMap["TransCompletedTime"] || new Date().toISOString();
+                dto.transaction_completed_at = parseMpesaDate(paramMap["TransCompletedTime"])?.toISOString() || new Date().toISOString();
             }
 
             //Check for duplicate TransactionID
@@ -403,8 +410,8 @@ export class SubscriptionService {
             PartyB: bank_paybill_number,
             AccountReference: bank_account_number,
             Remarks: REMARKS,
-            QueueTimeOutURL: `https://api.pumzi.co.ke/api/payments/v1/confirm-payment-callback`,
-            ResultURL: `https://api.pumzi.co.ke/api/payments/v1/confirm-payment-callback`
+            QueueTimeOutURL: `https://zidallie-backend.onrender.com/api/v1/subscriptions/b2c-result`,
+            ResultURL: `https://zidallie-backend.onrender.com/api/v1/subscriptions/b2c-result`
         };
 
         const url = `${this.MPESA_BASEURL}/mpesa/b2b/v1/paymentrequest`;
@@ -486,4 +493,39 @@ export class SubscriptionService {
 
 
 
+
+
+}
+
+
+
+
+function parseMpesaDate(dateValue: string | number | null | undefined): Date | null {
+    if (!dateValue) return null;
+
+    const dateString = String(dateValue).trim();
+
+    // B2B style: 20251107161221
+    if (/^\d{14}$/.test(dateString)) {
+        const year = dateString.slice(0, 4);
+        const month = dateString.slice(4, 6);
+        const day = dateString.slice(6, 8);
+        const hour = dateString.slice(8, 10);
+        const minute = dateString.slice(10, 12);
+        const second = dateString.slice(12, 14);
+        const parsed = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}`);
+        return isNaN(parsed.getTime()) ? null : parsed;
+    }
+
+    // B2C style: "19.12.2019 11:45:50"
+    if (/^\d{2}\.\d{2}\.\d{4}\s+\d{2}:\d{2}:\d{2}$/.test(dateString)) {
+        const [day, month, rest] = dateString.split('.');
+        const [year, time] = rest.trim().split(' ');
+        const parsed = new Date(`${year}-${month}-${day}T${time}`);
+        return isNaN(parsed.getTime()) ? null : parsed;
+    }
+
+    // Fallback
+    const parsed = new Date(dateString);
+    return isNaN(parsed.getTime()) ? null : parsed;
 }

@@ -32,7 +32,7 @@ export class PendingPaymentEntity {
   @Column('float')
   amount: number;
 
-  @Column({ unique: true })
+  @Column({ unique: true, nullable: true })
   checkoutId: string;
 
   @Column({ type: 'text', nullable: true })

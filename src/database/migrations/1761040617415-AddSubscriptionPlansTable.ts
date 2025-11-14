@@ -1,7 +1,8 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class AddSubscriptionPlansTable1754921023456
-  implements MigrationInterface {
+  implements MigrationInterface
+{
   name = 'AddSubscriptionPlansTable1754920023456';
 
   public async up(queryRunner: QueryRunner): Promise<void> {

@@ -6,6 +6,8 @@ import { Gender } from '../../utils/types/enums';
 import { Ride } from '../../rides/domain/rides';
 import { Subscription } from '../../subscriptions/domain/subscription';
 
+export type ServiceType = 'school' | 'carpool' | 'private';
+
 export class Student {
   @ApiProperty({ type: Number })
   id: number;
@@ -56,6 +58,42 @@ export class Student {
   @ApiProperty({ type: Object, required: false, nullable: true })
   @Expose({ groups: ['me', 'admin'] })
   meta: any | null;
+
+  // 🆕 New Payment Fields
+  @ApiProperty({
+    type: String,
+    example: 'ACC12345',
+    required: false,
+    nullable: true,
+  })
+  @Expose({ groups: ['me', 'admin'] })
+  account_number: string | null;
+
+  @ApiProperty({
+    type: Number,
+    example: 500,
+    required: false,
+    nullable: true,
+  })
+  @Expose({ groups: ['me', 'admin'] })
+  daily_fee: number | null;
+
+  @ApiProperty({
+    type: Number,
+    example: 12000,
+    required: false,
+    nullable: true,
+  })
+  @Expose({ groups: ['me', 'admin'] })
+  transport_term_fee: number | null;
+
+  @ApiProperty({
+    enum: ['school', 'carpool', 'private'],
+    required: false,
+    nullable: true,
+  })
+  @Expose({ groups: ['me', 'admin'] })
+  service_type: ServiceType | null;
 
   @ApiProperty({ type: () => [Ride] })
   @Expose({ groups: ['me', 'admin'] })

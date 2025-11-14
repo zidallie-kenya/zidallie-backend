@@ -25,6 +25,14 @@ export class SchoolMapper {
     domainEntity.terra_email = raw.terra_email;
     domainEntity.terra_password = raw.terra_password;
     domainEntity.terra_tag_id = raw.terra_tag_id;
+    domainEntity.terra_zone_tag = raw.terra_zone_tag;
+    domainEntity.terra_parents_tag = raw.terra_parents_tag;
+    domainEntity.terra_student_tag = raw.terra_student_tag;
+    domainEntity.terra_school_tag = raw.terra_school_tag;
+    domainEntity.has_commission = raw.has_commission;
+    domainEntity.commission_amount = raw.commission_amount;
+    domainEntity.paybill = raw.paybill;
+    domainEntity.service_type = raw.service_type;
 
     if (raw.students) {
       domainEntity.students = raw.students.map((student) =>
@@ -53,7 +61,7 @@ export class SchoolMapper {
         SubscriptionPlanMapper.toDomain(plan),
       );
     } else {
-      domainEntity.onboardings = [];
+      domainEntity.subscription_plans = [];
     }
 
     domainEntity.created_at = raw.created_at;
@@ -63,24 +71,46 @@ export class SchoolMapper {
   static toPersistence(domainEntity: Partial<School>): Partial<SchoolEntity> {
     const persistence: Partial<SchoolEntity> = {};
 
-    //simple fields
     if (domainEntity.id !== undefined) persistence.id = domainEntity.id;
     if (domainEntity.name !== undefined) persistence.name = domainEntity.name;
     if (domainEntity.disbursement_phone_number !== undefined)
       persistence.disbursement_phone_number =
         domainEntity.disbursement_phone_number;
     if (domainEntity.bank_paybill_number !== undefined)
-      persistence.bank_paybill_number =
-        domainEntity.bank_paybill_number;
+      persistence.bank_paybill_number = domainEntity.bank_paybill_number;
     if (domainEntity.bank_account_number !== undefined)
-      persistence.bank_account_number =
-        domainEntity.bank_account_number;
+      persistence.bank_account_number = domainEntity.bank_account_number;
     if (domainEntity.location !== undefined)
       persistence.location = domainEntity.location;
     if (domainEntity.comments !== undefined)
       persistence.comments = domainEntity.comments;
     if (domainEntity.url !== undefined) persistence.url = domainEntity.url;
     if (domainEntity.meta !== undefined) persistence.meta = domainEntity.meta;
+    if (domainEntity.smart_card_url !== undefined)
+      persistence.smart_card_url = domainEntity.smart_card_url;
+    if (domainEntity.terra_email !== undefined)
+      persistence.terra_email = domainEntity.terra_email;
+    if (domainEntity.terra_password !== undefined)
+      persistence.terra_password = domainEntity.terra_password;
+    if (domainEntity.terra_tag_id !== undefined)
+      persistence.terra_tag_id = domainEntity.terra_tag_id;
+    if (domainEntity.terra_zone_tag !== undefined)
+      persistence.terra_zone_tag = domainEntity.terra_zone_tag;
+    if (domainEntity.terra_parents_tag !== undefined)
+      persistence.terra_parents_tag = domainEntity.terra_parents_tag;
+    if (domainEntity.terra_student_tag !== undefined)
+      persistence.terra_student_tag = domainEntity.terra_student_tag;
+    if (domainEntity.terra_school_tag !== undefined)
+      persistence.terra_school_tag = domainEntity.terra_school_tag;
+    if (domainEntity.has_commission !== undefined)
+      persistence.has_commission = domainEntity.has_commission;
+    if (domainEntity.commission_amount !== undefined)
+      persistence.commission_amount = domainEntity.commission_amount;
+    if (domainEntity.paybill !== undefined)
+      persistence.paybill = domainEntity.paybill;
+    if (domainEntity.service_type !== undefined)
+      persistence.service_type = domainEntity.service_type;
+
     if (domainEntity.students !== undefined) {
       persistence.students = domainEntity.students.map(
         (student) => StudentMapper.toPersistence(student) as StudentEntity,
@@ -97,25 +127,13 @@ export class SchoolMapper {
           OnboardingMapper.toPersistence(onboarding) as OnboardingFormEntity,
       );
     }
-
     if (domainEntity.subscription_plans !== undefined) {
       persistence.subscription_plans = domainEntity.subscription_plans.map(
-        (onboarding) =>
-          SubscriptionPlanMapper.toPersistence(
-            onboarding,
-          ) as SubscriptionPlanEntity,
+        (plan) =>
+          SubscriptionPlanMapper.toPersistence(plan) as SubscriptionPlanEntity,
       );
     }
-    if (domainEntity.smart_card_url !== undefined)
-      persistence.smart_card_url = domainEntity.smart_card_url;
 
-    if (domainEntity.terra_email !== undefined)
-      persistence.terra_email = domainEntity.terra_email;
-
-    if (domainEntity.terra_password !== undefined)
-      persistence.terra_password = domainEntity.terra_password;
-    if (domainEntity.terra_tag_id !== undefined)
-      persistence.terra_tag_id = domainEntity.terra_tag_id;
     return persistence;
   }
 }

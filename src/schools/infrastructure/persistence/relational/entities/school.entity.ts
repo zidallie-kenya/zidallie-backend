@@ -12,6 +12,8 @@ import { RideEntity } from '../../../../../rides/infrastructure/persistence/rela
 import { OnboardingFormEntity } from '../../../../../onboarding/infrastructure/persistence/relational/entities/onboarding.entity';
 import { SubscriptionPlanEntity } from '../../../../../subscriptions/infrastructure/persistence/relational/entities/subscription_plans.entity';
 
+export type ServiceType = 'school' | 'carpool' | 'private';
+
 @Entity({ name: 'school' })
 export class SchoolEntity extends EntityRelationalHelper {
   @PrimaryGeneratedColumn()
@@ -48,10 +50,40 @@ export class SchoolEntity extends EntityRelationalHelper {
   terra_tag_id: string | null;
 
   @Column({ type: 'text', nullable: true })
+  terra_zone_tag: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  terra_parents_tag: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  terra_student_tag: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  terra_school_tag: string | null;
+
+  @Column({ type: 'text', nullable: true })
   smart_card_url: string | null;
 
   @Column({ type: 'jsonb', nullable: true })
   meta: SchoolMeta | null;
+
+  // NEW COLUMNS
+  @Column({ type: 'boolean', default: false })
+  has_commission: boolean;
+
+  @Column({ type: 'float', nullable: true })
+  commission_amount: number | null;
+
+  @Column({ type: 'text', nullable: true })
+  paybill: string | null;
+
+  @Column({
+    type: 'varchar',
+    length: 10,
+    enum: ['school', 'carpool', 'private'],
+    nullable: true,
+  })
+  service_type: ServiceType | null;
 
   @CreateDateColumn()
   created_at: Date;

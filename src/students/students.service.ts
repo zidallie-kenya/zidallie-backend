@@ -28,6 +28,7 @@ export class StudentsService {
   async create(createStudentDto: CreateStudentDto): Promise<Student> {
     console.log('school:', createStudentDto?.school?.id);
     console.log('parent:', createStudentDto?.parent?.id);
+
     // Validate school reference
     let school: SchoolEntity | null = null;
     if (createStudentDto.school?.id) {
@@ -82,6 +83,11 @@ export class StudentsService {
         address: createStudentDto.address ?? null,
         comments: createStudentDto.comments ?? null,
         meta: createStudentDto.meta ?? null,
+        // 🆕 Payment fields
+        account_number: createStudentDto.account_number ?? null,
+        daily_fee: createStudentDto.daily_fee ?? null,
+        transport_term_fee: createStudentDto.transport_term_fee ?? null,
+        service_type: createStudentDto.service_type ?? null,
         rides: [],
       });
     } catch (error) {
@@ -193,6 +199,23 @@ export class StudentsService {
 
     if (updateStudentDto.meta !== undefined) {
       updateData.meta = updateStudentDto.meta;
+    }
+
+    // 🆕 Payment fields
+    if (updateStudentDto.account_number !== undefined) {
+      updateData.account_number = updateStudentDto.account_number;
+    }
+
+    if (updateStudentDto.daily_fee !== undefined) {
+      updateData.daily_fee = updateStudentDto.daily_fee;
+    }
+
+    if (updateStudentDto.transport_term_fee !== undefined) {
+      updateData.transport_term_fee = updateStudentDto.transport_term_fee;
+    }
+
+    if (updateStudentDto.service_type !== undefined) {
+      updateData.service_type = updateStudentDto.service_type;
     }
 
     return this.studentsRepository.update(id, updateData);

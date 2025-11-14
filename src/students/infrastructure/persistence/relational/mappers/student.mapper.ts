@@ -34,6 +34,12 @@ export class StudentMapper {
     domainEntity.comments = raw.comments;
     domainEntity.meta = raw.meta;
 
+    // 🆕 Payment fields
+    domainEntity.account_number = raw.account_number;
+    domainEntity.daily_fee = raw.daily_fee;
+    domainEntity.transport_term_fee = raw.transport_term_fee;
+    domainEntity.service_type = raw.service_type;
+
     if (raw.rides) {
       domainEntity.rides = raw.rides.map((ride) => RideMapper.toDomain(ride));
     } else {
@@ -54,6 +60,7 @@ export class StudentMapper {
 
   static toPersistence(domainEntity: Partial<Student>): Partial<StudentEntity> {
     const persistence: Partial<StudentEntity> = {};
+
     if (domainEntity.id !== undefined) persistence.id = domainEntity.id;
     if (domainEntity.name !== undefined) persistence.name = domainEntity.name;
     if (domainEntity.profile_picture !== undefined)
@@ -65,6 +72,17 @@ export class StudentMapper {
     if (domainEntity.comments !== undefined)
       persistence.comments = domainEntity.comments;
     if (domainEntity.meta !== undefined) persistence.meta = domainEntity.meta;
+
+    // 🆕 Payment fields
+    if (domainEntity.account_number !== undefined)
+      persistence.account_number = domainEntity.account_number;
+    if (domainEntity.daily_fee !== undefined)
+      persistence.daily_fee = domainEntity.daily_fee;
+    if (domainEntity.transport_term_fee !== undefined)
+      persistence.transport_term_fee = domainEntity.transport_term_fee;
+    if (domainEntity.service_type !== undefined)
+      persistence.service_type = domainEntity.service_type;
+
     if (domainEntity.rides !== undefined)
       persistence.rides = domainEntity.rides.map(
         (ride) => RideMapper.toPersistence(ride) as RideEntity,
@@ -74,12 +92,11 @@ export class StudentMapper {
         (subscription) =>
           SubscriptionMapper.toPersistence(subscription) as SubscriptionEntity,
       );
-    //relations
-    //school
+
+    // Relations
     persistence.school =
       (mapRelation(domainEntity.school, SchoolMapper) as SchoolEntity) ||
       undefined;
-    //parent
     persistence.parent =
       (mapRelation(domainEntity.parent, UserMapper) as UserEntity) || undefined;
 

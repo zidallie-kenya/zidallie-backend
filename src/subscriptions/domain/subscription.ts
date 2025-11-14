@@ -7,10 +7,20 @@ export class Subscription {
   expiry_date: Date;
   amount: number;
   status: string;
+  total_paid: number;
+  balance: number;
+  is_commission_paid: boolean;
+  days_access?: number | null;
+  last_payment_date?: Date | null;
   created_at: Date;
   updated_at: Date;
 
   // Relations
-  plan?: SubscriptionPlan | null;
   student?: Student | null;
+  plan?: SubscriptionPlan | null;
+  term?: { id: number; name?: string } | null;
+
+  constructor(params: Partial<Subscription>) {
+    Object.assign(this, params);
+  }
 }

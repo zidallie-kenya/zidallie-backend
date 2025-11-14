@@ -7,6 +7,8 @@ import { Onboarding } from '../../onboarding/domain/onboarding';
 import { IsOptional } from 'class-validator';
 import { SubscriptionPlan } from '../../subscriptions/domain/subscription-plan';
 
+export type ServiceType = 'school' | 'carpool' | 'private';
+
 export class School {
   @ApiProperty({ type: Number })
   id: number;
@@ -105,6 +107,76 @@ export class School {
   })
   @Expose({ groups: ['me', 'admin'] })
   terra_tag_id: string | null;
+
+  @ApiProperty({
+    type: String,
+    example: 'zone_tag_123',
+    required: false,
+    nullable: true,
+  })
+  @Expose({ groups: ['me', 'admin'] })
+  terra_zone_tag: string | null;
+
+  @ApiProperty({
+    type: String,
+    example: 'parents_tag_456',
+    required: false,
+    nullable: true,
+  })
+  @Expose({ groups: ['me', 'admin'] })
+  terra_parents_tag: string | null;
+
+  @ApiProperty({
+    type: String,
+    example: 'student_tag_789',
+    required: false,
+    nullable: true,
+  })
+  @Expose({ groups: ['me', 'admin'] })
+  terra_student_tag: string | null;
+
+  @ApiProperty({
+    type: String,
+    example: 'school_tag_012',
+    required: false,
+    nullable: true,
+  })
+  @Expose({ groups: ['me', 'admin'] })
+  terra_school_tag: string | null;
+
+  @ApiProperty({
+    type: Boolean,
+    example: false,
+    default: false,
+  })
+  @Expose({ groups: ['me', 'admin'] })
+  has_commission: boolean;
+
+  @ApiProperty({
+    type: Number,
+    example: 150,
+    required: false,
+    nullable: true,
+  })
+  @Expose({ groups: ['me', 'admin'] })
+  commission_amount: number | null;
+
+  @ApiProperty({
+    type: String,
+    example: '247247',
+    required: false,
+    nullable: true,
+  })
+  @Expose({ groups: ['me', 'admin'] })
+  paybill: string | null;
+
+  @ApiProperty({
+    enum: ['school', 'carpool', 'private'],
+    required: false,
+    nullable: true,
+  })
+  @Expose({ groups: ['me', 'admin'] })
+  service_type: ServiceType | null;
 
   @ApiProperty({ type: () => SchoolMetaDto, required: false, nullable: true })
   @Expose({ groups: ['me', 'admin'] })

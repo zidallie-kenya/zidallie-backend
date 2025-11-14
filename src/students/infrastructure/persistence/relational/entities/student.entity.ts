@@ -14,6 +14,8 @@ import { Gender } from '../../../../../utils/types/enums';
 import { RideEntity } from '../../../../../rides/infrastructure/persistence/relational/entities/ride.entity';
 import { SubscriptionEntity } from '../../../../../subscriptions/infrastructure/persistence/relational/entities/subscription.entity';
 
+export type ServiceType = 'school' | 'carpool' | 'private';
+
 @Entity({ name: 'student' })
 export class StudentEntity extends EntityRelationalHelper {
   @PrimaryGeneratedColumn()
@@ -44,6 +46,24 @@ export class StudentEntity extends EntityRelationalHelper {
 
   @Column({ type: 'jsonb', nullable: true })
   meta: any | null;
+
+  // NEW FIELDS FOR PAYMENT INTEGRATION
+  @Column({ type: 'text', nullable: true })
+  account_number: string | null;
+
+  @Column({ type: 'float', nullable: true })
+  daily_fee: number | null;
+
+  @Column({ type: 'float', nullable: true })
+  transport_term_fee: number | null;
+
+  @Column({
+    type: 'varchar',
+    length: 10,
+    enum: ['school', 'carpool', 'private'],
+    nullable: true,
+  })
+  service_type: ServiceType | null;
 
   @CreateDateColumn()
   created_at: Date;

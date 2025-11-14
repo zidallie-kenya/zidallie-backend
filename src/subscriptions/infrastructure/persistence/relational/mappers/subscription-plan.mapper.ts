@@ -28,7 +28,8 @@ export class SubscriptionPlanMapper {
     if (domain.description !== undefined)
       entity.description = domain.description ?? undefined;
     if (domain.price !== undefined) entity.price = domain.price;
-    if(domain.commission_amount !== undefined) entity.commission_amount = domain.commission_amount;
+    if (domain.commission_amount !== undefined)
+      entity.commission_amount = domain.commission_amount;
     if (domain.duration_days !== undefined)
       entity.duration_days = domain.duration_days;
     if (domain.is_active !== undefined) entity.is_active = domain.is_active;

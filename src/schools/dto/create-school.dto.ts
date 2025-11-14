@@ -5,9 +5,14 @@ import {
   IsUrl,
   IsNotEmpty,
   ValidateNested,
+  IsBoolean,
+  IsNumber,
+  IsEnum,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { SchoolMetaDto } from './school-meta.dto';
+
+export type ServiceType = 'school' | 'carpool' | 'private';
 
 export class CreateSchoolDto {
   @ApiProperty({
@@ -24,7 +29,8 @@ export class CreateSchoolDto {
     required: false,
   })
   @IsString()
-  location: string;
+  @IsOptional()
+  location?: string | null;
 
   @ApiProperty({
     type: String,
@@ -32,7 +38,9 @@ export class CreateSchoolDto {
     required: false,
     nullable: true,
   })
-  disbursement_phone_number: string | null;
+  @IsString()
+  @IsOptional()
+  disbursement_phone_number?: string | null;
 
   @ApiProperty({
     type: String,
@@ -40,7 +48,9 @@ export class CreateSchoolDto {
     required: false,
     nullable: true,
   })
-  bank_paybill_number: string | null;
+  @IsString()
+  @IsOptional()
+  bank_paybill_number?: string | null;
 
   @ApiProperty({
     type: String,
@@ -48,7 +58,9 @@ export class CreateSchoolDto {
     required: false,
     nullable: true,
   })
-  bank_account_number: string | null;
+  @IsString()
+  @IsOptional()
+  bank_account_number?: string | null;
 
   @ApiProperty({
     type: String,
@@ -56,7 +68,8 @@ export class CreateSchoolDto {
     required: false,
   })
   @IsString()
-  comments: string | null;
+  @IsOptional()
+  comments?: string | null;
 
   @ApiProperty({
     type: String,
@@ -69,7 +82,7 @@ export class CreateSchoolDto {
 
   @ApiProperty({
     type: String,
-    example: 'https://nairobiprimary.ac.ke',
+    example: 'https://smartcard.nairobiprimary.ac.ke',
     required: false,
   })
   @IsUrl()
@@ -102,6 +115,81 @@ export class CreateSchoolDto {
   @IsString()
   @IsOptional()
   terra_password?: string | null;
+
+  @ApiProperty({
+    type: String,
+    example: 'zone_tag_123',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  terra_zone_tag?: string | null;
+
+  @ApiProperty({
+    type: String,
+    example: 'parents_tag_456',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  terra_parents_tag?: string | null;
+
+  @ApiProperty({
+    type: String,
+    example: 'student_tag_789',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  terra_student_tag?: string | null;
+
+  @ApiProperty({
+    type: String,
+    example: 'school_tag_012',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  terra_school_tag?: string | null;
+
+  @ApiProperty({
+    type: Boolean,
+    example: false,
+    default: false,
+    required: false,
+  })
+  @IsBoolean()
+  @IsOptional()
+  has_commission?: boolean;
+
+  @ApiProperty({
+    type: Number,
+    example: 150,
+    required: false,
+    nullable: true,
+  })
+  @IsNumber()
+  @IsOptional()
+  commission_amount?: number | null;
+
+  @ApiProperty({
+    type: String,
+    example: '247247',
+    required: false,
+    nullable: true,
+  })
+  @IsString()
+  @IsOptional()
+  paybill?: string | null;
+
+  @ApiProperty({
+    enum: ['school', 'carpool', 'private'],
+    required: false,
+    nullable: true,
+  })
+  @IsEnum(['school', 'carpool', 'private'])
+  @IsOptional()
+  service_type?: ServiceType | null;
 
   @ApiProperty({
     type: () => SchoolMetaDto,

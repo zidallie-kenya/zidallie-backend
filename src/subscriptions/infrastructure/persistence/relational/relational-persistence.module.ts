@@ -9,6 +9,10 @@ import { SubscriptionPlanEntity } from './entities/subscription_plans.entity';
 import { PaymentEntity } from '../../../../payments/infrastructure/persistence/relational/entities/payment.entity';
 import { StudentEntity } from '../../../../students/infrastructure/persistence/relational/entities/student.entity';
 import { B2cMpesaTransactionEntity } from './entities/b2c_mpesa_transaction.entity';
+import { PaymentTermEntity } from './entities/payment_term.entity';
+import { TermCommissionEntity } from './entities/term_commission.entity';
+import { StudentPaymentEntity } from './entities/student_payment.entity';
+import { SchoolDisbursementEntity } from './entities/school_disbursement.entity';
 
 // --- Repositories ---
 import { PendingPaymentRepository } from './repositories/pending_payment.repository';
@@ -19,6 +23,10 @@ import { StudentRepository } from '../../../../students/infrastructure/persisten
 import { StudentsRelationalRepository } from '../../../../students/infrastructure/persistence/relational/repositories/students.repository';
 import { PaymentsRelationalRepository } from '../../../../payments/infrastructure/persistence/relational/repositories/payment.repository';
 import { B2cMpesaTransactionRepository } from './repositories/b2c_mpesa_transaction.repository';
+import { PaymentTermRepository } from './repositories/payment_term.repository';
+import { StudentPaymentRepository } from './repositories/student_payment.repository';
+import { SchoolDisbursementRepository } from './repositories/school_disbursement.repository';
+import { TermCommissionRepository } from './repositories/term_commisson.repository';
 
 @Module({
   imports: [
@@ -28,7 +36,11 @@ import { B2cMpesaTransactionRepository } from './repositories/b2c_mpesa_transact
       SubscriptionPlanEntity,
       PaymentEntity,
       StudentEntity,
-      B2cMpesaTransactionEntity, // 👈 add this entity
+      B2cMpesaTransactionEntity,
+      PaymentTermEntity,
+      TermCommissionEntity,
+      StudentPaymentEntity,
+      SchoolDisbursementEntity,
     ]),
   ],
   providers: [
@@ -51,7 +63,7 @@ import { B2cMpesaTransactionRepository } from './repositories/b2c_mpesa_transact
       inject: [DataSource],
     },
     {
-      provide: B2cMpesaTransactionRepository, 
+      provide: B2cMpesaTransactionRepository,
       useFactory: (dataSource: DataSource) =>
         new B2cMpesaTransactionRepository(dataSource),
       inject: [DataSource],
@@ -64,6 +76,10 @@ import { B2cMpesaTransactionRepository } from './repositories/b2c_mpesa_transact
       provide: StudentRepository,
       useClass: StudentsRelationalRepository,
     },
+    PaymentTermRepository,
+    TermCommissionRepository,
+    StudentPaymentRepository,
+    SchoolDisbursementRepository,
   ],
   exports: [
     PendingPaymentRepository,
@@ -72,6 +88,10 @@ import { B2cMpesaTransactionRepository } from './repositories/b2c_mpesa_transact
     PaymentRepository,
     StudentRepository,
     B2cMpesaTransactionRepository,
+    PaymentTermRepository,
+    TermCommissionRepository,
+    StudentPaymentRepository,
+    SchoolDisbursementRepository,
   ],
 })
 export class RelationalSubscriptionPersistenceModule {}

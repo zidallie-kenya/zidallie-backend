@@ -13,45 +13,30 @@ import { Type } from 'class-transformer';
 import { Gender } from '../../utils/types/enums';
 
 export class SchoolReferenceDto {
-  @ApiProperty({
-    type: Number,
-    example: 1,
-  })
+  @ApiProperty({ type: Number, example: 1 })
   @IsNumber()
   id: number;
 }
 
 export class ParentReferenceDto {
-  @ApiProperty({
-    type: Number,
-    example: 1,
-  })
+  @ApiProperty({ type: Number, example: 1 })
   @IsNumber()
   id: number;
 }
 
 export class CreateStudentDto {
-  @ApiProperty({
-    type: String,
-    example: 'Jane Doe',
-  })
+  @ApiProperty({ type: String, example: 'Jane Doe' })
   @IsString()
   @IsNotEmpty()
   name: string;
 
-  @ApiProperty({
-    type: () => SchoolReferenceDto,
-    required: false,
-  })
+  @ApiProperty({ type: () => SchoolReferenceDto, required: false })
   @IsOptional()
   @ValidateNested()
   @Type(() => SchoolReferenceDto)
   school?: SchoolReferenceDto;
 
-  @ApiProperty({
-    type: () => ParentReferenceDto,
-    required: false,
-  })
+  @ApiProperty({ type: () => ParentReferenceDto, required: false })
   @IsOptional()
   @ValidateNested()
   @Type(() => ParentReferenceDto)
@@ -66,10 +51,7 @@ export class CreateStudentDto {
   @IsOptional()
   profile_picture?: string | null;
 
-  @ApiProperty({
-    enum: Gender,
-    example: Gender.Female,
-  })
+  @ApiProperty({ enum: Gender, example: Gender.Female })
   @IsEnum(Gender)
   gender: Gender;
 
@@ -91,11 +73,33 @@ export class CreateStudentDto {
   @IsOptional()
   comments?: string | null;
 
-  @ApiProperty({
-    type: Object,
-    required: false,
-  })
+  @ApiProperty({ type: Object, required: false })
   @IsObject()
   @IsOptional()
   meta?: any | null;
+
+  // 🆕 Payment fields
+  @ApiProperty({ type: String, example: 'ACC123', required: false })
+  @IsOptional()
+  @IsString()
+  account_number?: string | null;
+
+  @ApiProperty({ type: Number, example: 500, required: false })
+  @IsOptional()
+  @IsNumber()
+  daily_fee?: number | null;
+
+  @ApiProperty({ type: Number, example: 12000, required: false })
+  @IsOptional()
+  @IsNumber()
+  transport_term_fee?: number | null;
+
+  @ApiProperty({
+    enum: ['school', 'carpool', 'private'],
+    example: 'school',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  service_type?: 'school' | 'carpool' | 'private' | null;
 }

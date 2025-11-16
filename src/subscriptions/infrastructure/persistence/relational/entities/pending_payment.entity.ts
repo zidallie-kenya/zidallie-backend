@@ -4,7 +4,11 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
+import { StudentEntity } from '../../../../../students/infrastructure/persistence/relational/entities/student.entity';
+import { PaymentTermEntity } from './payment_term.entity';
 
 export type PaymentModel = 'daily' | 'term' | 'zidallie';
 export type PaymentType =
@@ -62,4 +66,12 @@ export class PendingPaymentEntity {
 
   @UpdateDateColumn({ type: 'timestamp' })
   updated_at: Date;
+
+  @ManyToOne(() => StudentEntity)
+  @JoinColumn({ name: 'studentId' })
+  student: StudentEntity;
+
+  @ManyToOne(() => PaymentTermEntity)
+  @JoinColumn({ name: 'termId' })
+  term: PaymentTermEntity;
 }

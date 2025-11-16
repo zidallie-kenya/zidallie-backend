@@ -14,6 +14,7 @@ import { PaymentTermRepository } from './infrastructure/persistence/relational/r
 import { TermCommissionRepository } from './infrastructure/persistence/relational/repositories/term_commisson.repository';
 import { StudentPaymentRepository } from './infrastructure/persistence/relational/repositories/student_payment.repository';
 import { SchoolDisbursementRepository } from './infrastructure/persistence/relational/repositories/school_disbursement.repository';
+import { PendingPaymentEntity } from './infrastructure/persistence/relational/entities/pending_payment.entity';
 
 @Injectable()
 export class SubscriptionService {
@@ -30,7 +31,7 @@ export class SubscriptionService {
     private readonly studentsService: StudentsService,
     private readonly schoolsService: SchoolsService,
     private readonly dataSource: DataSource,
-  ) {}
+  ) { }
 
   // -------------------------------
   // INITIATE PAYMENT
@@ -110,6 +111,8 @@ export class SubscriptionService {
       TransactionDesc: 'STUDENT SUBSCRIPTION',
     };
 
+    console.log(requestData)
+
     try {
       const response = await axios.post(
         `${this.MPESA_BASEURL}/mpesa/stkpush/v1/processrequest`,
@@ -132,15 +135,19 @@ export class SubscriptionService {
       if (!school.has_commission) {
         // Daily/Weekly/Monthly payment model
         const paymentType = this.determinePeriod(amount, student.daily_fee);
-        const subscriptionPlanId =
-          this.subscriptionsRepository.findActiveByStudentId(student.id);
+        const activeSubscription = await this.subscriptionsRepository.findActiveByStudentId(student.id);
 
-        if (!subscriptionPlanId) {
-          console.log('subcription plan not found');
+
+        if (!activeSubscription) {
+          console.log('subscription plan not found');
           throw new BadRequestException(
             'No active subscription plan found for the student',
           );
         }
+
+        // Extract the plan ID from the subscription
+        const subscriptionPlanId = activeSubscription?.plan?.id;
+
         const pending =
           await this.pendingPaymentsRepository.createPendingPayment({
             studentId: student.id,
@@ -177,28 +184,32 @@ export class SubscriptionService {
         const paymentType =
           subscription.total_paid === 0 ? 'initial' : 'installment';
 
-        const subscriptionPlanId =
-          this.subscriptionsRepository.findActiveByStudentId(student.id);
+        const activeSubscription = await this.subscriptionsRepository.findActiveByStudentId(student.id);
 
-        if (!subscriptionPlanId) {
-          console.log('subcription plan not found');
+
+        if (!activeSubscription) {
+          console.log('subscription plan not found');
           throw new BadRequestException(
             'No active subscription plan found for the student',
           );
         }
 
-        const pending =
-          await this.pendingPaymentsRepository.createPendingPayment({
-            studentId: student.id,
-            termId: term.id,
-            amount,
-            checkoutId: data.CheckoutRequestID,
-            phoneNumber,
-            paymentType,
-            paymentModel: 'term',
-            schoolId: school.id,
-            subscriptionPlanId: Number(subscriptionPlanId),
-          });
+        // Extract the plan ID from the subscription
+        const subscriptionPlanId = activeSubscription?.plan?.id;
+
+
+        await this.pendingPaymentsRepository.createPendingPayment({
+          studentId: student.id,
+          termId: term.id,
+          amount,
+          checkoutId: data.CheckoutRequestID,
+          phoneNumber,
+          paymentType,
+          paymentModel: 'term',
+          schoolId: school.id,
+          subscriptionPlanId: Number(subscriptionPlanId),
+        });
+
         return { message: 'Payment initiated', pendingPayment: pending };
       }
     } catch (error) {
@@ -283,8 +294,10 @@ export class SubscriptionService {
         );
       }
 
-      const subscriptionPlanId =
-        this.subscriptionsRepository.findActiveByStudentId(student.id);
+
+
+      const subscriptionPlanId = await this.subscriptionsRepository.findActiveByStudentId(student.id);
+
 
       if (!subscriptionPlanId) {
         console.log('subcription plan not found');
@@ -340,6 +353,7 @@ export class SubscriptionService {
 
     const pending_payment =
       await this.pendingPaymentsRepository.findByCheckoutId(checkoutRequestID);
+
     if (!pending_payment) {
       console.log(
         `Pending payment not found for CheckoutRequestID: ${checkoutRequestID}`,
@@ -403,64 +417,83 @@ export class SubscriptionService {
   // -------------------------------
   private async processSchoolBusDailyPayment(
     pending_payment,
-    transactionId,
-    phoneNumber,
-    amount,
+    transactionId: string,
+    phoneNumber: string,
+    amount: number,
     student,
   ) {
     try {
+      console.log('Reached processSchoolBusDailyPayment');
+
+      // Validate numeric inputs
+      const amt = Number(amount);
+      const dailyFee = Number(student.daily_fee);
+
+      if (isNaN(amt) || isNaN(dailyFee) || dailyFee <= 0) {
+        console.error('Invalid amount or daily fee:', { amt, dailyFee });
+        return;
+      }
+
+      // Calculate days to pay for
+      const daysPaidFor = Math.floor(amt / dailyFee);
+      if (daysPaidFor <= 0) {
+        console.error('Amount too small to cover any days:', { amt, dailyFee });
+        return;
+      }
+
       await this.dataSource.transaction(async (manager) => {
-        // Record payment
+        console.log('Transaction started');
+
+        // Record student payment
+        console.log('Recording student payment');
         await this.studentPaymentRepository.create(manager, {
           student,
           termId: null,
           transaction_id: transactionId,
           phone_number: phoneNumber,
-          amount_paid: amount,
+          amount_paid: amt,
           payment_type: pending_payment.paymentType || 'daily',
         });
+        console.log('Student payment recorded');
 
-        // Calculate days paid for
-        const daysPaidFor = Math.floor(amount / student.daily_fee);
+        // Fetch the active subscription entity (not domain object)
+        console.log('Fetching active subscription entity for student', student.id);
+        const subscriptionEntity = await this.subscriptionsRepository.findActiveEntityByStudentId(student.id);
 
-        // Get subscription
-        const subscription =
-          await this.subscriptionsRepository.findActiveByStudentId(student.id);
-
-        if (!subscription) {
-          console.log('subcription not found');
-          throw new BadRequestException(
-            'No active subscription found for the student',
-          );
+        if (!subscriptionEntity) {
+          console.error('No active subscription found for student', student.id);
+          return;
         }
+        console.log('Subscription entity found', subscriptionEntity.id);
 
-        // Calculate start date
+        // Determine start date
         const currentDate = new Date();
         let startDate = currentDate;
-
-        if (
-          subscription.expiry_date &&
-          subscription.expiry_date > currentDate
-        ) {
-          startDate = subscription.expiry_date;
+        if (subscriptionEntity.expiry_date && subscriptionEntity.expiry_date > currentDate) {
+          startDate = subscriptionEntity.expiry_date;
         }
+        console.log('Start date for new access:', startDate);
 
-        // Calculate expiry excluding weekends
-        const expiryDate = this.calculateExpiryDateExcludingWeekends(
-          startDate,
-          daysPaidFor,
-        );
+        // Calculate expiry date excluding weekends
+        const expiryDate = this.calculateExpiryDateExcludingWeekends(startDate, daysPaidFor);
+        console.log('Calculated expiry date:', expiryDate);
 
-        subscription.total_paid += amount;
-        subscription.expiry_date = expiryDate;
-        subscription.last_payment_date = new Date();
-        subscription.status = 'active';
-        subscription.days_access = daysPaidFor;
+        // Update subscription entity details
+        subscriptionEntity.total_paid += amt;
+        subscriptionEntity.expiry_date = expiryDate;
+        subscriptionEntity.last_payment_date = new Date();
+        subscriptionEntity.status = 'active';
+        subscriptionEntity.days_access = daysPaidFor;
 
-        await this.subscriptionsRepository.save(manager, subscription);
+        console.log('Saving subscription entity');
+        await manager.save(subscriptionEntity);
+        console.log('Subscription entity saved');
 
-        // Remove pending payment
-        await this.pendingPaymentsRepository.remove(pending_payment);
+        // Remove pending payment using transaction manager
+        console.log('Removing pending payment', pending_payment.id);
+        await manager.remove(PendingPaymentEntity, pending_payment);
+        console.log('Pending payment removed');
+
       });
 
       console.log(`Daily payment processed successfully: ${transactionId}`);
@@ -474,97 +507,109 @@ export class SubscriptionService {
   // -------------------------------
   private async processSchoolBusTermPayment(
     pending_payment,
-    transactionId,
-    phoneNumber,
-    amount,
+    transactionId: string,
+    phoneNumber: string,
+    amount: number,
     student,
     school,
   ) {
     try {
+      console.log('Reached processSchoolBusTermPayment');
+
+      const amt = Number(amount);
+      if (isNaN(amt) || amt <= 0) {
+        console.error('Invalid payment amount:', amt);
+        return;
+      }
+
       await this.dataSource.transaction(async (manager) => {
-        // Get subscription
-        const subscription =
-          await this.subscriptionsRepository.findActiveByStudentId(student.id);
+        console.log('Transaction started for term payment');
 
-        if (!subscription) {
-          console.log('subcription not found');
-          throw new BadRequestException(
-            'No active subscription found for the student',
-          );
+        // Fetch the active subscription entity
+        console.log('Fetching active subscription entity for student', student.id);
+        const subscriptionEntity =
+          await this.subscriptionsRepository.findActiveEntityByStudentId(student.id);
+
+        if (!subscriptionEntity) {
+          console.error('No active subscription found for student', student.id);
+          throw new BadRequestException('No active subscription found for the student');
         }
+        console.log('Subscription entity found', subscriptionEntity.id);
 
-        const termCommission = await this.termCommissionRepository.getOrCreate(
-          manager,
-          {
-            student,
-            termId: pending_payment.termId,
-            commissionAmount: school.commission_amount,
-          },
-        );
+        // Get or create term commission
+        const termCommission = await this.termCommissionRepository.getOrCreate(manager, {
+          student,
+          termId: pending_payment.termId,
+          commissionAmount: school.commission_amount,
+        });
+        console.log('Term commission:', termCommission);
 
-        // Record payment
-        const student_payment = await this.studentPaymentRepository.create(
-          manager,
-          {
-            student,
-            termId: pending_payment.termId,
-            transaction_id: transactionId,
-            phone_number: phoneNumber,
-            amount_paid: amount,
-            payment_type: pending_payment.paymentType || 'initial',
-          },
-        );
+        // Record student payment
+        console.log('Recording student payment for term');
+        const studentPayment = await this.studentPaymentRepository.create(manager, {
+          student,
+          termId: pending_payment.termId,
+          transaction_id: transactionId,
+          phone_number: phoneNumber,
+          amount_paid: amt,
+          payment_type: pending_payment.paymentType || 'initial',
+        });
+        console.log('Student payment recorded:', studentPayment.id);
 
-        // Calculate disbursement
-        let amountToDisburse = amount;
-
+        // Calculate amount to disburse to school
+        let amountToDisburse = amt;
         if (!termCommission.isPaid) {
-          if (amount >= school.commission_amount) {
-            amountToDisburse = amount - school.commission_amount;
+          if (amt >= school.commission_amount) {
+            amountToDisburse = amt - school.commission_amount;
             termCommission.isPaid = true;
             termCommission.paidAt = new Date();
             await this.termCommissionRepository.save(manager, termCommission);
+            console.log('Term commission marked as paid');
           } else {
             amountToDisburse = 0;
           }
         }
 
-        // Update subscription
-        const term = await this.paymentTermRepository.findById(
-          pending_payment.termId,
-        );
+        // Fetch term entity
+        const term = await this.paymentTermRepository.findById(pending_payment.termId);
         if (!term) {
-          console.log('term not found');
+          console.error('Term not found for pending payment', pending_payment.id);
           throw new BadRequestException('No active term found for the student');
         }
 
-        subscription.total_paid += amount;
-        subscription.balance =
-          student.transport_term_fee - subscription.total_paid;
-        subscription.is_commission_paid = termCommission.isPaid;
-        subscription.last_payment_date = new Date();
+        // Update subscription entity
+        subscriptionEntity.total_paid += amt;
+        subscriptionEntity.balance = student.transport_term_fee - subscriptionEntity.total_paid;
+        subscriptionEntity.is_commission_paid = termCommission.isPaid;
+        subscriptionEntity.last_payment_date = new Date();
 
-        if (subscription.balance <= 0) {
-          subscription.status = 'fully_paid';
-          subscription.expiry_date = term.endDate;
+        if (subscriptionEntity.balance <= 0) {
+          subscriptionEntity.status = 'fully_paid';
+          subscriptionEntity.expiry_date = term.endDate;
         } else {
-          subscription.status = 'partially_paid';
+          subscriptionEntity.status = 'partially_paid';
         }
 
-        await this.subscriptionsRepository.save(manager, subscription);
+        console.log('Saving subscription entity');
+        await manager.save(subscriptionEntity);
+        console.log('Subscription entity saved');
 
-        // Remove pending payment
-        await this.pendingPaymentsRepository.remove(pending_payment);
+        // Remove pending payment using transaction manager
+        console.log('Removing pending payment', pending_payment.id);
+        await manager.remove(PendingPaymentEntity, pending_payment);
+        console.log('Pending payment removed');
 
         // Disburse to school
         if (amountToDisburse > 0) {
+          console.log('Disbursing to school', amountToDisburse);
           await this.disburseToSchool(
             school,
             student,
-            student_payment,
+            studentPayment,
             amountToDisburse,
             pending_payment.termId,
           );
+          console.log('Disbursement completed');
         }
       });
 
@@ -578,67 +623,87 @@ export class SubscriptionService {
   // PROCESS CARPOOL/PRIVATE PAYMENT
   // -------------------------------
   private async processCarpoolPrivatePayment(
-    pending,
-    transactionId,
-    phoneNumber,
-    amount,
+    pending_payment,
+    transactionId: string,
+    phoneNumber: string,
+    amount: number,
     student,
   ) {
     try {
-      await this.dataSource.transaction(async (manager) => {
-        const term = await this.paymentTermRepository.findById(pending.termId);
+      console.log('Reached processCarpoolPrivatePayment');
 
+      const amt = Number(amount);
+      if (isNaN(amt) || amt <= 0) {
+        console.error('Invalid payment amount:', amt);
+        return;
+      }
+
+      await this.dataSource.transaction(async (manager) => {
+        console.log('Transaction started for carpool/private payment');
+
+        // Fetch term
+        const term = await this.paymentTermRepository.findById(pending_payment.termId);
         if (!term) {
-          console.log('term not found');
+          console.error('Term not found for pending payment', pending_payment.id);
           throw new BadRequestException('No active term found for the student');
         }
 
-        // Record payment
-        await this.studentPaymentRepository.create(manager, {
+        // Record student payment
+        console.log('Recording student payment for carpool/private');
+        const studentPayment = await this.studentPaymentRepository.create(manager, {
           student,
-          termId: pending.termId,
+          termId: pending_payment.termId,
           transaction_id: transactionId,
           phone_number: phoneNumber,
-          amount_paid: amount,
-          payment_type: 'installment',
+          amount_paid: amt,
+          payment_type: pending_payment.paymentType || 'installment',
         });
+        console.log('Student payment recorded:', studentPayment.id);
 
-        // Get subscription
-        const subscription =
-          await this.subscriptionsRepository.findActiveByStudentId(student.id);
+        // Fetch active subscription entity
+        console.log('Fetching active subscription entity for student', student.id);
+        const subscriptionEntity =
+          await this.subscriptionsRepository.findActiveEntityByStudentId(student.id);
 
-        if (!subscription) {
-          console.log('subcription not found');
-          throw new BadRequestException(
-            'No active subscription found for the student',
-          );
+        if (!subscriptionEntity) {
+          console.error('No active subscription found for student', student.id);
+          throw new BadRequestException('No active subscription found for the student');
         }
 
-        subscription.total_paid += amount;
-        subscription.balance =
-          student.transport_term_fee - subscription.total_paid;
-        subscription.last_payment_date = new Date();
+        // Update subscription details
+        subscriptionEntity.total_paid = (subscriptionEntity.total_paid || 0) + amt;
+        subscriptionEntity.balance = Math.max(
+          (student.transport_term_fee || 0) - subscriptionEntity.total_paid,
+          0,
+        );
+        subscriptionEntity.last_payment_date = new Date();
 
-        if (subscription.balance <= 0) {
-          subscription.status = 'fully_paid';
-          subscription.expiry_date = term.endDate;
+        if (subscriptionEntity.balance <= 0) {
+          subscriptionEntity.status = 'fully_paid';
+          subscriptionEntity.expiry_date = term.endDate;
         } else {
-          subscription.status = 'partially_paid';
+          subscriptionEntity.status = 'partially_paid';
         }
 
-        await this.subscriptionsRepository.save(manager, subscription);
+        console.log('Saving subscription entity');
+        await manager.save(subscriptionEntity);
+        console.log('Subscription entity saved');
 
         // Remove pending payment
-        await this.pendingPaymentsRepository.remove(pending);
+        console.log('Removing pending payment', pending_payment.id);
+        await manager.remove(PendingPaymentEntity, pending_payment);
+        console.log('Pending payment removed');
       });
 
-      console.log(
-        `Carpool/Private payment processed: ${transactionId} - 100% to Zidallie`,
-      );
+      console.log(`Carpool/Private payment processed successfully: ${transactionId}`);
     } catch (error) {
-      console.error('Error processing carpool/private payment:', error);
+      console.error(
+        `Error processing carpool/private payment for studentId ${student.id}:`,
+        error,
+      );
     }
   }
+
 
   // -------------------------------
   // DISBURSE TO SCHOOL

@@ -1,7 +1,12 @@
 // payment_terms/infrastructure/persistence/relational/repositories/payment_term.repository.ts
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import {
+  Repository,
+  LessThanOrEqual,
+  MoreThanOrEqual,
+  IsNull,
+} from 'typeorm';
 import { PaymentTermEntity } from '../entities/payment_term.entity';
 import { PaymentTermMapper } from '../mappers/payment_term.mapper';
 import { PaymentTerm } from '../../../../domain/payment_term';
@@ -11,7 +16,7 @@ export class PaymentTermRepository {
   constructor(
     @InjectRepository(PaymentTermEntity)
     private readonly repository: Repository<PaymentTermEntity>,
-  ) {}
+  ) { }
 
   async findById(id: number): Promise<PaymentTerm | null> {
     const entity = await this.repository.findOne({
@@ -23,13 +28,14 @@ export class PaymentTermRepository {
 
   async getActiveTerm(schoolId: number): Promise<PaymentTerm | null> {
     const currentDate = new Date();
+
     const entity = await this.repository.findOne({
       where: {
         school: { id: schoolId },
         is_active: true,
-        start_date: { $lte: currentDate } as any,
-        end_date: { $gte: currentDate } as any,
-      } as any,
+        start_date: LessThanOrEqual(currentDate),
+        end_date: MoreThanOrEqual(currentDate),
+      },
       order: { start_date: 'DESC' },
     });
 
@@ -37,15 +43,15 @@ export class PaymentTermRepository {
   }
 
   async getZidallieTerm(): Promise<PaymentTerm | null> {
-    // Get Zidallie's active term (school_id is null for Zidallie-managed terms)
     const currentDate = new Date();
+
     const entity = await this.repository.findOne({
       where: {
-        school: null,
+        school: IsNull(), // school = null for Zidallie
         is_active: true,
-        start_date: { $lte: currentDate } as any,
-        end_date: { $gte: currentDate } as any,
-      } as any,
+        start_date: LessThanOrEqual(currentDate),
+        end_date: MoreThanOrEqual(currentDate),
+      },
       order: { start_date: 'DESC' },
     });
 
@@ -72,6 +78,7 @@ export class PaymentTermRepository {
 
   async findAll(schoolId?: number): Promise<PaymentTerm[]> {
     let entities: PaymentTermEntity[];
+
     if (schoolId) {
       entities = await this.repository.find({
         where: { school: { id: schoolId } },
@@ -84,6 +91,7 @@ export class PaymentTermRepository {
         order: { start_date: 'DESC' },
       });
     }
+
     return entities.map((entity) => PaymentTermMapper.toDomain(entity));
   }
 

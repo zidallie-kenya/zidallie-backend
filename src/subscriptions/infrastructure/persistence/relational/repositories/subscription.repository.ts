@@ -54,6 +54,13 @@ export class SubscriptionRepository {
     return entity ? SubscriptionMapper.toDomain(entity) : null;
   }
 
+  async findActiveEntityByStudentId(studentId: number): Promise<SubscriptionEntity | null> {
+    return this.repository.findOne({
+      where: { student: { id: studentId }, status: 'active' },
+      relations: ['student', 'plan', 'term'],
+    });
+  }
+
   async updateTotals(
     id: number,
     amountPaid: number,

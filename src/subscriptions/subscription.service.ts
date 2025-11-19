@@ -408,7 +408,6 @@ export class SubscriptionService {
     try {
       console.log('Reached processSchoolBusDailyPayment');
 
-      // Validate numeric inputs
       const amt = Number(amount);
       const dailyFee = Number(student.daily_fee);
 
@@ -417,32 +416,28 @@ export class SubscriptionService {
         return;
       }
 
-      // Calculate days to pay for
       const daysPaidFor = Math.floor(amt / dailyFee);
       if (daysPaidFor <= 0) {
         console.error('Amount too small to cover any days:', { amt, dailyFee });
         return;
       }
 
+      let studentPayment;
+
       await this.dataSource.transaction(async (manager) => {
         console.log('Transaction started');
 
-        // Record student payment
         console.log('Recording student payment');
-        const studentPayment = await this.studentPaymentRepository.create(
-          manager,
-          {
-            student,
-            termId: null,
-            transaction_id: transactionId,
-            phone_number: phoneNumber,
-            amount_paid: amt,
-            payment_type: pending_payment.paymentType || 'daily',
-          },
-        );
+        studentPayment = await this.studentPaymentRepository.create(manager, {
+          student,
+          termId: null,
+          transaction_id: transactionId,
+          phone_number: phoneNumber,
+          amount_paid: amt,
+          payment_type: pending_payment.paymentType || 'daily',
+        });
         console.log('Student payment recorded');
 
-        // Fetch the active subscription entity (not domain object)
         console.log(
           'Fetching active subscription entity for student',
           student.id,
@@ -458,7 +453,6 @@ export class SubscriptionService {
         }
         console.log('Subscription entity found', subscriptionEntity.id);
 
-        // Determine start date
         const currentDate = new Date();
         let startDate = currentDate;
         if (
@@ -469,14 +463,12 @@ export class SubscriptionService {
         }
         console.log('Start date for new access:', startDate);
 
-        // Calculate expiry date excluding weekends
         const expiryDate = this.calculateExpiryDateExcludingWeekends(
           startDate,
           daysPaidFor,
         );
         console.log('Calculated expiry date:', expiryDate);
 
-        // Update subscription entity details
         subscriptionEntity.total_paid += amt;
         subscriptionEntity.expiry_date = expiryDate;
         subscriptionEntity.last_payment_date = new Date();
@@ -487,29 +479,28 @@ export class SubscriptionService {
         await manager.save(subscriptionEntity);
         console.log('Subscription entity saved');
 
-        // Remove pending payment using transaction manager
         console.log('Removing pending payment', pending_payment.id);
         await manager.remove(PendingPaymentEntity, pending_payment);
         console.log('Pending payment removed');
-
-        if (amt > 0) {
-          console.log('Disbursing to school', amt);
-          await this.disburseToSchool(
-            school,
-            student,
-            studentPayment,
-            amt,
-            pending_payment.termId,
-          );
-        }
       });
+
+      // MOVE DISBURSEMENT OUTSIDE THE TRANSACTION
+      if (amt > 0 && studentPayment) {
+        console.log('Disbursing to school', amt);
+        await this.disburseToSchool(
+          school,
+          student,
+          studentPayment,
+          amt,
+          pending_payment.termId,
+        );
+      }
 
       console.log(`Daily payment processed successfully: ${transactionId}`);
     } catch (error) {
       console.error('Error processing daily payment:', error);
     }
   }
-
   // -------------------------------
   // PROCESS SCHOOL BUS - TERM PAYMENT
   // -------------------------------

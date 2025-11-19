@@ -13,7 +13,6 @@ export class PendingPaymentRepository extends Repository<PendingPaymentEntity> {
   async createPendingPayment(data: {
     studentId: number;
     termId?: number | null;
-    subscriptionPlanId: number;
     amount: number;
     checkoutId: string;
     phoneNumber?: string | null;
@@ -31,7 +30,6 @@ export class PendingPaymentRepository extends Repository<PendingPaymentEntity> {
     const entity = this.create({
       studentId: data.studentId,
       termId: data.termId ?? null,
-      subscriptionPlanId: data.subscriptionPlanId,
       amount: data.amount,
       checkoutId: data.checkoutId,
       phoneNumber: data.phoneNumber ?? null,

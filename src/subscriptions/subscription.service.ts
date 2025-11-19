@@ -49,6 +49,7 @@ export class SubscriptionService {
       const school = await this.schoolsService.findById(student.school.id);
       if (!school) throw new BadRequestException('School not found');
 
+      // returns null if no active term
       const activeTerm = await this.paymentTermRepository.getActiveTerm(
         school.id,
       );
@@ -63,12 +64,12 @@ export class SubscriptionService {
       student.service_type === 'carpool' ||
       student.service_type === 'private'
     ) {
-      const activeTerm = await this.paymentTermRepository.getZidallieTerm();
+      // const activeTerm = await this.paymentTermRepository.getZidallieTerm();
       return this.handleCarpoolPrivatePayment(
         student,
         dto.phone_number,
         dto.amount,
-        activeTerm,
+        // activeTerm,
       );
     } else {
       throw new BadRequestException('Invalid service type');
@@ -145,9 +146,6 @@ export class SubscriptionService {
           );
         }
 
-        // Extract the plan ID from the subscription
-        const subscriptionPlanId = activeSubscription?.plan?.id;
-
         const pending =
           await this.pendingPaymentsRepository.createPendingPayment({
             studentId: student.id,
@@ -158,7 +156,6 @@ export class SubscriptionService {
             paymentModel: 'daily',
             schoolId: school.id,
             termId: null,
-            subscriptionPlanId: Number(subscriptionPlanId),
           });
         return { message: 'Payment initiated', pendingPayment: pending };
       } else {
@@ -184,9 +181,6 @@ export class SubscriptionService {
         const paymentType =
           subscription.total_paid === 0 ? 'initial' : 'installment';
 
-        // Extract the plan ID from the subscription
-        const subscriptionPlanId = subscription?.plan?.id;
-
         await this.pendingPaymentsRepository.createPendingPayment({
           studentId: student.id,
           termId: term.id,
@@ -196,7 +190,6 @@ export class SubscriptionService {
           paymentType,
           paymentModel: 'term',
           schoolId: school.id,
-          subscriptionPlanId: Number(subscriptionPlanId),
         });
 
         return { message: 'Payment initiated', pendingPayment: pending };
@@ -213,12 +206,7 @@ export class SubscriptionService {
   // -------------------------------
   // CARPOOL/PRIVATE PAYMENT HANDLER
   // -------------------------------
-  private async handleCarpoolPrivatePayment(
-    student,
-    phoneNumber,
-    amount,
-    term,
-  ) {
+  private async handleCarpoolPrivatePayment(student, phoneNumber, amount) {
     const consumerKey = process.env.MPESA_CONSUMER_KEY;
     const secretKey = process.env.MPESA_SECRET_KEY;
     if (!consumerKey || !secretKey)
@@ -283,27 +271,16 @@ export class SubscriptionService {
         );
       }
 
-      const subscriptionPlanId =
-        await this.subscriptionsRepository.findActiveByStudentId(student.id);
-
-      if (!subscriptionPlanId) {
-        console.log('subcription plan not found');
-        throw new BadRequestException(
-          'No active subscription plan found for the student',
-        );
-      }
-
       const pending = await this.pendingPaymentsRepository.createPendingPayment(
         {
           studentId: student.id,
-          termId: term.id,
+          termId: null,
           amount,
           checkoutId: data.CheckoutRequestID,
           phoneNumber,
           paymentType: 'termly',
           paymentModel: 'zidallie',
           schoolId: null,
-          subscriptionPlanId: Number(subscriptionPlanId),
         },
       );
 
@@ -382,6 +359,7 @@ export class SubscriptionService {
           phoneNumber,
           amount,
           student,
+          school,
         );
       } else {
         // Term Payment Model
@@ -408,6 +386,7 @@ export class SubscriptionService {
     phoneNumber: string,
     amount: number,
     student,
+    school,
   ) {
     try {
       console.log('Reached processSchoolBusDailyPayment');
@@ -433,14 +412,17 @@ export class SubscriptionService {
 
         // Record student payment
         console.log('Recording student payment');
-        await this.studentPaymentRepository.create(manager, {
-          student,
-          termId: null,
-          transaction_id: transactionId,
-          phone_number: phoneNumber,
-          amount_paid: amt,
-          payment_type: pending_payment.paymentType || 'daily',
-        });
+        const studentPayment = await this.studentPaymentRepository.create(
+          manager,
+          {
+            student,
+            termId: null,
+            transaction_id: transactionId,
+            phone_number: phoneNumber,
+            amount_paid: amt,
+            payment_type: pending_payment.paymentType || 'daily',
+          },
+        );
         console.log('Student payment recorded');
 
         // Fetch the active subscription entity (not domain object)
@@ -492,6 +474,17 @@ export class SubscriptionService {
         console.log('Removing pending payment', pending_payment.id);
         await manager.remove(PendingPaymentEntity, pending_payment);
         console.log('Pending payment removed');
+
+        if (amt > 0) {
+          console.log('Disbursing to school', amt);
+          await this.disburseToSchool(
+            school,
+            student,
+            studentPayment,
+            amt,
+            pending_payment.termId,
+          );
+        }
       });
 
       console.log(`Daily payment processed successfully: ${transactionId}`);
@@ -776,7 +769,7 @@ export class SubscriptionService {
 
         await this.schoolDisbursementRepository.create({
           student,
-          termId,
+          termId: termId || null,
           payment,
           bank_paybill: school.bank_paybill_number,
           account_number: school.bank_account_number,

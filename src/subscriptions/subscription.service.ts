@@ -79,6 +79,7 @@ export class SubscriptionService {
   // -------------------------------
   // SCHOOL PAYMENT HANDLER
   // -------------------------------
+  // Fixed handleSchoolPayment method
   private async handleSchoolPayment(
     student,
     phoneNumber,
@@ -112,7 +113,7 @@ export class SubscriptionService {
       TransactionDesc: 'STUDENT SUBSCRIPTION',
     };
 
-    console.log(requestData);
+    console.log('M-Pesa Request Data:', requestData);
 
     try {
       const response = await axios.post(
@@ -133,45 +134,47 @@ export class SubscriptionService {
         );
       }
 
+      // Check for active subscription
+      const activeSubscription =
+        await this.subscriptionsRepository.findActiveByStudentId(student.id);
+
+      if (!activeSubscription) {
+        console.log('No active subscription found for student:', student.id);
+        throw new BadRequestException(
+          'No active subscription found for the student. Please contact support.',
+        );
+      }
+
+      let pending;
+
       if (!school.has_commission) {
         // Daily/Weekly/Monthly payment model
         const paymentType = this.determinePeriod(amount, student.daily_fee);
-        const activeSubscription =
-          await this.subscriptionsRepository.findActiveByStudentId(student.id);
 
-        if (!activeSubscription) {
-          console.log('subscription plan not found');
-          throw new BadRequestException(
-            'No active subscription plan found for the student',
-          );
-        }
+        pending = await this.pendingPaymentsRepository.createPendingPayment({
+          studentId: student.id,
+          amount,
+          checkoutId: data.CheckoutRequestID,
+          phoneNumber,
+          paymentType,
+          paymentModel: 'daily',
+          schoolId: school.id,
+          termId: null,
+        });
 
-        const pending =
-          await this.pendingPaymentsRepository.createPendingPayment({
-            studentId: student.id,
-            amount,
-            checkoutId: data.CheckoutRequestID,
-            phoneNumber,
-            paymentType,
-            paymentModel: 'daily',
-            schoolId: school.id,
-            termId: null,
-          });
-        return { message: 'Payment initiated', pendingPayment: pending };
+        console.log('Daily payment pending record created:', pending.id);
       } else {
-        const subscription =
-          await this.subscriptionsRepository.findActiveByStudentId(student.id);
-
-        if (!subscription) {
-          console.log('subcription not found');
+        // Term-based payment model
+        if (!term) {
           throw new BadRequestException(
-            'No active subscription found for the student',
+            'No active term found for the school. Cannot process payment.',
           );
         }
 
+        // Check if student has already paid full amount for this term
         if (
-          subscription.balance === 0 &&
-          subscription.total_paid >= student.transport_term_fee
+          activeSubscription.balance === 0 &&
+          activeSubscription.total_paid >= student.transport_term_fee
         ) {
           throw new BadRequestException(
             'Student has already paid full amount for this term',
@@ -179,9 +182,9 @@ export class SubscriptionService {
         }
 
         const paymentType =
-          subscription.total_paid === 0 ? 'initial' : 'installment';
+          activeSubscription.total_paid === 0 ? 'initial' : 'installment';
 
-        await this.pendingPaymentsRepository.createPendingPayment({
+        pending = await this.pendingPaymentsRepository.createPendingPayment({
           studentId: student.id,
           termId: term.id,
           amount,
@@ -192,14 +195,28 @@ export class SubscriptionService {
           schoolId: school.id,
         });
 
-        return { message: 'Payment initiated', pendingPayment: pending };
+        console.log('Term payment pending record created:', pending.id);
       }
+
+      return {
+        message: 'Payment initiated successfully',
+        pendingPayment: pending,
+        checkoutRequestId: data.CheckoutRequestID,
+      };
     } catch (error) {
       console.error(
         'MPESA STK Push Error:',
         error.response?.data || error.message,
       );
-      throw new BadRequestException('Failed to initiate payment');
+
+      // Re-throw BadRequestException as is
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+
+      throw new BadRequestException(
+        'Failed to initiate payment. Please try again.',
+      );
     }
   }
 

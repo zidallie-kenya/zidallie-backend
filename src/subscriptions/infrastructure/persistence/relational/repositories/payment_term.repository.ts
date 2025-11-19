@@ -1,12 +1,7 @@
 // payment_terms/infrastructure/persistence/relational/repositories/payment_term.repository.ts
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import {
-  Repository,
-  LessThanOrEqual,
-  MoreThanOrEqual,
-  IsNull,
-} from 'typeorm';
+import { Repository, LessThanOrEqual, MoreThanOrEqual, IsNull } from 'typeorm';
 import { PaymentTermEntity } from '../entities/payment_term.entity';
 import { PaymentTermMapper } from '../mappers/payment_term.mapper';
 import { PaymentTerm } from '../../../../domain/payment_term';
@@ -16,7 +11,7 @@ export class PaymentTermRepository {
   constructor(
     @InjectRepository(PaymentTermEntity)
     private readonly repository: Repository<PaymentTermEntity>,
-  ) { }
+  ) {}
 
   async findById(id: number): Promise<PaymentTerm | null> {
     const entity = await this.repository.findOne({

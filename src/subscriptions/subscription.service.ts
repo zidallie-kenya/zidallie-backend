@@ -501,6 +501,7 @@ export class SubscriptionService {
       console.error('Error processing daily payment:', error);
     }
   }
+
   // -------------------------------
   // PROCESS SCHOOL BUS - TERM PAYMENT
   // -------------------------------
@@ -520,6 +521,9 @@ export class SubscriptionService {
         console.error('Invalid payment amount:', amt);
         return;
       }
+
+      let studentPayment;
+      let amountToDisburse = 0;
 
       await this.dataSource.transaction(async (manager) => {
         console.log('Transaction started for term payment');
@@ -555,21 +559,18 @@ export class SubscriptionService {
 
         // Record student payment
         console.log('Recording student payment for term');
-        const studentPayment = await this.studentPaymentRepository.create(
-          manager,
-          {
-            student,
-            termId: pending_payment.termId,
-            transaction_id: transactionId,
-            phone_number: phoneNumber,
-            amount_paid: amt,
-            payment_type: pending_payment.paymentType || 'initial',
-          },
-        );
+        studentPayment = await this.studentPaymentRepository.create(manager, {
+          student,
+          termId: pending_payment.termId,
+          transaction_id: transactionId,
+          phone_number: phoneNumber,
+          amount_paid: amt,
+          payment_type: pending_payment.paymentType || 'initial',
+        });
         console.log('Student payment recorded:', studentPayment.id);
 
         // Calculate amount to disburse to school
-        let amountToDisburse = amt;
+        amountToDisburse = amt;
         if (!termCommission.isPaid) {
           if (amt >= school.commission_amount) {
             amountToDisburse = amt - school.commission_amount;
@@ -616,20 +617,20 @@ export class SubscriptionService {
         console.log('Removing pending payment', pending_payment.id);
         await manager.remove(PendingPaymentEntity, pending_payment);
         console.log('Pending payment removed');
-
-        // Disburse to school
-        if (amountToDisburse > 0) {
-          console.log('Disbursing to school', amountToDisburse);
-          await this.disburseToSchool(
-            school,
-            student,
-            studentPayment,
-            amountToDisburse,
-            pending_payment.termId,
-          );
-          console.log('Disbursement completed');
-        }
       });
+
+      // Disburse AFTER transaction commits
+      if (amountToDisburse > 0 && studentPayment) {
+        console.log('Disbursing to school', amountToDisburse);
+        await this.disburseToSchool(
+          school,
+          student,
+          studentPayment,
+          amountToDisburse,
+          pending_payment.termId,
+        );
+        console.log('Disbursement completed');
+      }
 
       console.log(`Term payment processed successfully: ${transactionId}`);
     } catch (error) {

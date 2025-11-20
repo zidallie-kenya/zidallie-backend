@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource, EntityManager, Repository } from 'typeorm';
+import { DataSource, EntityManager, Not, Repository } from 'typeorm';
 import { SubscriptionEntity } from '../entities/subscription.entity';
 import { SubscriptionMapper } from '../mappers/subscription.mapper';
 import { Subscription } from '../../../../domain/subscription';
@@ -48,7 +48,7 @@ export class SubscriptionRepository {
 
   async findActiveByStudentId(studentId: number): Promise<Subscription | null> {
     const entity = await this.repository.findOne({
-      where: { student: { id: studentId }, status: 'active' },
+      where: { student: { id: studentId }, status: Not('inactive') },
       relations: ['student', 'plan', 'term'],
     });
     return entity ? SubscriptionMapper.toDomain(entity) : null;
@@ -58,7 +58,7 @@ export class SubscriptionRepository {
     studentId: number,
   ): Promise<SubscriptionEntity | null> {
     return this.repository.findOne({
-      where: { student: { id: studentId }, status: 'active' },
+      where: { student: { id: studentId }, status: Not('inactive') },
       relations: ['student', 'plan', 'term'],
     });
   }

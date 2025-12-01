@@ -113,7 +113,8 @@ export class SubscriptionService {
       TransactionDesc: 'STUDENT SUBSCRIPTION',
     };
 
-    console.log('M-Pesa Request Data:', requestData);
+    // console.log('M-Pesa Request Data:', requestData);
+    console.log('Initiating M-Pesa STK Push for student:', student.id);
 
     try {
       const response = await axios.post(
@@ -859,10 +860,15 @@ export class SubscriptionService {
         raw_result: result,
       };
 
-      const params = result?.ResultParameters?.ResultParameter || [];
+      // Ensure params is always an array
+      let params = result?.ResultParameters?.ResultParameter || [];
+      if (!Array.isArray(params)) {
+        params = [params]; // Convert single object to array
+      }
+
       const paramMap: Record<string, any> = {};
       for (const p of params) {
-        if (!p.Key) continue;
+        if (!p?.Key) continue; // Added optional chaining for safety
         if (typeof p.Value === 'number') {
           p.Value = p.Value.toString();
         }

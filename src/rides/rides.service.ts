@@ -156,7 +156,6 @@ export class RidesService {
       const vehicleExists = await this.vehiclesService.existsById(
         createRideDto.vehicle.id,
       );
-      console.log(vehicleExists);
       if (!vehicleExists) {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,

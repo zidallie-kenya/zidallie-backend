@@ -40,7 +40,7 @@ describe('Users Module', () => {
         .post('/api/v1/auth/email/login')
         .send({ email: newUserEmail, password: newUserPassword })
         .then(({ body }) => {
-          console.log(body);
+          // console.log(body);
           newUser = body.user;
         });
     });

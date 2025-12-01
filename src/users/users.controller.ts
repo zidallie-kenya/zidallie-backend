@@ -106,7 +106,7 @@ export class UsersController {
   findOne(
     @Param('identifier') identifier: string,
   ): Promise<NullableType<User>> {
-    console.log('findOne', identifier);
+    // console.log('findOne', identifier);
     return this.usersService.findByIdOrEmail(identifier);
   }
 

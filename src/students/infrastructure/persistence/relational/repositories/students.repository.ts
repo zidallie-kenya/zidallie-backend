@@ -107,7 +107,7 @@ export class StudentsRelationalRepository implements StudentRepository {
       .orderBy('student.name', 'ASC')
       .getMany();
 
-    console.log('Found students for parent ID:', parentId, entities);
+    // console.log('Found students for parent ID:', parentId, entities);
     return entities.map((student) => StudentMapper.toDomain(student));
   }
 

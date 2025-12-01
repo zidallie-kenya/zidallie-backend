@@ -40,7 +40,7 @@ export class RideMapper {
     domainEntity.created_at = raw.created_at;
     domainEntity.updated_at = raw.updated_at;
 
-    console.log(domainEntity);
+    // console.log(domainEntity);
 
     return domainEntity;
   }

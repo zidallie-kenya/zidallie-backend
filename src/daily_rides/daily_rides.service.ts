@@ -661,7 +661,7 @@ export class DailyRidesService {
         status, // pass optional status
       );
     } else if (user.kind === 'Parent') {
-      console.log('is parent');
+      // console.log('is parent');
       return this.dailyRideRepository.findUpcomingRidesForParent(
         user.id,
         today,

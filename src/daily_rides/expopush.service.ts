@@ -36,14 +36,14 @@ export class ExpoPushService {
           (t.startsWith('ExpoPushToken') || t.startsWith('ExponentPushToken')),
       );
 
-      console.log('Valid tokens after filter:', validTokens);
-      console.log('Title:', title);
-      console.log('Body:', body);
-      console.log('Data:', data);
+      // console.log('Valid tokens after filter:', validTokens);
+      // console.log('Title:', title);
+      // console.log('Body:', body);
+      // console.log('Data:', data);
 
       if (validTokens.length === 0) {
         this.logger.warn('No valid Expo push tokens found');
-        console.log('❌ NO VALID TOKENS - stopping here');
+        // console.log('❌ NO VALID TOKENS - stopping here');
         return;
       }
 
@@ -56,7 +56,7 @@ export class ExpoPushService {
         data,
       }));
 
-      console.log('Messages to send:', JSON.stringify(messages, null, 2));
+      // console.log('Messages to send:', JSON.stringify(messages, null, 2));
 
       // Send bulk request to Expo API
       const response = await axios.post(this.EXPO_URL, messages, {
@@ -67,7 +67,7 @@ export class ExpoPushService {
         },
       });
 
-      console.log('✅ Expo API Response:', response.data);
+      // console.log('✅ Expo API Response:', response.data);
 
       this.logger.log(
         `Sent ${messages.length} notifications, got response: ${JSON.stringify(

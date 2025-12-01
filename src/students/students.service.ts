@@ -26,9 +26,6 @@ export class StudentsService {
   ) {}
 
   async create(createStudentDto: CreateStudentDto): Promise<Student> {
-    console.log('school:', createStudentDto?.school?.id);
-    console.log('parent:', createStudentDto?.parent?.id);
-
     // Validate school reference
     let school: SchoolEntity | null = null;
     if (createStudentDto.school?.id) {

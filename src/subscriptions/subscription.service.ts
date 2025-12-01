@@ -863,12 +863,12 @@ export class SubscriptionService {
       // Ensure params is always an array
       let params = result?.ResultParameters?.ResultParameter || [];
       if (!Array.isArray(params)) {
-        params = [params]; // Convert single object to array
+        params = [params];
       }
 
       const paramMap: Record<string, any> = {};
       for (const p of params) {
-        if (!p?.Key) continue; // Added optional chaining for safety
+        if (!p?.Key) continue;
         if (typeof p.Value === 'number') {
           p.Value = p.Value.toString();
         }

@@ -747,6 +747,15 @@ export class SubscriptionService {
   // -------------------------------
   private async disburseToSchool(school, student, payment, amount, termId) {
     try {
+      // Transfer funds from Utility to Working Account first
+      console.log(`Transferring KES ${amount} to working account...`);
+      await this.transferFundsToWorkingAccount(amount);
+
+      console.log('Waiting for transfer to complete...');
+
+      // Wait a few seconds for transfer to complete (M-Pesa typically processes within 3-5 seconds)
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+
       if (school.disbursement_phone_number) {
         // B2C to phone
         const response = await this.disburseFunds(
@@ -1118,5 +1127,57 @@ export class SubscriptionService {
     // Fallback
     const parsed = new Date(dateString);
     return isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  // Add this new method to your service
+  private async transferFundsToWorkingAccount(amount: number) {
+    const consumerKey = process.env.MPESA_CONSUMER_KEY;
+    const secretKey = process.env.MPESA_SECRET_KEY;
+    const shortcode = process.env.MPESA_C2B_PAYBILL;
+    const initiatorName = process.env.B2C_INITIATOR_NAME;
+    const initiatorPassword = process.env.B2C_INITIATOR_PASSWORD;
+
+    if (!consumerKey || !secretKey) {
+      throw new Error('Missing M-Pesa credentials');
+    }
+
+    const accessToken = await this.getAccessToken(consumerKey, secretKey);
+    const securityCredential =
+      await this.generateSecurityCredentials(initiatorPassword);
+
+    const requestData = {
+      Initiator: initiatorName,
+      SecurityCredential: securityCredential,
+      CommandID: 'TransferFromUtilityToWorking',
+      SenderIdentifierType: '4',
+      ReceiverIdentifierType: '4',
+      Amount: amount,
+      PartyA: shortcode,
+      PartyB: shortcode,
+      Remarks: 'Transfer to working account for disbursement',
+      QueueTimeOutURL: `https://zidallie-backend.onrender.com/api/v1/subscriptions/b2c-result`,
+      ResultURL: `https://zidallie-backend.onrender.com/api/v1/subscriptions/b2c-result`,
+    };
+
+    try {
+      const response = await axios.post(
+        `${this.MPESA_BASEURL}/mpesa/b2b/v1/paymentrequest`,
+        requestData,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+        },
+      );
+      console.log('Fund transfer initiated:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error(
+        'Fund transfer error:',
+        error.response?.data || error.message,
+      );
+      throw new Error('Failed to transfer funds to working account');
+    }
   }
 }

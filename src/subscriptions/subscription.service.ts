@@ -1019,7 +1019,7 @@ export class SubscriptionService {
       SecurityCredential: securityCredential,
       CommandID: 'BusinessPayBill',
       SenderIdentifierType: '4',
-      RecieverIdentifierType: '4',
+      ReceiverIdentifierType: '4',
       Amount: amount,
       PartyA: BULK_SHORTCODE,
       PartyB: bankPaybill,

@@ -1148,13 +1148,14 @@ export class SubscriptionService {
     const requestData = {
       Initiator: initiatorName,
       SecurityCredential: securityCredential,
-      CommandID: 'TransferFromUtilityToWorking',
-      SenderIdentifierType: '4',
-      ReceiverIdentifierType: '4',
+      CommandID: 'BusinessToBusinessTransfer', // ✅ Changed from TransferFromUtilityToWorking
       Amount: amount,
-      PartyA: shortcode,
-      PartyB: shortcode,
-      Remarks: 'Transfer to working account for disbursement',
+      PartyA: shortcode, // Your paybill (source: utility account)
+      PartyB: shortcode, // Same paybill (destination: working account)
+      AccountReference: 'UtilityToWorking',
+      SenderIdentifierType: '4', // 4 = Paybill
+      RecieverIdentifierType: '4', // 4 = Paybill
+      Remarks: 'Transfer from utility to working account',
       QueueTimeOutURL: `https://zidallie-backend.onrender.com/api/v1/subscriptions/b2c-result`,
       ResultURL: `https://zidallie-backend.onrender.com/api/v1/subscriptions/b2c-result`,
     };

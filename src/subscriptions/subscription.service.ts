@@ -1156,7 +1156,7 @@ export class SubscriptionService {
       Amount: amount,
       PartyA: shortcode,
       PartyB: shortcode,
-      AccountReference: 'UtilityToWorking',
+      AccountReference: 'Working Account',
       Remarks: 'Transfer from utility to working account',
       QueueTimeOutURL: `https://zidallie-backend.onrender.com/api/v1/subscriptions/b2c-timeout`,
       ResultURL: `https://zidallie-backend.onrender.com/api/v1/subscriptions/b2c-result`,

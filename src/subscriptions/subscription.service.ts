@@ -1019,7 +1019,7 @@ export class SubscriptionService {
       SecurityCredential: securityCredential,
       CommandID: 'BusinessPayBill',
       SenderIdentifierType: '4',
-      ReceiverIdentifierType: '4',
+      RecieverIdentifierType: '4',
       Amount: amount,
       PartyA: BULK_SHORTCODE,
       PartyB: bankPaybill,
@@ -1129,7 +1129,9 @@ export class SubscriptionService {
     return isNaN(parsed.getTime()) ? null : parsed;
   }
 
-  // Add this new method to your service
+  // -------------------------------
+  // TRANSFER FUNDS TO WORKING ACCOUNT
+  // -------------------------------
   private async transferFundsToWorkingAccount(amount: number) {
     const consumerKey = process.env.MPESA_CONSUMER_KEY;
     const secretKey = process.env.MPESA_SECRET_KEY;
@@ -1148,19 +1150,24 @@ export class SubscriptionService {
     const requestData = {
       Initiator: initiatorName,
       SecurityCredential: securityCredential,
-      CommandID: 'BusinessToBusinessTransfer', // ✅ Changed from TransferFromUtilityToWorking
+      CommandID: 'BusinessToBusinessTransfer',
+      SenderIdentifierType: '4',
+      RecieverIdentifierType: '4',
       Amount: amount,
-      PartyA: shortcode, // Your paybill (source: utility account)
-      PartyB: shortcode, // Same paybill (destination: working account)
+      PartyA: shortcode,
+      PartyB: shortcode,
       AccountReference: 'UtilityToWorking',
-      SenderIdentifierType: '4', // 4 = Paybill
-      RecieverIdentifierType: '4', // 4 = Paybill
       Remarks: 'Transfer from utility to working account',
-      QueueTimeOutURL: `https://zidallie-backend.onrender.com/api/v1/subscriptions/b2c-result`,
+      QueueTimeOutURL: `https://zidallie-backend.onrender.com/api/v1/subscriptions/b2c-timeout`,
       ResultURL: `https://zidallie-backend.onrender.com/api/v1/subscriptions/b2c-result`,
     };
 
     try {
+      console.log(
+        'Fund Transfer Request:',
+        JSON.stringify(requestData, null, 2),
+      );
+
       const response = await axios.post(
         `${this.MPESA_BASEURL}/mpesa/b2b/v1/paymentrequest`,
         requestData,
@@ -1171,7 +1178,8 @@ export class SubscriptionService {
           },
         },
       );
-      console.log('Fund transfer initiated:', response.data);
+
+      console.log('Fund transfer response:', response.data);
       return response.data;
     } catch (error) {
       console.error(

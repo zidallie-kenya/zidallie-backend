@@ -53,6 +53,10 @@ export class SubscriptionService {
       const activeTerm = await this.paymentTermRepository.getActiveTerm(
         school.id,
       );
+
+      console.log(`Initiating school payment for student: ${student.id}`);
+      console.log(`Amount: ${dto.amount}, Phone Number: ${dto.phone_number}`);
+
       return this.handleSchoolPayment(
         student,
         dto.phone_number,

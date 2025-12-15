@@ -333,6 +333,10 @@ export class SubscriptionService {
     const checkoutRequestID = stkCallback.CheckoutRequestID;
     const phoneNumber = metadata[1]?.Value;
 
+    console.log(
+      `Amount received: ${amount} from phone number: ${phoneNumber} for CheckoutRequestID: ${checkoutRequestID}`,
+    );
+
     const pending_payment =
       await this.pendingPaymentsRepository.findByCheckoutId(checkoutRequestID);
 
@@ -408,6 +412,7 @@ export class SubscriptionService {
   ) {
     try {
       console.log('Reached processSchoolBusDailyPayment');
+      console.log('Amount received:(school bus daily payment):', amount);
 
       const amt = Number(amount);
       const dailyFee = Number(student.daily_fee);
@@ -418,6 +423,20 @@ export class SubscriptionService {
       }
 
       const daysPaidFor = Math.floor(amt / dailyFee);
+
+      // just for logging purposes
+      if (amt % dailyFee !== 0) {
+        const student_info = `Student ID: ${student.id}, Name: ${student.name}`;
+        console.log('Amount does not cover full days:', {
+          amt,
+          dailyFee,
+          student_info,
+        });
+        console.log(
+          `amount remaining that does not cover full day: ${amt % dailyFee}`,
+        );
+      }
+
       if (daysPaidFor <= 0) {
         console.error('Amount too small to cover any days:', { amt, dailyFee });
         return;

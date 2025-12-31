@@ -752,9 +752,9 @@ export class SubscriptionService {
         } else {
           subscriptionEntity.status = 'partially_paid';
         }
-        // Today + 90 days
+        // Today + 95 days
         const expiryDate = new Date();
-        expiryDate.setDate(expiryDate.getDate() + 90);
+        expiryDate.setDate(expiryDate.getDate() + 95);
 
         subscriptionEntity.expiry_date = expiryDate;
 

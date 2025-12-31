@@ -749,10 +749,14 @@ export class SubscriptionService {
 
         if (subscriptionEntity.balance <= 0) {
           subscriptionEntity.status = 'fully_paid';
-          subscriptionEntity.expiry_date = term.endDate;
         } else {
           subscriptionEntity.status = 'partially_paid';
         }
+        // Today + 90 days
+        const expiryDate = new Date();
+        expiryDate.setDate(expiryDate.getDate() + 90);
+
+        subscriptionEntity.expiry_date = expiryDate;
 
         console.log('Saving subscription entity');
         await manager.save(subscriptionEntity);

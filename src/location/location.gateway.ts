@@ -11,12 +11,13 @@ import { LocationsService } from './location.service';
 
 @WebSocketGateway({ cors: true })
 export class LocationGateway
-  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
+  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer() server: Server;
 
   private lastSaved: Record<string, number> = {};
 
-  constructor(private readonly locationsService: LocationsService) { }
+  constructor(private readonly locationsService: LocationsService) {}
 
   afterInit(server: Server) {
     console.log('Socket server initialized');
@@ -63,7 +64,6 @@ export class LocationGateway
     });
   }
 
-
   @SubscribeMessage('locationUpdate')
   async handleLocationUpdate(client: Socket, payload: any) {
     const driverId = Number(payload.driverId); // force number
@@ -95,5 +95,4 @@ export class LocationGateway
       });
     }
   }
-
 }

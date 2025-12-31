@@ -152,8 +152,13 @@ export class SubscriptionService {
 
       let pending;
 
+      console.log(
+        `${school.name} has commision: ${school.has_commission ? 'has commission' : 'no commission'}`,
+      );
+
       if (!school.has_commission) {
         // Daily/Weekly/Monthly payment model
+        console.log('school has no commission');
         const paymentType = this.determinePeriod(amount, student.daily_fee);
 
         pending = await this.pendingPaymentsRepository.createPendingPayment({
@@ -170,6 +175,8 @@ export class SubscriptionService {
         console.log('Daily payment pending record created:', pending.id);
       } else {
         // Term-based payment model
+        console.log('school has commission');
+
         if (!term) {
           throw new BadRequestException(
             'No active term found for the school. Cannot process payment.',
@@ -377,7 +384,9 @@ export class SubscriptionService {
         console.log(`School not found for student id ${student.id}`);
         return { ResultCode: 0, ResultDesc: 'Accepted' };
       }
+
       if (!school.has_commission) {
+        console.log('school has no commision');
         // Daily Payment Model
         await this.processSchoolBusDailyPayment(
           pending_payment,
@@ -389,6 +398,7 @@ export class SubscriptionService {
         );
       } else {
         // Term Payment Model
+        console.log('school has commission');
         await this.processSchoolBusTermPayment(
           pending_payment,
           checkoutRequestID,

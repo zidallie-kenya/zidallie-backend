@@ -49,11 +49,6 @@ export class SubscriptionService {
       const school = await this.schoolsService.findById(student.school.id);
       if (!school) throw new BadRequestException('School not found');
 
-      // returns null if no active term
-      const activeTerm = await this.paymentTermRepository.getActiveTerm(
-        school.id,
-      );
-
       console.log(`Initiating school payment for student: ${student.id}`);
       console.log(`Amount: ${dto.amount}, Phone Number: ${dto.phone_number}`);
 
@@ -61,7 +56,6 @@ export class SubscriptionService {
         student,
         dto.phone_number,
         dto.amount,
-        activeTerm,
         school,
       );
     } else if (
@@ -84,13 +78,7 @@ export class SubscriptionService {
   // SCHOOL PAYMENT HANDLER
   // -------------------------------
   // Fixed handleSchoolPayment method
-  private async handleSchoolPayment(
-    student,
-    phoneNumber,
-    amount,
-    term,
-    school,
-  ) {
+  private async handleSchoolPayment(student, phoneNumber, amount, school) {
     const consumerKey = process.env.MPESA_CONSUMER_KEY;
     const secretKey = process.env.MPESA_SECRET_KEY;
     if (!consumerKey || !secretKey)
@@ -177,28 +165,34 @@ export class SubscriptionService {
         // Term-based payment model
         console.log('school has commission');
 
-        if (!term) {
+        // Check if subscription has expired or is still valid for current term
+        const currentDate = new Date();
+        const expiryDate = new Date(activeSubscription.expiry_date);
+
+        // Check if current term payment is complete
+        // They can only pay again if:
+        // 1. Expiry date has passed (new term), OR
+        // 2. They haven't paid the full amount for current term yet
+        const hasExpired = expiryDate <= currentDate;
+
+        const hasFullyPaidCurrentTerm =
+          activeSubscription.term_total_paid >= student.transport_term_fee;
+
+        if (!hasExpired && hasFullyPaidCurrentTerm) {
           throw new BadRequestException(
-            'No active term found for the school. Cannot process payment.',
+            `Student has already paid full amount for the current term. Payment is valid until ${expiryDate.toLocaleDateString()}`,
           );
         }
 
-        // Check if student has already paid full amount for this term
-        if (
-          activeSubscription.balance === 0 &&
-          activeSubscription.total_paid >= student.transport_term_fee
-        ) {
-          throw new BadRequestException(
-            'Student has already paid full amount for this term',
-          );
-        }
-
+        // Determine payment type based on term_total_paid (current term payments only)
+        // If term expired and they're paying again, it's a new initial payment
         const paymentType =
-          activeSubscription.total_paid === 0 ? 'initial' : 'installment';
+          hasExpired || activeSubscription.term_total_paid === 0
+            ? 'initial'
+            : 'installment';
 
         pending = await this.pendingPaymentsRepository.createPendingPayment({
           studentId: student.id,
-          termId: term.id,
           amount,
           checkoutId: data.CheckoutRequestID,
           phoneNumber,
@@ -251,12 +245,15 @@ export class SubscriptionService {
       );
     }
 
-    if (
-      subscription.balance === 0 &&
-      subscription.total_paid >= student.transport_term_fee
-    ) {
+    const currentDate = new Date();
+    const expiryDate = new Date(subscription.expiry_date);
+    const hasExpired = expiryDate <= currentDate;
+    const hasFullyPaidCurrentTerm =
+      subscription.term_total_paid >= student.transport_term_fee;
+
+    if (!hasExpired && hasFullyPaidCurrentTerm) {
       throw new BadRequestException(
-        'Student has already paid full amount for this term',
+        `Student has already paid full amount for the current term. Payment is valid until ${expiryDate.toLocaleDateString()}`,
       );
     }
 
@@ -504,6 +501,7 @@ export class SubscriptionService {
         console.log('Calculated expiry date:', expiryDate);
 
         subscriptionEntity.total_paid += amt;
+        subscriptionEntity.term_total_paid += amt;
         subscriptionEntity.expiry_date = expiryDate;
         subscriptionEntity.last_payment_date = new Date();
         subscriptionEntity.status = 'active';
@@ -580,22 +578,24 @@ export class SubscriptionService {
         }
         console.log('Subscription entity found', subscriptionEntity.id);
 
-        // Get or create term commission
-        const termCommission = await this.termCommissionRepository.getOrCreate(
-          manager,
-          {
-            student,
-            termId: pending_payment.termId,
-            commissionAmount: school.commission_amount,
-          },
-        );
-        console.log('Term commission:', termCommission);
+        const currentDate = new Date();
+        const expiryDate = new Date(subscriptionEntity.expiry_date);
+        const hasExpired = expiryDate <= currentDate;
+
+        // If subscription expired, reset for new term cycle
+        if (hasExpired) {
+          console.log('Subscription expired, resetting term_total_paid');
+          subscriptionEntity.term_total_paid = 0; // Reset term total paid
+          subscriptionEntity.balance = student.transport_term_fee; // Reset balance
+          subscriptionEntity.is_commission_paid = false; // Reset commission status
+          subscriptionEntity.commission_paid_amount = 0; // Reset commission
+        }
 
         // Record student payment
         console.log('Recording student payment for term');
         studentPayment = await this.studentPaymentRepository.create(manager, {
           student,
-          termId: pending_payment.termId,
+          termId: null,
           transaction_id: transactionId,
           phone_number: phoneNumber,
           amount_paid: amt,
@@ -605,42 +605,62 @@ export class SubscriptionService {
 
         // Calculate amount to disburse to school
         amountToDisburse = amt;
-        if (!termCommission.isPaid) {
-          if (amt >= school.commission_amount) {
-            amountToDisburse = amt - school.commission_amount;
-            termCommission.isPaid = true;
-            termCommission.paidAt = new Date();
-            await this.termCommissionRepository.save(manager, termCommission);
-            console.log('Term commission marked as paid');
-          } else {
-            amountToDisburse = 0;
-          }
-        }
 
-        // Fetch term entity
-        const term = await this.paymentTermRepository.findById(
-          pending_payment.termId,
-        );
-        if (!term) {
-          console.error(
-            'Term not found for pending payment',
-            pending_payment.id,
+        if (!subscriptionEntity.is_commission_paid) {
+          const remainingCommission =
+            school.commission_amount -
+            subscriptionEntity.commission_paid_amount;
+
+          console.log(
+            `Remaining commission to collect: ${remainingCommission}`,
           );
-          throw new BadRequestException('No active term found for the student');
+
+          if (amt >= remainingCommission) {
+            // This payment covers the remaining commission
+            amountToDisburse = amt - remainingCommission;
+            subscriptionEntity.commission_paid_amount += remainingCommission;
+            subscriptionEntity.is_commission_paid = true;
+
+            console.log(
+              `Commission fully paid. Remaining commission (${remainingCommission}) deducted. ` +
+                `Disbursing ${amountToDisburse} to school.`,
+            );
+          } else {
+            // Payment is less than remaining commission
+            // All of this payment goes toward commission
+            subscriptionEntity.commission_paid_amount += amt;
+            amountToDisburse = 0;
+
+            console.log(
+              `Partial commission payment of ${amt}. ` +
+                `Total commission paid so far: ${subscriptionEntity.commission_paid_amount}/${school.commission_amount}. ` +
+                `No disbursement to school yet.`,
+            );
+          }
+        } else {
+          // Commission already fully paid, all goes to school
+          amountToDisburse = amt;
+          console.log('Commission already paid, full amount goes to school');
         }
 
-        // Update subscription entity
-        subscriptionEntity.total_paid += amt;
+        subscriptionEntity.total_paid += amt; // Historical total (accumulates forever)
+        subscriptionEntity.term_total_paid += amt; // Current term total (resets each term)
         subscriptionEntity.balance =
-          student.transport_term_fee - subscriptionEntity.total_paid;
-        subscriptionEntity.is_commission_paid = termCommission.isPaid;
+          student.transport_term_fee - subscriptionEntity.term_total_paid;
         subscriptionEntity.last_payment_date = new Date();
 
+        // Calculate expiry date - 95 days (approximately one term)
         if (subscriptionEntity.balance <= 0) {
           subscriptionEntity.status = 'fully_paid';
-          subscriptionEntity.expiry_date = term.endDate;
+          const newExpiryDate = new Date();
+          newExpiryDate.setDate(newExpiryDate.getDate() + 95);
+          subscriptionEntity.expiry_date = newExpiryDate;
+          console.log('Full payment received, expiry set to:', newExpiryDate);
         } else {
           subscriptionEntity.status = 'partially_paid';
+          console.log(
+            `Partial payment received, balance: ${subscriptionEntity.balance}`,
+          );
         }
 
         console.log('Saving subscription entity');
@@ -694,34 +714,6 @@ export class SubscriptionService {
       await this.dataSource.transaction(async (manager) => {
         console.log('Transaction started for carpool/private payment');
 
-        // Fetch term
-        const term = await this.paymentTermRepository.findById(
-          pending_payment.termId,
-        );
-        if (!term) {
-          console.error(
-            'Term not found for pending payment',
-            pending_payment.id,
-          );
-          throw new BadRequestException('No active term found for the student');
-        }
-
-        // Record student payment
-        console.log('Recording student payment for carpool/private');
-        const studentPayment = await this.studentPaymentRepository.create(
-          manager,
-          {
-            student,
-            termId: pending_payment.termId,
-            transaction_id: transactionId,
-            phone_number: phoneNumber,
-            amount_paid: amt,
-            payment_type: pending_payment.paymentType || 'installment',
-          },
-        );
-        console.log('Student payment recorded:', studentPayment.id);
-
-        // Fetch active subscription entity
         console.log(
           'Fetching active subscription entity for student',
           student.id,
@@ -738,11 +730,37 @@ export class SubscriptionService {
           );
         }
 
+        const currentDate = new Date();
+        const expiryDate = new Date(subscriptionEntity.expiry_date);
+        const hasExpired = expiryDate <= currentDate;
+
+        // If subscription expired, reset for new term cycle
+        if (hasExpired) {
+          console.log('Subscription expired, resetting for new term cycle');
+          subscriptionEntity.term_total_paid = 0;
+          subscriptionEntity.balance = student.transport_term_fee;
+        }
+
+        // Record student payment
+        console.log('Recording student payment for carpool/private');
+        const studentPayment = await this.studentPaymentRepository.create(
+          manager,
+          {
+            student,
+            termId: null,
+            transaction_id: transactionId,
+            phone_number: phoneNumber,
+            amount_paid: amt,
+            payment_type: pending_payment.paymentType || 'installment',
+          },
+        );
+        console.log('Student payment recorded:', studentPayment.id);
+
         // Update subscription details
-        subscriptionEntity.total_paid =
-          (subscriptionEntity.total_paid || 0) + amt;
+        subscriptionEntity.total_paid += amt; // Historical total
+        subscriptionEntity.term_total_paid += amt; // Current term total
         subscriptionEntity.balance = Math.max(
-          (student.transport_term_fee || 0) - subscriptionEntity.total_paid,
+          student.transport_term_fee - subscriptionEntity.term_total_paid, // Use term_total_paid
           0,
         );
         subscriptionEntity.last_payment_date = new Date();
@@ -752,10 +770,9 @@ export class SubscriptionService {
         } else {
           subscriptionEntity.status = 'partially_paid';
         }
-        // Today + 95 days
-        const expiryDate = new Date();
-        expiryDate.setDate(expiryDate.getDate() + 95);
 
+        // Today + 95 days
+        expiryDate.setDate(expiryDate.getDate() + 95);
         subscriptionEntity.expiry_date = expiryDate;
 
         console.log('Saving subscription entity');
@@ -782,16 +799,17 @@ export class SubscriptionService {
   // -------------------------------
   // DISBURSE TO SCHOOL
   // -------------------------------
-  private async disburseToSchool(school, student, payment, amount, termId) {
+  private async disburseToSchool(
+    school,
+    student,
+    payment,
+    amount,
+    termId: number | null = null,
+  ) {
     try {
       // Transfer funds from Utility to Working Account first
-      // console.log(`Transferring KES ${amount} to working account...`);
-      // await this.transferFundsToWorkingAccount(amount);
-
-      // console.log('Waiting for transfer to complete...');
-
-      // await new Promise((resolve) => setTimeout(resolve, 5000));
-
+      // done manually for now
+      console.log(termId);
       if (school.disbursement_phone_number) {
         // B2C to phone
         const response = await this.disburseFunds(
@@ -802,7 +820,7 @@ export class SubscriptionService {
 
         await this.schoolDisbursementRepository.create({
           student,
-          termId,
+          termId: null,
           payment,
           bank_paybill: null,
           account_number: null,
@@ -824,7 +842,7 @@ export class SubscriptionService {
 
         await this.schoolDisbursementRepository.create({
           student,
-          termId: termId || null,
+          termId: null,
           payment,
           bank_paybill: school.bank_paybill_number,
           account_number: school.bank_account_number,

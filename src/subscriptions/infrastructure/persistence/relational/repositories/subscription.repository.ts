@@ -28,10 +28,14 @@ export class SubscriptionRepository {
       amount: data.amount ?? 0,
       status: 'active',
       total_paid: 0,
+      term_total_paid: 0, // NEW: Track current term payments
       balance: data.amount ?? 0,
       is_commission_paid: false,
+      commission_paid_amount: 0, // NEW: Track partial commission payments
       start_date: new Date(),
       expiry_date: this.calculateEndDate(),
+      days_access: null,
+      last_payment_date: null,
     });
 
     const saved = await manager.save(entity);
@@ -71,8 +75,9 @@ export class SubscriptionRepository {
     if (!subscription) return null;
 
     subscription.total_paid += amountPaid;
+    subscription.term_total_paid += amountPaid; // NEW: Update term total
     subscription.balance = Math.max(
-      subscription.amount - subscription.total_paid,
+      subscription.amount - subscription.term_total_paid, // Use term_total_paid for balance calculation
       0,
     );
     subscription.last_payment_date = new Date();
@@ -83,6 +88,16 @@ export class SubscriptionRepository {
 
   async deactivateSubscription(id: number): Promise<void> {
     await this.repository.update(id, { status: 'inactive' });
+  }
+
+  async resetTermCycle(id: number): Promise<void> {
+    // NEW: Method to reset term cycle when subscription expires
+    await this.repository.update(id, {
+      term_total_paid: 0,
+      commission_paid_amount: 0,
+      is_commission_paid: false,
+      balance: 0, // Will be recalculated based on student's term fee
+    });
   }
 
   async save(

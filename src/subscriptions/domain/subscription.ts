@@ -8,6 +8,8 @@ export class Subscription {
   amount: number;
   status: string;
   total_paid: number;
+  term_total_paid: number;
+  commission_paid_amount: number;
   balance: number;
   is_commission_paid: boolean;
   days_access?: number | null;

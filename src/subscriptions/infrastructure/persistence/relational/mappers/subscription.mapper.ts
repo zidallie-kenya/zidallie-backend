@@ -16,8 +16,10 @@ export class SubscriptionMapper {
       total_paid: entity.total_paid,
       balance: entity.balance,
       is_commission_paid: entity.is_commission_paid,
+      commission_paid_amount: entity.commission_paid_amount,
       days_access: entity.days_access,
       last_payment_date: entity.last_payment_date,
+      term_total_paid: entity.term_total_paid,
       created_at: entity.created_at,
       updated_at: entity.updated_at,
 
@@ -42,6 +44,8 @@ export class SubscriptionMapper {
     entity.amount = domain.amount;
     entity.status = domain.status;
     entity.total_paid = domain.total_paid ?? 0;
+    entity.term_total_paid = domain.term_total_paid ?? 0;
+    entity.commission_paid_amount = domain.commission_paid_amount ?? 0;
     entity.balance = domain.balance ?? 0;
     entity.is_commission_paid = domain.is_commission_paid ?? false;
     entity.days_access = domain.days_access ?? null;

@@ -37,6 +37,12 @@ export class SubscriptionEntity {
   total_paid: number;
 
   @Column({ type: 'float', default: 0 })
+  term_total_paid: number; //Resets each term
+
+  @Column({ type: 'float', default: 0 })
+  commission_paid_amount: number; // Track partial commission payments
+
+  @Column({ type: 'float', default: 0 })
   balance: number;
 
   @Column({ type: 'boolean', default: false })

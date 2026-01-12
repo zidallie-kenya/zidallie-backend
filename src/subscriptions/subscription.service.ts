@@ -345,6 +345,20 @@ export class SubscriptionService {
       `Amount received: ${amount} from phone number: ${phoneNumber} for CheckoutRequestID: ${checkoutRequestID}`,
     );
 
+    // Check if this transaction was already processed
+    // reason: mpesa may send duplicate callbacks( M-Pesa might retry the callback (they often do this for reliability))
+    const existingPayment =
+      await this.studentPaymentRepository.findByTransactionId(
+        checkoutRequestID,
+      );
+
+    if (existingPayment) {
+      console.log(
+        `Duplicate callback ignored - transaction already processed: ${checkoutRequestID}`,
+      );
+      return { ResultCode: 0, ResultDesc: 'Accepted' };
+    }
+
     const pending_payment =
       await this.pendingPaymentsRepository.findByCheckoutId(checkoutRequestID);
 

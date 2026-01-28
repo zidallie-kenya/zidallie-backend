@@ -16,6 +16,7 @@ export class LocationGateway
   @WebSocketServer() server: Server;
 
   private lastSaved: Record<string, number> = {};
+  private readonly SAVE_THROTTLE_MS = 30 * 1000; // 30 seconds
 
   constructor(private readonly locationsService: LocationsService) {}
 
@@ -84,15 +85,28 @@ export class LocationGateway
     const now = Date.now();
     const last = this.lastSaved[driverId] || 0;
 
-    if (now - last >= 2 * 60 * 1000) {
+    if (now - last >= this.SAVE_THROTTLE_MS) {
       this.lastSaved[driverId] = now;
 
-      await this.locationsService.create({
-        driverId,
-        latitude: payload.latitude,
-        longitude: payload.longitude,
-        timestamp: payload.timestamp,
-      });
+      try {
+        await this.locationsService.create({
+          driverId,
+          latitude: payload.latitude,
+          longitude: payload.longitude,
+          timestamp: payload.timestamp,
+        });
+        console.log(`✅ Location saved to DB for driver ${driverId}`);
+      } catch (error) {
+        console.error(
+          `❌ Failed to save location for driver ${driverId}:`,
+          error,
+        );
+      }
+    } else {
+      const timeSinceLast = Math.round((now - last) / 1000);
+      console.log(
+        `⏭️  Skipping DB save for driver ${driverId} (last saved ${timeSinceLast}s ago)`,
+      );
     }
   }
 }

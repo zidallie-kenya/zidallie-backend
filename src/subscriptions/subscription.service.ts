@@ -15,6 +15,16 @@ import { TermCommissionRepository } from './infrastructure/persistence/relationa
 import { StudentPaymentRepository } from './infrastructure/persistence/relational/repositories/student_payment.repository';
 import { SchoolDisbursementRepository } from './infrastructure/persistence/relational/repositories/school_disbursement.repository';
 import { PendingPaymentEntity } from './infrastructure/persistence/relational/entities/pending_payment.entity';
+import { StudentPaymentEntity } from './infrastructure/persistence/relational/entities/student_payment.entity';
+import { SchoolDisbursementEntity } from './infrastructure/persistence/relational/entities/school_disbursement.entity';
+import { SubscriptionEntity } from './infrastructure/persistence/relational/entities/subscription.entity';
+import { subscriptionLogger as logger } from './subscription.logger';
+
+interface DisbursementData {
+  school: any;
+  disbursementRecord: SchoolDisbursementEntity;
+  amount: number;
+}
 
 @Injectable()
 export class SubscriptionService {
@@ -49,7 +59,9 @@ export class SubscriptionService {
       const school = await this.schoolsService.findById(student.school.id);
       if (!school) throw new BadRequestException('School not found');
 
+      logger.info(`Initiating school payment for student: ${student.id}`);
       console.log(`Initiating school payment for student: ${student.id}`);
+      logger.info(`Amount: ${dto.amount}, Phone Number: ${dto.phone_number}`);
       console.log(`Amount: ${dto.amount}, Phone Number: ${dto.phone_number}`);
 
       return this.handleSchoolPayment(
@@ -62,14 +74,13 @@ export class SubscriptionService {
       student.service_type === 'carpool' ||
       student.service_type === 'private'
     ) {
-      // const activeTerm = await this.paymentTermRepository.getZidallieTerm();
       return this.handleCarpoolPrivatePayment(
         student,
         dto.phone_number,
         dto.amount,
-        // activeTerm,
       );
     } else {
+      logger.error(`Invalid service type for student: ${student.id}`);
       throw new BadRequestException('Invalid service type');
     }
   }
@@ -77,12 +88,13 @@ export class SubscriptionService {
   // -------------------------------
   // SCHOOL PAYMENT HANDLER
   // -------------------------------
-  // Fixed handleSchoolPayment method
   private async handleSchoolPayment(student, phoneNumber, amount, school) {
     const consumerKey = process.env.MPESA_CONSUMER_KEY;
     const secretKey = process.env.MPESA_SECRET_KEY;
-    if (!consumerKey || !secretKey)
+    if (!consumerKey || !secretKey) {
+      logger.error('Missing M-Pesa credentials');
       throw new Error('Missing M-Pesa credentials');
+    }
 
     const accessToken = await this.getAccessToken(consumerKey, secretKey);
     const timestamp = this.getTimestamp();
@@ -105,8 +117,10 @@ export class SubscriptionService {
       TransactionDesc: 'STUDENT SUBSCRIPTION',
     };
 
-    // console.log('M-Pesa Request Data:', requestData);
     console.log('Initiating M-Pesa STK Push for student:', student.id);
+    logger.info(
+      ` Initiating M-Pesa STK Push For: Student ID: ${student.id}, Amount: ${amount}, Phone: ${phoneNumber}`,
+    );
 
     try {
       const response = await axios.post(
@@ -122,6 +136,9 @@ export class SubscriptionService {
 
       const data = response.data;
       if (data.ResponseCode !== '0' && data.ResponseCode !== 0) {
+        logger.error(
+          `M-Pesa STK Push failed for student ${student.id}: ${data.ResponseDescription}`,
+        );
         throw new BadRequestException(
           data.ResponseDescription || 'MPESA Error',
         );
@@ -133,6 +150,7 @@ export class SubscriptionService {
 
       if (!activeSubscription) {
         console.log('No active subscription found for student:', student.id);
+        logger.error(`No active subscription found for student: ${student.id}`);
         throw new BadRequestException(
           'No active subscription found for the student. Please contact support.',
         );
@@ -143,10 +161,15 @@ export class SubscriptionService {
       console.log(
         `${school.name} has commision: ${school.has_commission ? 'has commission' : 'no commission'}`,
       );
+      logger.info(
+        `${school.name} has commision: ${school.has_commission ? 'has commission' : 'no commission'}`,
+      );
 
       if (!school.has_commission) {
         // Daily/Weekly/Monthly payment model
         console.log('school has no commission');
+        logger.info('school has no commission');
+
         const paymentType = this.determinePeriod(amount, student.daily_fee);
 
         pending = await this.pendingPaymentsRepository.createPendingPayment({
@@ -161,24 +184,25 @@ export class SubscriptionService {
         });
 
         console.log('Daily payment pending record created:', pending.id);
+        logger.info('Daily payment pending record created:', pending.id);
       } else {
         // Term-based payment model
         console.log('school has commission');
+        logger.info('school has commission');
 
         // Check if subscription has expired or is still valid for current term
         const currentDate = new Date();
         const expiryDate = new Date(activeSubscription.expiry_date);
 
-        // Check if current term payment is complete
-        // They can only pay again if:
-        // 1. Expiry date has passed (new term), OR
-        // 2. They haven't paid the full amount for current term yet
         const hasExpired = expiryDate <= currentDate;
 
         const hasFullyPaidCurrentTerm =
           activeSubscription.term_total_paid >= student.transport_term_fee;
 
         if (!hasExpired && hasFullyPaidCurrentTerm) {
+          logger.error(
+            `Student ${student.id} has already paid full amount for the current term. Payment is valid until ${expiryDate.toLocaleDateString()}`,
+          );
           throw new BadRequestException(
             `Student has already paid full amount for the current term. Payment is valid until ${expiryDate.toLocaleDateString()}`,
           );
@@ -202,6 +226,7 @@ export class SubscriptionService {
         });
 
         console.log('Term payment pending record created:', pending.id);
+        logger.info('Term payment pending record created:', pending.id);
       }
 
       return {
@@ -210,6 +235,7 @@ export class SubscriptionService {
         checkoutRequestId: data.CheckoutRequestID,
       };
     } catch (error) {
+      logger.error(`M-Pesa STK Push Error for student ${student.id}`);
       console.error(
         'MPESA STK Push Error:',
         error.response?.data || error.message,
@@ -220,6 +246,9 @@ export class SubscriptionService {
         throw error;
       }
 
+      logger.error(
+        `Failed to initiate payment for student ${student.id}: ${error.message}`,
+      );
       throw new BadRequestException(
         'Failed to initiate payment. Please try again.',
       );
@@ -232,14 +261,18 @@ export class SubscriptionService {
   private async handleCarpoolPrivatePayment(student, phoneNumber, amount) {
     const consumerKey = process.env.MPESA_CONSUMER_KEY;
     const secretKey = process.env.MPESA_SECRET_KEY;
-    if (!consumerKey || !secretKey)
+
+    if (!consumerKey || !secretKey) {
+      logger.error('Missing M-Pesa credentials');
       throw new Error('Missing M-Pesa credentials');
+    }
 
     const subscription =
       await this.subscriptionsRepository.findActiveByStudentId(student.id);
 
     if (!subscription) {
       console.log('subcription not found');
+      logger.error(`No active subscription found for student: ${student.id}`);
       throw new BadRequestException(
         'No active subscription found for the student',
       );
@@ -252,6 +285,9 @@ export class SubscriptionService {
       subscription.term_total_paid >= student.transport_term_fee;
 
     if (!hasExpired && hasFullyPaidCurrentTerm) {
+      logger.error(
+        `Student ${student.id} has already paid full amount for the current term. Payment is valid until ${expiryDate.toLocaleDateString()}`,
+      );
       throw new BadRequestException(
         `Student has already paid full amount for the current term. Payment is valid until ${expiryDate.toLocaleDateString()}`,
       );
@@ -316,6 +352,10 @@ export class SubscriptionService {
         'MPESA STK Push Error:',
         error.response?.data || error.message,
       );
+      logger.error(
+        'MPESA STK Push Error:',
+        error.response?.data || error.message,
+      );
       throw new BadRequestException('Failed to initiate payment');
     }
   }
@@ -328,11 +368,13 @@ export class SubscriptionService {
 
     if (!stkCallback) {
       console.log('Received invalid M-Pesa callback.');
+      logger.error('Received invalid M-Pesa callback.');
       return { ResultCode: 0, ResultDesc: 'Accepted' };
     }
 
     if (stkCallback.ResultCode !== 0) {
       console.log(`M-Pesa payment failed: ${stkCallback.ResultDesc}`);
+      logger.error(`M-Pesa payment failed: ${stkCallback.ResultDesc}`);
       return { ResultCode: 0, ResultDesc: 'Accepted' };
     }
 
@@ -344,107 +386,219 @@ export class SubscriptionService {
     console.log(
       `Amount received: ${amount} from phone number: ${phoneNumber} for CheckoutRequestID: ${checkoutRequestID}`,
     );
-
-    // Check if this transaction was already processed
-    // reason: mpesa may send duplicate callbacks( M-Pesa might retry the callback (they often do this for reliability))
-    const existingPayment =
-      await this.studentPaymentRepository.findByTransactionId(
-        checkoutRequestID,
-      );
-
-    if (existingPayment) {
-      console.log(
-        `Duplicate callback ignored - transaction already processed: ${checkoutRequestID}`,
-      );
-      return { ResultCode: 0, ResultDesc: 'Accepted' };
-    }
-
-    const pending_payment =
-      await this.pendingPaymentsRepository.findByCheckoutId(checkoutRequestID);
-
-    if (!pending_payment) {
-      console.log(
-        `Pending payment not found for CheckoutRequestID: ${checkoutRequestID}`,
-      );
-      return { ResultCode: 0, ResultDesc: 'Accepted' };
-    }
-
-    const student = await this.studentsService.findById(
-      pending_payment.studentId,
+    logger.info(
+      `Amount received: ${amount} from phone number: ${phoneNumber} for CheckoutRequestID: ${checkoutRequestID}`,
     );
-    if (!student) {
-      console.log(
-        `Student not found for pending payment id ${pending_payment.id}`,
-      );
-      return { ResultCode: 0, ResultDesc: 'Accepted' };
-    }
 
-    // Route based on schoolId and payment model
-    if (!student.school) {
-      // Carpool/Private
-      await this.processCarpoolPrivatePayment(
-        pending_payment,
-        checkoutRequestID,
-        phoneNumber,
-        amount,
-        student,
-      );
-    } else {
-      const school = await this.schoolsService.findById(student.school.id);
-      if (!school) {
-        console.log(`School not found for student id ${student.id}`);
-        return { ResultCode: 0, ResultDesc: 'Accepted' };
-      }
+    let disbursementData: DisbursementData | null = null;
 
-      if (!school.has_commission) {
-        console.log('school has no commision');
-        // Daily Payment Model
-        await this.processSchoolBusDailyPayment(
-          pending_payment,
-          checkoutRequestID,
-          phoneNumber,
-          amount,
-          student,
-          school,
+    try {
+      // ✅ START TRANSACTION AT THE VERY BEGINNING
+      await this.dataSource.transaction(async (manager) => {
+        console.log(
+          `🔒 Transaction started and locked for: ${checkoutRequestID}`,
         );
-      } else {
-        // Term Payment Model
-        console.log('school has commission');
-        await this.processSchoolBusTermPayment(
-          pending_payment,
-          checkoutRequestID,
-          phoneNumber,
-          amount,
-          student,
-          school,
+        logger.info(
+          `🔒 Transaction started and locked for: ${checkoutRequestID}`,
         );
-      }
-    }
 
+        // 1. ACQUIRE A PESSIMISTIC LOCK ON PENDING PAYMENT
+        const pending_payment = await manager
+          .getRepository(PendingPaymentEntity)
+          .findOne({
+            where: { checkoutId: checkoutRequestID },
+            lock: { mode: 'pessimistic_write' },
+          });
+
+        // 2. RE-CHECK IF IT STILL EXISTS
+        if (!pending_payment) {
+          console.log(
+            `⚠️ Transaction ${checkoutRequestID} already processed or pending record removed.`,
+          );
+          logger.error(
+            `Transaction ${checkoutRequestID} already processed or pending record removed.`,
+          );
+          return;
+        }
+
+        // 3. DOUBLE CHECK StudentPayment table (Safety net)
+        const existingPayment = await manager
+          .getRepository(StudentPaymentEntity)
+          .findOne({
+            where: { transaction_id: checkoutRequestID },
+          });
+
+        if (existingPayment) {
+          console.log(
+            `⚠️ Duplicate detected in StudentPayment: ${checkoutRequestID}`,
+          );
+          logger.info(
+            `⚠️ Duplicate detected in StudentPayment: ${checkoutRequestID}`,
+          );
+          // Remove the pending payment since it was already processed
+          await manager.remove(PendingPaymentEntity, pending_payment);
+          return;
+        }
+
+        const student = await this.studentsService.findById(
+          pending_payment.studentId,
+        );
+
+        if (!student) {
+          console.log(
+            `❌ Student not found for pending payment: ${pending_payment.id}`,
+          );
+          logger.error(
+            `Student not found for pending payment: ${pending_payment.id}`,
+          );
+          return;
+        }
+
+        // 4. PROCESS BUSINESS LOGIC INSIDE THE TRANSACTION
+        if (!student.school) {
+          // Carpool/Private - no disbursement needed
+          await this.processCarpoolPrivatePaymentInTransaction(
+            manager,
+            pending_payment,
+            checkoutRequestID,
+            phoneNumber,
+            amount,
+            student,
+          );
+        } else {
+          const school = await this.schoolsService.findById(student.school.id);
+
+          if (!school) {
+            console.log(`❌ School not found for student: ${student.id}`);
+            logger.error(`School not found for student: ${student.id}`);
+            return;
+          }
+
+          logger.info(
+            `Processing payment for school: ${school.name} (ID: ${school.id})`,
+          );
+
+          if (!school.has_commission) {
+            logger.info(
+              `Processing daily payment for student ${student.id} at school ${school.name} with no commission`,
+            );
+
+            // Daily payment model
+            const result = await this.processSchoolBusDailyPaymentInTransaction(
+              manager,
+              pending_payment,
+              checkoutRequestID,
+              phoneNumber,
+              amount,
+              student,
+              school,
+            );
+
+            // Store disbursement data to execute AFTER transaction commits
+            if (
+              result.shouldDisburse &&
+              result.disbursementRecord !== undefined
+            ) {
+              disbursementData = {
+                school,
+                disbursementRecord: result.disbursementRecord,
+                amount: result.amountToDisburse!,
+              };
+            }
+          } else {
+            // Term payment model
+            const result = await this.processSchoolBusTermPaymentInTransaction(
+              manager,
+              pending_payment,
+              checkoutRequestID,
+              phoneNumber,
+              amount,
+              student,
+              school,
+            );
+
+            // Store disbursement data to execute AFTER transaction commits
+            if (result.shouldDisburse && result.disbursementRecord) {
+              disbursementData = {
+                school,
+                disbursementRecord: result.disbursementRecord,
+                amount: result.amountToDisburse!,
+              };
+            }
+          }
+        }
+
+        logger.info(
+          `✅ Transaction committed successfully for: ${checkoutRequestID}`,
+        );
+
+        console.log(
+          `✅ Transaction committed successfully for: ${checkoutRequestID}`,
+        );
+      });
+
+      // ✅ DISBURSEMENT HAPPENS OUTSIDE TRANSACTION
+      if (disbursementData !== null) {
+        console.log(`💰 Initiating disbursement outside transaction...`);
+        logger.info(`Initiating disbursement outside transaction...`);
+
+        const data = disbursementData as DisbursementData;
+
+        await this.disburseToSchool(
+          data.school,
+          data.disbursementRecord,
+          data.amount,
+        );
+        logger.info(
+          `✅ Disbursement completed for: ${data.disbursementRecord.id} to school ${data.school.name} amount: ${data.amount} `,
+        );
+        console.log(`✅ Disbursement completed`);
+      }
+    } catch (error) {
+      console.error(
+        `Error handling callback for ${checkoutRequestID}:`,
+        error.message,
+      );
+      logger.error(
+        `Error handling callback for ${checkoutRequestID}: ${error.message}`,
+      );
+    }
     return { ResultCode: 0, ResultDesc: 'Accepted' };
   }
 
   // -------------------------------
   // PROCESS SCHOOL BUS - DAILY PAYMENT
   // -------------------------------
-  private async processSchoolBusDailyPayment(
+  private async processSchoolBusDailyPaymentInTransaction(
+    manager: any,
     pending_payment,
     transactionId: string,
     phoneNumber: string,
     amount: number,
     student,
     school,
-  ) {
+  ): Promise<{
+    shouldDisburse: boolean;
+    disbursementRecord?: SchoolDisbursementEntity;
+    amountToDisburse?: number;
+  }> {
     try {
       console.log('Reached processSchoolBusDailyPayment');
       console.log('Amount received:(school bus daily payment):', amount);
+
+      // Log student and school info for better traceability
+      logger.info(
+        'Processing school bus daily payment for student: ' + student.id,
+      );
+      logger.info('Amount received:(school bus daily payment): ' + amount);
 
       const amt = Number(amount);
       const dailyFee = Number(student.daily_fee);
 
       if (isNaN(amt) || isNaN(dailyFee) || dailyFee <= 0) {
         console.error('Invalid amount or daily fee:', { amt, dailyFee });
-        return;
+        logger.error('Invalid amount or daily fee:', { amt, dailyFee });
+        return { shouldDisburse: false };
       }
 
       const daysPaidFor = Math.floor(amt / dailyFee);
@@ -460,352 +614,553 @@ export class SubscriptionService {
         console.log(
           `amount remaining that does not cover full day: ${amt % dailyFee}`,
         );
+
+        logger.warn('Amount does not cover full days:', {
+          amt,
+          dailyFee,
+          student_info,
+        });
+        logger.warn(
+          `amount remaining that does not cover full day: ${amt % dailyFee}`,
+        );
       }
 
       if (daysPaidFor <= 0) {
         console.error('Amount too small to cover any days:', { amt, dailyFee });
-        return;
+        logger.error('Amount too small to cover any days:', { amt, dailyFee });
+        return { shouldDisburse: false };
       }
 
-      let studentPayment;
+      console.log('Recording student payment');
+      logger.info('Recording student payment for daily subscription');
 
-      await this.dataSource.transaction(async (manager) => {
-        console.log('Transaction started');
-
-        console.log('Recording student payment');
-        studentPayment = await this.studentPaymentRepository.create(manager, {
+      const studentPayment = await this.studentPaymentRepository.create(
+        manager,
+        {
           student,
           termId: null,
           transaction_id: transactionId,
           phone_number: phoneNumber,
           amount_paid: amt,
           payment_type: pending_payment.paymentType || 'daily',
+        },
+      );
+
+      console.log('Student payment recorded');
+      logger.info(`Student payment recorded with ID: ${studentPayment.id}`);
+
+      console.log(
+        'Fetching active subscription entity for student',
+        student.id,
+      );
+      logger.info(
+        'Fetching active subscription entity for student: ' + student.id,
+      );
+
+      const subscriptionEntity = await manager
+        .getRepository(SubscriptionEntity)
+        .findOne({
+          where: { student: { id: student.id } },
+          lock: { mode: 'pessimistic_write' },
         });
-        console.log('Student payment recorded');
 
-        console.log(
-          'Fetching active subscription entity for student',
-          student.id,
-        );
-        const subscriptionEntity =
-          await this.subscriptionsRepository.findActiveEntityByStudentId(
-            student.id,
-          );
-
-        if (!subscriptionEntity) {
-          console.error('No active subscription found for student', student.id);
-          return;
-        }
-        console.log('Subscription entity found', subscriptionEntity.id);
-
-        const currentDate = new Date();
-        let startDate = currentDate;
-        if (
-          subscriptionEntity.expiry_date &&
-          subscriptionEntity.expiry_date > currentDate
-        ) {
-          startDate = subscriptionEntity.expiry_date;
-        }
-        console.log('Start date for new access:', startDate);
-
-        const expiryDate = this.calculateExpiryDateExcludingWeekends(
-          startDate,
-          daysPaidFor,
-        );
-        console.log('Calculated expiry date:', expiryDate);
-
-        subscriptionEntity.total_paid += amt;
-        subscriptionEntity.term_total_paid += amt;
-        subscriptionEntity.expiry_date = expiryDate;
-        subscriptionEntity.last_payment_date = new Date();
-        subscriptionEntity.status = 'active';
-        subscriptionEntity.days_access = daysPaidFor;
-
-        console.log('Saving subscription entity');
-        await manager.save(subscriptionEntity);
-        console.log('Subscription entity saved');
-
-        console.log('Removing pending payment', pending_payment.id);
-        await manager.remove(PendingPaymentEntity, pending_payment);
-        console.log('Pending payment removed');
-      });
-
-      // MOVE DISBURSEMENT OUTSIDE THE TRANSACTION
-      if (amt > 0 && studentPayment) {
-        console.log('Disbursing to school', amt);
-        await this.disburseToSchool(
-          school,
-          student,
-          studentPayment,
-          amt,
-          pending_payment.termId,
-        );
+      if (!subscriptionEntity) {
+        console.error('No active subscription found for student', student.id);
+        logger.error('No active subscription found for student: ' + student.id);
+        return { shouldDisburse: false };
       }
 
+      console.log('Subscription entity found', subscriptionEntity.id);
+      logger.info(
+        `Subscription entity found with ID: ${subscriptionEntity.id} for student: ${student.id}`,
+      );
+
+      const currentDate = new Date();
+      let startDate = currentDate;
+      if (
+        subscriptionEntity.expiry_date &&
+        subscriptionEntity.expiry_date > currentDate
+      ) {
+        startDate = subscriptionEntity.expiry_date;
+      }
+
+      console.log('Start date for new access:', startDate);
+      logger.info(
+        `Start date for new access: ${startDate.toISOString()} for student: ${student.id}`,
+      );
+
+      const expiryDate = this.calculateExpiryDateExcludingWeekends(
+        startDate,
+        daysPaidFor,
+      );
+
+      console.log('Calculated expiry date:', expiryDate);
+      logger.info(
+        `Calculated expiry date: ${expiryDate.toISOString()} for student: ${student.id}`,
+      );
+
+      subscriptionEntity.total_paid += amt;
+      subscriptionEntity.term_total_paid += amt;
+      subscriptionEntity.expiry_date = expiryDate;
+      subscriptionEntity.last_payment_date = new Date();
+      subscriptionEntity.status = 'active';
+      subscriptionEntity.days_access = daysPaidFor;
+
+      console.log('Saving subscription entity');
+      logger.info('Saving subscription entity for student: ' + student.id);
+
+      await manager.save(subscriptionEntity);
+      console.log('Subscription entity saved');
+      logger.info(
+        `Subscription entity updated with new expiry date: ${subscriptionEntity.expiry_date.toISOString()} for student: ${student.id}`,
+      );
+
+      // ✅ CREATE DISBURSEMENT RECORD INSIDE TRANSACTION
+      console.log('Creating disbursement record inside transaction');
+      logger.info(
+        'Creating disbursement record inside transaction for school: ' +
+          school.name,
+      );
+
+      const disbursementRecord = manager.create(SchoolDisbursementEntity, {
+        student,
+        term: null,
+        payment: studentPayment,
+        bank_paybill: school.bank_paybill_number || null,
+        account_number: school.bank_account_number || null,
+        amount_disbursed: amt,
+        disbursement_type: school.disbursement_phone_number ? 'B2C' : 'B2B',
+        transaction_id: null, // Will be updated after API call
+        status: 'pending',
+      });
+
+      await manager.save(disbursementRecord);
+      console.log('Disbursement record created:', disbursementRecord.id);
+      logger.info(
+        `Disbursement record created with ID: ${disbursementRecord.id} for student: ${student.id}`,
+      );
+
+      console.log('Removing pending payment', pending_payment.id);
+      logger.info(
+        `Removing pending payment with ID: ${pending_payment.id} for student: ${student.id}`,
+      );
+
+      await manager.remove(PendingPaymentEntity, pending_payment);
+      console.log('Pending payment removed');
+      logger.info(
+        `Pending payment with ID: ${pending_payment.id} removed for student: ${student.id}`,
+      );
+
       console.log(`Daily payment processed successfully: ${transactionId}`);
+      logger.info(
+        `Daily payment processed successfully with Transaction ID: ${transactionId} for student: ${student.id}`,
+      );
+      return {
+        shouldDisburse: true,
+        disbursementRecord,
+        amountToDisburse: amt,
+      };
     } catch (error) {
       console.error('Error processing daily payment:', error);
+      logger.error('Error processing daily payment: ' + error.message);
+      return { shouldDisburse: false };
     }
   }
 
   // -------------------------------
   // PROCESS SCHOOL BUS - TERM PAYMENT
   // -------------------------------
-  private async processSchoolBusTermPayment(
+  private async processSchoolBusTermPaymentInTransaction(
+    manager: any,
     pending_payment,
     transactionId: string,
     phoneNumber: string,
     amount: number,
     student,
     school,
-  ) {
+  ): Promise<{
+    shouldDisburse: boolean;
+    disbursementRecord?: SchoolDisbursementEntity;
+    amountToDisburse?: number;
+  }> {
     try {
-      console.log('Reached processSchoolBusTermPayment');
+      console.log('📍 Processing term payment (in transaction)');
+      logger.info(
+        'Processing term payment for student: ' +
+          student.id +
+          ' at school: ' +
+          school.name,
+      );
+
+      console.log('Amount received:(school bus term payment):', amount);
+      logger.info('Amount received:(school bus term payment): ' + amount);
 
       const amt = Number(amount);
       if (isNaN(amt) || amt <= 0) {
         console.error('Invalid payment amount:', amt);
-        return;
+        logger.error('Invalid payment amount: ' + amt);
+        return { shouldDisburse: false };
       }
 
-      let studentPayment;
       let amountToDisburse = 0;
 
-      await this.dataSource.transaction(async (manager) => {
-        console.log('Transaction started for term payment');
+      console.log('Transaction started for term payment');
+      logger.info(
+        'Transaction started for term payment with Transaction ID: ' +
+          transactionId,
+      );
 
-        // Fetch the active subscription entity
-        console.log(
-          'Fetching active subscription entity for student',
-          student.id,
-        );
-        const subscriptionEntity =
-          await this.subscriptionsRepository.findActiveEntityByStudentId(
+      // Fetch the active subscription entity
+      console.log(
+        'Fetching active subscription entity for student',
+        student.id,
+      );
+
+      logger.info(
+        'Fetching active subscription entity for student: ' + student.id,
+      );
+
+      // ✅ CORRECT - Use manager and lock
+      const subscriptionEntity = await manager
+        .getRepository(SubscriptionEntity)
+        .findOne({
+          where: { student: { id: student.id } },
+          lock: { mode: 'pessimistic_write' },
+        });
+
+      if (!subscriptionEntity) {
+        console.error('No active subscription found for student', student.id);
+        logger.error('No active subscription found for student: ' + student.id);
+        return { shouldDisburse: false };
+      }
+
+      console.log('Subscription entity found', subscriptionEntity.id);
+      logger.info(
+        `Subscription entity found with ID: ${subscriptionEntity.id} for student: ${student.id}`,
+      );
+
+      const currentDate = new Date();
+      const expiryDate = new Date(subscriptionEntity.expiry_date);
+      const hasExpired = expiryDate <= currentDate;
+
+      // If subscription expired, reset for new term cycle
+      if (hasExpired) {
+        console.log('Subscription expired, resetting term_total_paid');
+        logger.info(
+          'Subscription expired, resetting term_total_paid for student: ' +
             student.id,
-          );
+        );
+        subscriptionEntity.term_total_paid = 0;
+        subscriptionEntity.balance = student.transport_term_fee;
+        subscriptionEntity.is_commission_paid = false;
+        subscriptionEntity.commission_paid_amount = 0;
+      }
 
-        if (!subscriptionEntity) {
-          console.error('No active subscription found for student', student.id);
-          throw new BadRequestException(
-            'No active subscription found for the student',
-          );
-        }
-        console.log('Subscription entity found', subscriptionEntity.id);
-
-        const currentDate = new Date();
-        const expiryDate = new Date(subscriptionEntity.expiry_date);
-        const hasExpired = expiryDate <= currentDate;
-
-        // If subscription expired, reset for new term cycle
-        if (hasExpired) {
-          console.log('Subscription expired, resetting term_total_paid');
-          subscriptionEntity.term_total_paid = 0; // Reset term total paid
-          subscriptionEntity.balance = student.transport_term_fee; // Reset balance
-          subscriptionEntity.is_commission_paid = false; // Reset commission status
-          subscriptionEntity.commission_paid_amount = 0; // Reset commission
-        }
-
-        // Record student payment
-        console.log('Recording student payment for term');
-        studentPayment = await this.studentPaymentRepository.create(manager, {
+      // Record student payment
+      console.log('Recording student payment for term');
+      logger.info('Recording student payment for term subscription');
+      const studentPayment = await this.studentPaymentRepository.create(
+        manager,
+        {
           student,
           termId: null,
           transaction_id: transactionId,
           phone_number: phoneNumber,
           amount_paid: amt,
           payment_type: pending_payment.paymentType || 'initial',
-        });
-        console.log('Student payment recorded:', studentPayment.id);
+        },
+      );
+      console.log('Student payment recorded:', studentPayment.id);
+      logger.info(
+        `Student payment recorded with ID: ${studentPayment.id} for student: ${student.id}`,
+      );
 
-        // Calculate amount to disburse to school
-        amountToDisburse = amt;
+      // Calculate amount to disburse to school
+      amountToDisburse = amt;
 
-        if (!subscriptionEntity.is_commission_paid) {
-          const remainingCommission =
-            school.commission_amount -
-            subscriptionEntity.commission_paid_amount;
+      if (!subscriptionEntity.is_commission_paid) {
+        const remainingCommission =
+          school.commission_amount - subscriptionEntity.commission_paid_amount;
 
-          console.log(
-            `Remaining commission to collect: ${remainingCommission}`,
-          );
-
-          if (amt >= remainingCommission) {
-            // This payment covers the remaining commission
-            amountToDisburse = amt - remainingCommission;
-            subscriptionEntity.commission_paid_amount += remainingCommission;
-            subscriptionEntity.is_commission_paid = true;
-
-            console.log(
-              `Commission fully paid. Remaining commission (${remainingCommission}) deducted. ` +
-                `Disbursing ${amountToDisburse} to school.`,
-            );
-          } else {
-            // Payment is less than remaining commission
-            // All of this payment goes toward commission
-            subscriptionEntity.commission_paid_amount += amt;
-            amountToDisburse = 0;
-
-            console.log(
-              `Partial commission payment of ${amt}. ` +
-                `Total commission paid so far: ${subscriptionEntity.commission_paid_amount}/${school.commission_amount}. ` +
-                `No disbursement to school yet.`,
-            );
-          }
-        } else {
-          // Commission already fully paid, all goes to school
-          amountToDisburse = amt;
-          console.log('Commission already paid, full amount goes to school');
-        }
-
-        subscriptionEntity.total_paid += amt; // Historical total (accumulates forever)
-        subscriptionEntity.term_total_paid += amt; // Current term total (resets each term)
-        subscriptionEntity.balance =
-          student.transport_term_fee - subscriptionEntity.term_total_paid;
-        subscriptionEntity.last_payment_date = new Date();
-
-        // Calculate expiry date - 95 days (approximately one term)
-        if (subscriptionEntity.balance <= 0) {
-          subscriptionEntity.status = 'fully_paid';
-          const newExpiryDate = new Date();
-          newExpiryDate.setDate(newExpiryDate.getDate() + 95);
-          subscriptionEntity.expiry_date = newExpiryDate;
-          console.log('Full payment received, expiry set to:', newExpiryDate);
-        } else {
-          subscriptionEntity.status = 'partially_paid';
-          console.log(
-            `Partial payment received, balance: ${subscriptionEntity.balance}`,
-          );
-        }
-
-        console.log('Saving subscription entity');
-        await manager.save(subscriptionEntity);
-        console.log('Subscription entity saved');
-
-        // Remove pending payment using transaction manager
-        console.log('Removing pending payment', pending_payment.id);
-        await manager.remove(PendingPaymentEntity, pending_payment);
-        console.log('Pending payment removed');
-      });
-
-      // Disburse AFTER transaction commits
-      if (amountToDisburse > 0 && studentPayment) {
-        console.log('Disbursing to school', amountToDisburse);
-        await this.disburseToSchool(
-          school,
-          student,
-          studentPayment,
-          amountToDisburse,
-          pending_payment.termId,
+        console.log(`Remaining commission to collect: ${remainingCommission}`);
+        logger.info(
+          `Remaining commission to collect: ${remainingCommission} for student: ${student.id}`,
         );
-        console.log('Disbursement completed');
+
+        if (amt >= remainingCommission) {
+          // This payment covers the remaining commission
+          amountToDisburse = amt - remainingCommission;
+          subscriptionEntity.commission_paid_amount += remainingCommission;
+          subscriptionEntity.is_commission_paid = true;
+
+          console.log(
+            `Commission fully paid. Remaining commission (${remainingCommission}) deducted. ` +
+              `Disbursing ${amountToDisburse} to school.`,
+          );
+
+          logger.info(
+            `Commission fully paid for student: ${student.id}. Remaining commission (${remainingCommission}) deducted. ` +
+              `Disbursing ${amountToDisburse} to school ${school.name}.`,
+          );
+        } else {
+          // Payment is less than remaining commission
+          subscriptionEntity.commission_paid_amount += amt;
+          amountToDisburse = 0;
+
+          console.log(
+            `Partial commission payment of ${amt}. ` +
+              `Total commission paid so far: ${subscriptionEntity.commission_paid_amount}/${school.commission_amount}. ` +
+              `No disbursement to school yet.`,
+          );
+          logger.info(
+            `Partial commission payment of ${amt} for student: ${student.id}. ` +
+              `Total commission paid so far: ${subscriptionEntity.commission_paid_amount}/${school.commission_amount}. ` +
+              `No disbursement to school ${school.name} yet.`,
+          );
+        }
+      } else {
+        // Commission already fully paid, all goes to school
+        amountToDisburse = amt;
+        console.log('Commission already paid, full amount goes to school');
+        logger.info(
+          'Commission already paid for student: ' +
+            student.id +
+            ', full amount goes to school ' +
+            school.name,
+        );
       }
 
-      console.log(`Term payment processed successfully: ${transactionId}`);
+      subscriptionEntity.total_paid += amt;
+      subscriptionEntity.term_total_paid += amt;
+      subscriptionEntity.balance =
+        student.transport_term_fee - subscriptionEntity.term_total_paid;
+      subscriptionEntity.last_payment_date = new Date();
+
+      // Calculate expiry date - 95 days (approximately one term)
+      if (subscriptionEntity.balance <= 0) {
+        subscriptionEntity.status = 'fully_paid';
+        const newExpiryDate = new Date();
+        newExpiryDate.setDate(newExpiryDate.getDate() + 95);
+        subscriptionEntity.expiry_date = newExpiryDate;
+        console.log('Full payment received, expiry set to:', newExpiryDate);
+        logger.info(
+          'Full payment received for student: ' +
+            student.id +
+            ', expiry set to: ' +
+            newExpiryDate.toISOString(),
+        );
+      } else {
+        subscriptionEntity.status = 'partially_paid';
+        console.log(
+          `Partial payment received, balance: ${subscriptionEntity.balance}`,
+        );
+        logger.info(
+          `Partial payment received for student: ${student.id}, balance: ${subscriptionEntity.balance}`,
+        );
+      }
+
+      console.log('Saving subscription entity');
+      logger.info('Saving subscription entity for student: ' + student.id);
+      await manager.save(subscriptionEntity);
+      console.log('Subscription entity saved');
+      logger.info(
+        `Subscription entity updated for student: ${student.id}, new balance: ${subscriptionEntity.balance}`,
+      );
+
+      // ✅ CREATE DISBURSEMENT RECORD INSIDE TRANSACTION (only if amount > 0)
+      let disbursementRecord: SchoolDisbursementEntity | undefined = undefined;
+      if (amountToDisburse > 0) {
+        console.log('Creating disbursement record inside transaction');
+        logger.info(
+          'Creating disbursement record inside transaction for school: ' +
+            school.name,
+        );
+
+        disbursementRecord = manager.create(SchoolDisbursementEntity, {
+          student,
+          term: null,
+          payment: studentPayment,
+          bank_paybill: school.bank_paybill_number || null,
+          account_number: school.bank_account_number || null,
+          amount_disbursed: amountToDisburse,
+          disbursement_type: school.disbursement_phone_number ? 'B2C' : 'B2B',
+          transaction_id: null, // Will be updated after API call
+          status: 'pending',
+        });
+
+        await manager.save(disbursementRecord);
+        console.log('Disbursement record created:', disbursementRecord?.id);
+        logger.info(
+          `Disbursement record created with ID: ${disbursementRecord?.id} for student: ${student.id}`,
+        );
+      }
+
+      // Remove pending payment using transaction manager
+      console.log('Removing pending payment', pending_payment.id);
+      logger.info(
+        'Removing pending payment for transaction ID: ' + transactionId,
+      );
+
+      await manager.remove(PendingPaymentEntity, pending_payment);
+      console.log('Pending payment removed');
+      logger.info(
+        `Pending payment with ID: ${pending_payment.id} removed for student: ${student.id}`,
+      );
+
+      console.log(`✅ Term payment processed successfully: ${transactionId}`);
+      logger.info(
+        `Term payment processed successfully with Transaction ID: ${transactionId} for student: ${student.id}`,
+      );
+
+      return {
+        shouldDisburse: amountToDisburse > 0,
+        disbursementRecord,
+        amountToDisburse,
+      };
     } catch (error) {
       console.error('Error processing term payment:', error);
+      logger.error('Error processing term payment: ' + error.message);
+      return { shouldDisburse: false };
     }
   }
 
   // -------------------------------
   // PROCESS CARPOOL/PRIVATE PAYMENT
   // -------------------------------
-  private async processCarpoolPrivatePayment(
+  private async processCarpoolPrivatePaymentInTransaction(
+    manager: any,
     pending_payment,
     transactionId: string,
     phoneNumber: string,
     amount: number,
     student,
-  ) {
+  ): Promise<void> {
     try {
       console.log('Reached processCarpoolPrivatePayment');
+      logger.info(
+        'Processing carpool/private payment for student: ' + student.id,
+      );
 
       const amt = Number(amount);
       if (isNaN(amt) || amt <= 0) {
         console.error('Invalid payment amount:', amt);
+        logger.error('Invalid payment amount: ' + amt);
         return;
       }
 
-      await this.dataSource.transaction(async (manager) => {
-        console.log('Transaction started for carpool/private payment');
+      console.log('Transaction started for carpool/private payment');
+      logger.info(
+        'Transaction started for carpool/private payment with Transaction ID: ' +
+          transactionId,
+      );
 
-        console.log(
-          'Fetching active subscription entity for student',
-          student.id,
+      console.log(
+        'Fetching active subscription entity for student',
+        student.id,
+      );
+      logger.info(
+        'Fetching active subscription entity for student: ' + student.id,
+      );
+
+      // ✅ CORRECT - Use manager and lock
+      const subscriptionEntity = await manager
+        .getRepository(SubscriptionEntity)
+        .findOne({
+          where: { student: { id: student.id } },
+          lock: { mode: 'pessimistic_write' },
+        });
+
+      if (!subscriptionEntity) {
+        console.error('No active subscription found for student', student.id);
+        logger.error('No active subscription found for student: ' + student.id);
+        return;
+      }
+
+      const currentDate = new Date();
+      const expiryDate = new Date(subscriptionEntity.expiry_date);
+      const hasExpired = expiryDate <= currentDate;
+
+      // If subscription expired, reset for new term cycle
+      if (hasExpired) {
+        console.log('Subscription expired, resetting for new term cycle');
+        logger.info(
+          'Subscription expired for student: ' +
+            student.id +
+            ', resetting for new term cycle',
         );
-        const subscriptionEntity =
-          await this.subscriptionsRepository.findActiveEntityByStudentId(
-            student.id,
-          );
+        subscriptionEntity.term_total_paid = 0;
+        subscriptionEntity.balance = student.transport_term_fee;
+      }
 
-        if (!subscriptionEntity) {
-          console.error('No active subscription found for student', student.id);
-          throw new BadRequestException(
-            'No active subscription found for the student',
-          );
-        }
-
-        const currentDate = new Date();
-        const expiryDate = new Date(subscriptionEntity.expiry_date);
-        const hasExpired = expiryDate <= currentDate;
-
-        // If subscription expired, reset for new term cycle
-        if (hasExpired) {
-          console.log('Subscription expired, resetting for new term cycle');
-          subscriptionEntity.term_total_paid = 0;
-          subscriptionEntity.balance = student.transport_term_fee;
-        }
-
-        // Record student payment
-        console.log('Recording student payment for carpool/private');
-        const studentPayment = await this.studentPaymentRepository.create(
-          manager,
-          {
-            student,
-            termId: null,
-            transaction_id: transactionId,
-            phone_number: phoneNumber,
-            amount_paid: amt,
-            payment_type: pending_payment.paymentType || 'installment',
-          },
-        );
-        console.log('Student payment recorded:', studentPayment.id);
-
-        // Update subscription details
-        subscriptionEntity.total_paid += amt; // Historical total
-        subscriptionEntity.term_total_paid += amt; // Current term total
-        subscriptionEntity.balance = Math.max(
-          student.transport_term_fee - subscriptionEntity.term_total_paid, // Use term_total_paid
-          0,
-        );
-        subscriptionEntity.last_payment_date = new Date();
-
-        if (subscriptionEntity.balance <= 0) {
-          subscriptionEntity.status = 'fully_paid';
-        } else {
-          subscriptionEntity.status = 'partially_paid';
-        }
-
-        // Today + 95 days
-        expiryDate.setDate(expiryDate.getDate() + 95);
-        subscriptionEntity.expiry_date = expiryDate;
-
-        console.log('Saving subscription entity');
-        await manager.save(subscriptionEntity);
-        console.log('Subscription entity saved');
-
-        // Remove pending payment
-        console.log('Removing pending payment', pending_payment.id);
-        await manager.remove(PendingPaymentEntity, pending_payment);
-        console.log('Pending payment removed');
+      // Record student payment
+      console.log('Recording student payment for carpool/private');
+      logger.info('Recording student payment for carpool/private subscription');
+      await this.studentPaymentRepository.create(manager, {
+        student,
+        termId: null,
+        transaction_id: transactionId,
+        phone_number: phoneNumber,
+        amount_paid: amt,
+        payment_type: pending_payment.paymentType || 'installment',
       });
+      console.log('Student payment recorded');
+      logger.info(
+        `Student payment recorded for carpool/private subscription with Transaction ID: ${transactionId} for student: ${student.id}`,
+      );
+
+      // Update subscription details
+      subscriptionEntity.total_paid += amt;
+      subscriptionEntity.term_total_paid += amt;
+      subscriptionEntity.balance = Math.max(
+        student.transport_term_fee - subscriptionEntity.term_total_paid,
+        0,
+      );
+      subscriptionEntity.last_payment_date = new Date();
+
+      if (subscriptionEntity.balance <= 0) {
+        subscriptionEntity.status = 'fully_paid';
+      } else {
+        subscriptionEntity.status = 'partially_paid';
+      }
+
+      // Today + 95 days
+      expiryDate.setDate(expiryDate.getDate() + 95);
+      subscriptionEntity.expiry_date = expiryDate;
+
+      console.log('Saving subscription entity');
+      logger.info('Saving subscription entity for student: ' + student.id);
+      await manager.save(subscriptionEntity);
+
+      console.log('Subscription entity saved');
+      logger.info(
+        `Subscription entity updated for student: ${student.id}, new balance: ${subscriptionEntity.balance}, new expiry: ${subscriptionEntity.expiry_date.toISOString()}`,
+      );
+
+      // Remove pending payment
+      console.log('Removing pending payment', pending_payment.id);
+      logger.info(
+        'Removing pending payment for transaction ID: ' + transactionId,
+      );
+      await manager.remove(PendingPaymentEntity, pending_payment);
+
+      console.log('Pending payment removed');
+      logger.info(
+        `Pending payment with ID: ${pending_payment.id} removed for student: ${student.id}`,
+      );
 
       console.log(
         `Carpool/Private payment processed successfully: ${transactionId}`,
+      );
+      logger.info(
+        `Carpool/Private payment processed successfully with Transaction ID: ${transactionId} for student: ${student.id}`,
       );
     } catch (error) {
       console.error(
         `Error processing carpool/private payment for studentId ${student.id}:`,
         error,
+      );
+      logger.error(
+        `Error processing carpool/private payment for studentId ${student.id}: ${error.message}`,
       );
     }
   }
@@ -815,63 +1170,86 @@ export class SubscriptionService {
   // -------------------------------
   private async disburseToSchool(
     school,
-    student,
-    payment,
-    amount,
-    termId: number | null = null,
+    disbursementRecord: SchoolDisbursementEntity,
+    amount: number,
   ) {
     try {
-      // Transfer funds from Utility to Working Account first
-      // done manually for now
-      console.log(termId);
+      console.log(
+        `Initiating disbursement for record ID: ${disbursementRecord.id}`,
+      );
+      logger.info(
+        `Initiating disbursement for record ID: ${disbursementRecord.id} to school: ${school.name} amount: ${amount}`,
+      );
+
       if (school.disbursement_phone_number) {
         // B2C to phone
+        console.log('Calling B2C API...');
+        logger.info(
+          `Calling B2C API for school: ${school.name} to phone number: ${school.disbursement_phone_number}`,
+        );
         const response = await this.disburseFunds(
-          payment.transaction_id,
+          disbursementRecord.payment.transaction_id,
           school.disbursement_phone_number,
           amount,
         );
 
-        await this.schoolDisbursementRepository.create({
-          student,
-          termId: null,
-          payment,
-          bank_paybill: null,
-          account_number: null,
-          amount_disbursed: amount,
-          disbursement_type: 'B2C',
+        // ✅ UPDATE existing record
+        await this.schoolDisbursementRepository.update(disbursementRecord.id, {
           transaction_id: response.ConversationID,
-          status: 'pending',
         });
 
         console.log(`B2C disbursement initiated to: ${school.name}`);
+        logger.info(
+          `B2C disbursement initiated to: ${school.name} with phone number: ${school.disbursement_phone_number}`,
+        );
       } else if (school.bank_account_number && school.bank_paybill_number) {
         // B2B to bank
+        console.log('Calling B2B API...');
+        logger.info(
+          `Calling B2B API for school: ${school.name} to bank account: ${school.bank_account_number}, paybill: ${school.bank_paybill_number}`,
+        );
         const response = await this.disbursebankFunds(
-          payment.transaction_id,
+          disbursementRecord.payment.transaction_id,
           school.bank_paybill_number,
           school.bank_account_number,
           amount,
         );
 
-        await this.schoolDisbursementRepository.create({
-          student,
-          termId: null,
-          payment,
-          bank_paybill: school.bank_paybill_number,
-          account_number: school.bank_account_number,
-          amount_disbursed: amount,
-          disbursement_type: 'B2B',
+        // ✅ UPDATE existing record
+        await this.schoolDisbursementRepository.update(disbursementRecord.id, {
           transaction_id: response.ConversationID,
-          status: 'pending',
         });
 
         console.log(`B2B disbursement initiated to: ${school.name}`);
+        logger.info(
+          `B2B disbursement initiated to: ${school.name} with bank account: ${school.bank_account_number}, paybill: ${school.bank_paybill_number}`,
+        );
       } else {
         console.warn(`No valid disbursement method for school: ${school.name}`);
+        logger.warn(
+          `No valid disbursement method for school: ${school.name}. Disbursement record ID: ${disbursementRecord.id} cannot be processed.`,
+        );
+
+        // Mark as failed if no disbursement method
+        await this.schoolDisbursementRepository.update(disbursementRecord.id, {
+          status: 'failed',
+        });
       }
     } catch (error) {
       console.error('Error disbursing funds:', error);
+      logger.error('Error disbursing funds: ' + error.message);
+
+      // ✅ Mark disbursement as failed
+      try {
+        await this.schoolDisbursementRepository.update(disbursementRecord.id, {
+          status: 'failed',
+        });
+      } catch (updateError) {
+        console.error('Error updating disbursement status:', updateError);
+        logger.error(
+          'Error updating disbursement status: ' + updateError.message,
+        );
+      }
     }
   }
 
@@ -915,10 +1293,17 @@ export class SubscriptionService {
   // -------------------------------
   async handleMpesaBusinessCallback(receivedData: any) {
     console.log('Received M-Pesa B2C/B2B callback');
+    logger.info(
+      'Received M-Pesa B2C/B2B callback with data: ' +
+        JSON.stringify(receivedData),
+    );
 
     try {
       if (!receivedData?.Result) {
         console.warn('Invalid M-Pesa callback payload:', receivedData);
+        logger.warn(
+          'Invalid M-Pesa callback payload: ' + JSON.stringify(receivedData),
+        );
         return { ResultCode: 0, ResultDesc: 'Accepted' };
       }
 
@@ -972,6 +1357,9 @@ export class SubscriptionService {
 
       if (existing) {
         console.log(`Duplicate callback ignored: ${result.TransactionID}`);
+        logger.warn(
+          `Duplicate M-Pesa callback ignored for Transaction ID: ${result.TransactionID}`,
+        );
         return { ResultCode: 0, ResultDesc: 'Accepted' };
       }
 
@@ -993,10 +1381,14 @@ export class SubscriptionService {
       }
 
       console.log(`Transaction saved successfully: ${result.TransactionID}`);
+      logger.info(
+        `M-Pesa transaction saved successfully with Transaction ID: ${result.TransactionID}, Result Code: ${result.ResultCode}`,
+      );
 
       return { ResultCode: 0, ResultDesc: 'Accepted' };
     } catch (error) {
       console.error('Error processing M-Pesa callback:', error);
+      logger.error('Error processing M-Pesa callback: ' + error.message);
       return { ResultCode: 0, ResultDesc: 'Accepted' };
     }
   }
@@ -1015,8 +1407,10 @@ export class SubscriptionService {
     const B2C_INITIATOR_NAME = process.env.B2C_INITIATOR_NAME;
     const B2C_INITIATOR_PASSWORD = process.env.B2C_INITIATOR_PASSWORD;
 
-    if (!B2C_CONSUMER_KEY || !B2C_CONSUMER_SECRET_KEY)
+    if (!B2C_CONSUMER_KEY || !B2C_CONSUMER_SECRET_KEY) {
+      logger.error('Missing M-Pesa credentials for disbursement');
       throw new Error('Missing M-Pesa credentials');
+    }
 
     const accessToken = await this.getAccessToken(
       B2C_CONSUMER_KEY,
@@ -1052,6 +1446,10 @@ export class SubscriptionService {
       return response.data;
     } catch (error) {
       console.error('B2C error:', error.response?.data || error.message);
+      logger.error(
+        'Error during B2C disbursement: ' +
+          (error.response?.data || error.message),
+      );
       throw new Error('Failed to disburse funds');
     }
   }
@@ -1071,8 +1469,10 @@ export class SubscriptionService {
     const B2C_INITIATOR_NAME = process.env.B2C_INITIATOR_NAME;
     const B2C_INITIATOR_PASSWORD = process.env.B2C_INITIATOR_PASSWORD;
 
-    if (!B2C_CONSUMER_KEY || !B2C_CONSUMER_SECRET_KEY)
+    if (!B2C_CONSUMER_KEY || !B2C_CONSUMER_SECRET_KEY) {
+      logger.error('Missing M-Pesa credentials for bank disbursement');
       throw new Error('Missing M-Pesa credentials');
+    }
 
     const accessToken = await this.getAccessToken(
       B2C_CONSUMER_KEY,
@@ -1108,6 +1508,10 @@ export class SubscriptionService {
       });
       return response.data;
     } catch (error) {
+      logger.error(
+        'Error during B2B disbursement: ' +
+          (error.response?.data || error.message),
+      );
       console.error('B2B error:', error.response?.data || error.message);
       throw new Error('Failed to disburse funds');
     }
@@ -1125,6 +1529,10 @@ export class SubscriptionService {
       );
       return response.data.access_token;
     } catch (error) {
+      logger.error(
+        'Error getting M-Pesa access token: ' +
+          (error.response?.data || error.message),
+      );
       console.error(
         'Access token error:',
         error.response?.data || error.message,
@@ -1159,6 +1567,7 @@ export class SubscriptionService {
       return encryptedBuffer.toString('base64');
     } catch (error) {
       console.error('Error generating security credentials:', error);
+      logger.error('Error generating security credentials: ' + error.message);
       throw error;
     }
   }
@@ -1196,65 +1605,4 @@ export class SubscriptionService {
     const parsed = new Date(dateString);
     return isNaN(parsed.getTime()) ? null : parsed;
   }
-
-  // -------------------------------
-  // TRANSFER FUNDS TO WORKING ACCOUNT
-  // -------------------------------
-  // private async transferFundsToWorkingAccount(amount: number) {
-  //   const consumerKey = process.env.MPESA_CONSUMER_KEY;
-  //   const secretKey = process.env.MPESA_SECRET_KEY;
-  //   const shortcode = process.env.MPESA_C2B_PAYBILL;
-  //   const initiatorName = process.env.B2C_INITIATOR_NAME;
-  //   const initiatorPassword = process.env.B2C_INITIATOR_PASSWORD;
-
-  //   if (!consumerKey || !secretKey) {
-  //     throw new Error('Missing M-Pesa credentials');
-  //   }
-
-  //   const accessToken = await this.getAccessToken(consumerKey, secretKey);
-  //   const securityCredential =
-  //     await this.generateSecurityCredentials(initiatorPassword);
-
-  //   const requestData = {
-  //     Initiator: initiatorName,
-  //     SecurityCredential: securityCredential,
-  //     CommandID: 'BusinessToBusinessTransfer',
-  //     SenderIdentifierType: '4',
-  //     RecieverIdentifierType: '4',
-  //     Amount: amount,
-  //     PartyA: shortcode,
-  //     PartyB: shortcode,
-  //     AccountReference: 'Working Account',
-  //     Remarks: 'Transfer from utility to working account',
-  //     QueueTimeOutURL: `https://zidallie-backend.onrender.com/api/v1/subscriptions/b2c-timeout`,
-  //     ResultURL: `https://zidallie-backend.onrender.com/api/v1/subscriptions/b2c-result`,
-  //   };
-
-  //   try {
-  //     console.log(
-  //       'Fund Transfer Request:',
-  //       JSON.stringify(requestData, null, 2),
-  //     );
-
-  //     const response = await axios.post(
-  //       `${this.MPESA_BASEURL}/mpesa/b2b/v1/paymentrequest`,
-  //       requestData,
-  //       {
-  //         headers: {
-  //           Authorization: `Bearer ${accessToken}`,
-  //           'Content-Type': 'application/json',
-  //         },
-  //       },
-  //     );
-
-  //     console.log('Fund transfer response:', response.data);
-  //     return response.data;
-  //   } catch (error) {
-  //     console.error(
-  //       'Fund transfer error:',
-  //       error.response?.data || error.message,
-  //     );
-  //     throw new Error('Failed to transfer funds to working account');
-  //   }
-  // }
 }

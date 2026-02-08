@@ -31,7 +31,7 @@ export class StudentPaymentEntity extends EntityRelationalHelper {
   })
   term: PaymentTermEntity | null;
 
-  @Column({ type: 'text', nullable: false })
+  @Column({ type: 'text', nullable: false, unique: true })
   transaction_id: string;
 
   @Column({ type: 'text', nullable: false })

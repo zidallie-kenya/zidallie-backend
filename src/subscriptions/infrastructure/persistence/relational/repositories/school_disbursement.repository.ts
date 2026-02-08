@@ -56,6 +56,57 @@ export class SchoolDisbursementRepository {
     return SchoolDisbursementMapper.toDomain(reloaded);
   }
 
+  async update(
+    id: number,
+    data: Partial<{
+      transaction_id: string;
+      status: DisbursementStatus;
+      bank_paybill: string;
+      account_number: string;
+      amount_disbursed: number;
+    }>,
+  ): Promise<SchoolDisbursement | null> {
+    const entity = await this.repository.findOne({
+      where: { id },
+      relations: ['student', 'term', 'payment'],
+    });
+
+    if (!entity) {
+      return null;
+    }
+
+    // Update only provided fields
+    if (data.transaction_id !== undefined) {
+      entity.transaction_id = data.transaction_id;
+    }
+    if (data.status !== undefined) {
+      entity.status = data.status;
+    }
+    if (data.bank_paybill !== undefined) {
+      entity.bank_paybill = data.bank_paybill;
+    }
+    if (data.account_number !== undefined) {
+      entity.account_number = data.account_number;
+    }
+    if (data.amount_disbursed !== undefined) {
+      entity.amount_disbursed = data.amount_disbursed;
+    }
+
+    const saved = await this.repository.save(entity);
+
+    // Reload with relations
+    const reloaded = await this.repository.findOne({
+      where: { id: saved.id },
+      relations: ['student', 'term', 'payment'],
+    });
+
+    if (!reloaded) {
+      throw new Error('Failed to reload school disbursement after update');
+    }
+
+    return SchoolDisbursementMapper.toDomain(reloaded);
+  }
+
   async updateStatus(
     originatorConversationId: string,
     status: DisbursementStatus,
@@ -88,6 +139,15 @@ export class SchoolDisbursementRepository {
     }
 
     return SchoolDisbursementMapper.toDomain(reloaded);
+  }
+
+  // ✅ NEW METHOD: Find disbursement by payment ID
+  async findByPaymentId(paymentId: number): Promise<SchoolDisbursement | null> {
+    const entity = await this.repository.findOne({
+      where: { payment: { id: paymentId } },
+      relations: ['student', 'term', 'payment'],
+    });
+    return entity ? SchoolDisbursementMapper.toDomain(entity) : null;
   }
 
   async findByStudent(studentId: number): Promise<SchoolDisbursement[]> {

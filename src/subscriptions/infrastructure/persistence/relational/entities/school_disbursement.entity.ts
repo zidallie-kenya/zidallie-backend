@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
@@ -14,6 +15,7 @@ export type DisbursementType = 'B2C' | 'B2B';
 export type DisbursementStatus = 'pending' | 'completed' | 'failed';
 
 @Entity({ name: 'school_disbursements' })
+@Index(['payment'], { unique: true })
 export class SchoolDisbursementEntity extends EntityRelationalHelper {
   @PrimaryGeneratedColumn()
   id: number;

@@ -1,5 +1,5 @@
 // location/location.module.ts
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { LocationEntity } from './infrastructure/persistence/relational/entities/location.entity';
 import { LocationRepository } from './infrastructure/persistence/location.repository';
@@ -16,7 +16,7 @@ import { LocationGateway } from './location.gateway';
   imports: [
     TypeOrmModule.forFeature([LocationEntity, DailyRideEntity, UserEntity]),
     UsersModule,
-    DailyRidesModule,
+    forwardRef(() => DailyRidesModule),
   ],
   controllers: [LocationsController],
   providers: [
@@ -25,7 +25,7 @@ import { LocationGateway } from './location.gateway';
       provide: LocationRepository,
       useClass: LocationsRelationalRepository,
     },
-    LocationGateway, // 👈 register gateway as provider
+    LocationGateway,
   ],
   exports: [LocationsService],
 })

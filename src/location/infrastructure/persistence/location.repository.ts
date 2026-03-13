@@ -40,4 +40,13 @@ export abstract class LocationRepository {
   ): Promise<Location | null>;
 
   abstract remove(id: Location['id']): Promise<void>;
+
+  abstract findByDriverIdSince(
+    driverId: Location['driver']['id'],
+    since: Date,
+  ): Promise<Location[]>;
+
+  abstract findByDailyRideId(dailyRideId: number): Promise<Location[]>;
+  abstract deleteManyByDailyRideId(dailyRideId: number): Promise<void>;
+  abstract deleteOldRecords(beforeDate: Date): Promise<void>;
 }

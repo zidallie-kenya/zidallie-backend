@@ -99,16 +99,6 @@ export class LocationsRelationalRepository implements LocationRepository {
     return entities.map(LocationMapper.toDomain);
   }
 
-  async findByDailyRideId(dailyRideId: number): Promise<Location[]> {
-    const entities = await this.locationsRepository.find({
-      where: { daily_ride: { id: dailyRideId } },
-      relations: ['daily_ride', 'driver'],
-      order: { timestamp: 'ASC' },
-    });
-
-    return entities.map(LocationMapper.toDomain);
-  }
-
   async findByDriverId(driverId: number): Promise<Location[]> {
     const entities = await this.locationsRepository.find({
       where: { driver: { id: driverId } },
@@ -170,5 +160,43 @@ export class LocationsRelationalRepository implements LocationRepository {
 
   async remove(id: number): Promise<void> {
     await this.locationsRepository.delete(id);
+  }
+
+  async findByDriverIdSince(
+    driverId: number,
+    since: Date,
+  ): Promise<Location[]> {
+    const entities = await this.locationsRepository
+      .createQueryBuilder('location')
+      .leftJoinAndSelect('location.driver', 'driver')
+      .leftJoinAndSelect('location.daily_ride', 'daily_ride')
+      .where('driver.id = :driverId', { driverId })
+      .andWhere('location.timestamp >= :since', { since })
+      .orderBy('location.timestamp', 'ASC')
+      .getMany();
+
+    return entities.map(LocationMapper.toDomain);
+  }
+
+  async findByDailyRideId(dailyRideId: number): Promise<Location[]> {
+    const entities = await this.locationsRepository.find({
+      where: { daily_ride: { id: dailyRideId } },
+      relations: ['daily_ride', 'driver'],
+      order: { timestamp: 'ASC' },
+    });
+
+    return entities.map(LocationMapper.toDomain);
+  }
+
+  async deleteManyByDailyRideId(dailyRideId: number): Promise<void> {
+    await this.locationsRepository.delete({ daily_ride: { id: dailyRideId } });
+  }
+
+  async deleteOldRecords(beforeDate: Date): Promise<void> {
+    await this.locationsRepository
+      .createQueryBuilder('location')
+      .delete()
+      .where('timestamp < :beforeDate', { beforeDate })
+      .execute();
   }
 }

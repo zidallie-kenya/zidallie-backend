@@ -31,6 +31,8 @@ import brevoConfig from './mail/config/brevo.config';
 import { LocationModule } from './location/location.module';
 import { SubscriptionModule } from './subscriptions/subscription.module';
 
+import { ScheduleModule } from '@nestjs/schedule';
+
 const infrastructureDatabaseModule = TypeOrmModule.forRootAsync({
   useClass: TypeOrmConfigService,
   dataSourceFactory: async (options: DataSourceOptions) => {
@@ -46,6 +48,7 @@ const infrastructureDatabaseModule = TypeOrmModule.forRootAsync({
       envFilePath: ['.env'],
     }),
     infrastructureDatabaseModule,
+    ScheduleModule.forRoot(), // schedule module for cron jobs and other scheduled tasks
     I18nModule.forRootAsync({
       useFactory: (configService: ConfigService<AllConfigType>) => ({
         fallbackLanguage: configService.getOrThrow('app.fallbackLanguage', {

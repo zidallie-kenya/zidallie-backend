@@ -59,9 +59,7 @@ export class SubscriptionService {
       const school = await this.schoolsService.findById(student.school.id);
       if (!school) throw new BadRequestException('School not found');
 
-      logger.info(`Initiating school payment for student: ${student.id}`);
       console.log(`Initiating school payment for student: ${student.id}`);
-      logger.info(`Amount: ${dto.amount}, Phone Number: ${dto.phone_number}`);
       console.log(`Amount: ${dto.amount}, Phone Number: ${dto.phone_number}`);
 
       return this.handleSchoolPayment(
@@ -80,7 +78,6 @@ export class SubscriptionService {
         dto.amount,
       );
     } else {
-      logger.error(`Invalid service type for student: ${student.id}`);
       throw new BadRequestException('Invalid service type');
     }
   }
@@ -118,9 +115,6 @@ export class SubscriptionService {
     };
 
     console.log('Initiating M-Pesa STK Push for student:', student.id);
-    logger.info(
-      ` Initiating M-Pesa STK Push For: Student ID: ${student.id}, Amount: ${amount}, Phone: ${phoneNumber}`,
-    );
 
     try {
       const response = await axios.post(
@@ -136,9 +130,6 @@ export class SubscriptionService {
 
       const data = response.data;
       if (data.ResponseCode !== '0' && data.ResponseCode !== 0) {
-        logger.error(
-          `M-Pesa STK Push failed for student ${student.id}: ${data.ResponseDescription}`,
-        );
         throw new BadRequestException(
           data.ResponseDescription || 'MPESA Error',
         );
@@ -150,7 +141,6 @@ export class SubscriptionService {
 
       if (!activeSubscription) {
         console.log('No active subscription found for student:', student.id);
-        logger.error(`No active subscription found for student: ${student.id}`);
         throw new BadRequestException(
           'No active subscription found for the student. Please contact support.',
         );
@@ -161,14 +151,10 @@ export class SubscriptionService {
       console.log(
         `${school.name} has commision: ${school.has_commission ? 'has commission' : 'no commission'}`,
       );
-      logger.info(
-        `${school.name} has commision: ${school.has_commission ? 'has commission' : 'no commission'}`,
-      );
 
       if (!school.has_commission) {
         // Daily/Weekly/Monthly payment model
         console.log('school has no commission');
-        logger.info('school has no commission');
 
         const paymentType = this.determinePeriod(amount, student.daily_fee);
 
@@ -184,11 +170,9 @@ export class SubscriptionService {
         });
 
         console.log('Daily payment pending record created:', pending.id);
-        logger.info('Daily payment pending record created:', pending.id);
       } else {
         // Term-based payment model
         console.log('school has commission');
-        logger.info('school has commission');
 
         // Check if subscription has expired or is still valid for current term
         const currentDate = new Date();
@@ -200,9 +184,6 @@ export class SubscriptionService {
           activeSubscription.term_total_paid >= student.transport_term_fee;
 
         if (!hasExpired && hasFullyPaidCurrentTerm) {
-          logger.error(
-            `Student ${student.id} has already paid full amount for the current term. Payment is valid until ${expiryDate.toLocaleDateString()}`,
-          );
           throw new BadRequestException(
             `Student has already paid full amount for the current term. Payment is valid until ${expiryDate.toLocaleDateString()}`,
           );
@@ -226,7 +207,6 @@ export class SubscriptionService {
         });
 
         console.log('Term payment pending record created:', pending.id);
-        logger.info('Term payment pending record created:', pending.id);
       }
 
       return {
@@ -368,13 +348,11 @@ export class SubscriptionService {
 
     if (!stkCallback) {
       console.log('Received invalid M-Pesa callback.');
-      logger.error('Received invalid M-Pesa callback.');
       return { ResultCode: 0, ResultDesc: 'Accepted' };
     }
 
     if (stkCallback.ResultCode !== 0) {
       console.log(`M-Pesa payment failed: ${stkCallback.ResultDesc}`);
-      logger.error(`M-Pesa payment failed: ${stkCallback.ResultDesc}`);
       return { ResultCode: 0, ResultDesc: 'Accepted' };
     }
 
@@ -384,9 +362,6 @@ export class SubscriptionService {
     const phoneNumber = metadata[1]?.Value;
 
     console.log(
-      `Amount received: ${amount} from phone number: ${phoneNumber} for CheckoutRequestID: ${checkoutRequestID}`,
-    );
-    logger.info(
       `Amount received: ${amount} from phone number: ${phoneNumber} for CheckoutRequestID: ${checkoutRequestID}`,
     );
 
@@ -951,6 +926,14 @@ export class SubscriptionService {
         );
       } else {
         subscriptionEntity.status = 'partially_paid';
+        const amount_per_day = Math.floor(
+          subscriptionEntity.transport_term_fee / 95,
+        );
+        const days_access = Math.floor(Number(amount) / amount_per_day);
+        const date = new Date();
+        date.setDate(date.getDate() + days_access);
+        subscriptionEntity.expiry_date = date;
+
         console.log(
           `Partial payment received, balance: ${subscriptionEntity.balance}`,
         );

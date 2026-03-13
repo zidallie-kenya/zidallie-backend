@@ -116,6 +116,21 @@ export class CreateDailyRideDto {
   status?: DailyRideStatus;
 
   @IsOptional()
+  embark_latitude?: number;
+
+  @IsOptional()
+  embark_longitude?: number;
+
+  @IsOptional()
+  disembark_latitude?: number;
+
+  @IsOptional()
+  disembark_longitude?: number;
+
+  @IsOptional()
+  route_data?: any;
+
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => RelationDto)

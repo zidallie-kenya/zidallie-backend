@@ -3,6 +3,8 @@ import {
   Injectable,
   UnprocessableEntityException,
   NotFoundException,
+  forwardRef,
+  Inject,
 } from '@nestjs/common';
 import { NullableType } from '../utils/types/nullable.type';
 
@@ -28,6 +30,9 @@ import { MyRidesResponseDto } from './dto/response.dto';
 import { ExpoPushService } from './expopush.service';
 import { DataSource } from 'typeorm'; // Add for transactions
 import { DailyRideEntity } from './infrastructure/persistence/relational/entities/daily_ride.entity';
+import { LocationsService } from '../location/location.service';
+import { Location } from '../location/domain/location';
+import * as pako from 'pako';
 
 @Injectable()
 export class DailyRidesService {
@@ -37,7 +42,9 @@ export class DailyRidesService {
     private readonly vehiclesService: VehicleService,
     private readonly usersService: UsersService,
     private readonly expoPushService: ExpoPushService,
-    private readonly dataSource: DataSource, // Add for transactions
+    private readonly dataSource: DataSource,
+    @Inject(forwardRef(() => LocationsService))
+    private readonly locationsService: LocationsService,
   ) {}
 
   // Helper method to format date
@@ -140,6 +147,11 @@ export class DailyRidesService {
       disembark_time: createDailyRideDto.disembark_time
         ? new Date(createDailyRideDto.disembark_time)
         : null,
+      embark_latitude: createDailyRideDto.embark_latitude ?? null,
+      embark_longitude: createDailyRideDto.embark_longitude ?? null,
+      disembark_latitude: createDailyRideDto.disembark_latitude ?? null,
+      disembark_longitude: createDailyRideDto.disembark_longitude ?? null,
+      route_data: createDailyRideDto.route_data ?? null,
     });
 
     return dailyRide;
@@ -345,10 +357,21 @@ export class DailyRidesService {
 
     const embarkTime = new Date();
 
+    // Fetch the latest location for this driver
+    let latestLocation: Location | null = null;
+
+    if (dailyRide.driver?.id) {
+      latestLocation = await this.locationsService.findLatestByDriverId(
+        dailyRide?.driver.id,
+      );
+    }
+
     const updated = await this.update(id, {
       status: DailyRideStatus.Active,
       start_time: new Date().toISOString(),
       embark_time: embarkTime.toISOString(),
+      embark_latitude: latestLocation?.latitude,
+      embark_longitude: latestLocation?.longitude,
     });
 
     if (updated?.ride?.parent?.push_token && updated.ride.student?.name) {
@@ -390,10 +413,35 @@ export class DailyRidesService {
 
     const disembarkTime = new Date();
 
+    let latestLocation: Location | null = null;
+
+    if (dailyRide.driver?.id) {
+      latestLocation = await this.locationsService.findLatestByDriverId(
+        dailyRide?.driver.id,
+      );
+    }
+
+    // 1. Fetch all locations for this ride before finishing
+    const locations = await this.locationsService.findByDailyRideId(id);
+
+    // 2. Format them into a lightweight object
+    const routeSnapshot = locations.map((loc) => ({
+      lat: loc.latitude,
+      lng: loc.longitude,
+      ts: loc.timestamp,
+    }));
+
+    // Compress to a base64 string
+    const binaryString = pako.gzip(JSON.stringify(routeSnapshot));
+    const compressedString = Buffer.from(binaryString).toString('base64');
+
     const updated = await this.update(id, {
       status: DailyRideStatus.Finished,
       end_time: new Date().toISOString(),
       disembark_time: disembarkTime.toISOString(),
+      disembark_latitude: latestLocation?.latitude,
+      disembark_longitude: latestLocation?.longitude,
+      route_data: compressedString,
     });
 
     if (updated?.ride?.parent?.push_token && updated.ride.student?.name) {
@@ -408,6 +456,8 @@ export class DailyRidesService {
         console.log(error);
       }
     }
+
+    await this.locationsService.deleteManyByDailyRideId(id);
 
     return updated;
   }
@@ -609,6 +659,11 @@ export class DailyRidesService {
       locations: updateDailyRideDto.locations,
       embark_time: updateDailyRideDto.embark_time,
       disembark_time: updateDailyRideDto.disembark_time,
+      embark_latitude: updateDailyRideDto.embark_latitude,
+      embark_longitude: updateDailyRideDto.embark_longitude,
+      disembark_latitude: updateDailyRideDto.disembark_latitude,
+      disembark_longitude: updateDailyRideDto.disembark_longitude,
+      route_data: updateDailyRideDto.route_data,
     });
   }
 

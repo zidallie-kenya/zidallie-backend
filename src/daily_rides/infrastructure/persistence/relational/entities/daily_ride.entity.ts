@@ -73,6 +73,21 @@ export class DailyRideEntity extends EntityRelationalHelper {
   @Column({ type: 'timestamp', nullable: true })
   disembark_time: Date | null;
 
+  @Column({ type: 'float', nullable: true })
+  embark_latitude: number | null;
+
+  @Column({ type: 'float', nullable: true })
+  embark_longitude: number | null;
+
+  @Column({ type: 'float', nullable: true })
+  disembark_latitude: number | null;
+
+  @Column({ type: 'float', nullable: true })
+  disembark_longitude: number | null;
+
+  @Column({ type: 'jsonb', nullable: true })
+  route_data: any;
+
   @OneToMany(() => LocationEntity, (location) => location.daily_ride)
   locations: LocationEntity[];
 }

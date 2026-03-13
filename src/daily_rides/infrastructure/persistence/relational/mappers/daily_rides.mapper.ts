@@ -33,6 +33,11 @@ export class DailyRideMapper {
     domainEntity.status = raw.status;
     domainEntity.embark_time = raw.embark_time;
     domainEntity.disembark_time = raw.disembark_time;
+    domainEntity.embark_latitude = raw.embark_latitude;
+    domainEntity.embark_longitude = raw.embark_longitude;
+    domainEntity.disembark_latitude = raw.disembark_latitude;
+    domainEntity.disembark_longitude = raw.disembark_longitude;
+    domainEntity.route_data = raw.route_data;
 
     if (raw.locations && raw.locations.length > 0) {
       domainEntity.locations = raw.locations.map((location) =>
@@ -69,6 +74,16 @@ export class DailyRideMapper {
       persistence.embark_time = domainEntity.embark_time;
     if (domainEntity.disembark_time !== undefined)
       persistence.disembark_time = domainEntity.disembark_time;
+    if (domainEntity.embark_latitude !== undefined)
+      persistence.embark_latitude = domainEntity.embark_latitude;
+    if (domainEntity.embark_longitude !== undefined)
+      persistence.embark_longitude = domainEntity.embark_longitude;
+    if (domainEntity.disembark_latitude !== undefined)
+      persistence.disembark_latitude = domainEntity.disembark_latitude;
+    if (domainEntity.disembark_longitude !== undefined)
+      persistence.disembark_longitude = domainEntity.disembark_longitude;
+    if (domainEntity.route_data !== undefined)
+      persistence.route_data = domainEntity.route_data;
 
     //relations
 

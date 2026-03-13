@@ -44,6 +44,22 @@ export class DailyRide {
   @Expose({ groups: ['me', 'admin'] })
   comments: string | null;
 
+  @ApiProperty({ type: Number, required: false, nullable: true })
+  @Expose({ groups: ['me', 'admin'] })
+  embark_latitude: number | null;
+
+  @ApiProperty({ type: Number, required: false, nullable: true })
+  @Expose({ groups: ['me', 'admin'] })
+  embark_longitude: number | null;
+
+  @ApiProperty({ type: Number, required: false, nullable: true })
+  @Expose({ groups: ['me', 'admin'] })
+  disembark_latitude: number | null;
+
+  @ApiProperty({ type: Number, required: false, nullable: true })
+  @Expose({ groups: ['me', 'admin'] })
+  disembark_longitude: number | null;
+
   @ApiProperty({
     type: () => DailyRideMetaDto,
     required: false,
@@ -68,6 +84,10 @@ export class DailyRide {
   @ApiProperty()
   @Expose({ groups: ['me', 'admin'] })
   disembark_time: Date | null;
+
+  @ApiProperty({ type: Object, required: false, nullable: true })
+  @Expose({ groups: ['me', 'admin'] })
+  route_data: any;
 
   @ApiProperty()
   @Expose({ groups: ['me', 'admin'] })

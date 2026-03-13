@@ -204,6 +204,20 @@ export class LocationsController {
     );
   }
 
+  @ApiOkResponse({ type: [Location] })
+  @Get('driver/:driverId/history')
+  @HttpCode(HttpStatus.OK)
+  @ApiParam({ name: 'driverId', type: String, required: true })
+  findByDriverIdSince(
+    @Param('driverId') driverId: Location['driver']['id'],
+    @Query('since') since: string,
+  ): Promise<Location[]> {
+    return this.locationsService.findByDriverIdSince(
+      driverId,
+      since ? new Date(since) : new Date(Date.now() - 4 * 60 * 60 * 1000), // default: last 4 hours
+    );
+  }
+
   //get the latest location data for a driver
   @ApiOkResponse({
     type: Location,

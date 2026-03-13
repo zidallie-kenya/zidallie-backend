@@ -113,4 +113,13 @@ export class Vehicle {
   @ApiProperty()
   @Expose({ groups: ['me', 'admin'] })
   updated_at: Date;
+
+  // Add these to the class
+  @ApiProperty({ type: String, required: false })
+  @Expose({ groups: ['me', 'admin'] })
+  minders_name: string | null;
+
+  @ApiProperty({ type: String, required: false })
+  @Expose({ groups: ['me', 'admin'] })
+  minders_id_url: string | null;
 }

@@ -1,5 +1,7 @@
 import {
+  forwardRef,
   HttpStatus,
+  Inject,
   Injectable,
   UnprocessableEntityException,
 } from '@nestjs/common';
@@ -14,13 +16,15 @@ import { DailyRide } from '../daily_rides/domain/daily_rides';
 import { User } from '../users/domain/user';
 import { DailyRidesService } from '../daily_rides/daily_rides.service';
 import { UsersService } from '../users/users.service';
+import { Cron } from '@nestjs/schedule';
 
 @Injectable()
 export class LocationsService {
   constructor(
     private readonly locationsRepository: LocationRepository,
-    private readonly dailyRidesService: DailyRidesService,
     private readonly usersService: UsersService,
+    @Inject(forwardRef(() => DailyRidesService))
+    private readonly dailyRidesService: DailyRidesService,
   ) {}
 
   async create(createLocationDto: CreateLocationDto): Promise<Location> {
@@ -103,6 +107,10 @@ export class LocationsService {
     return this.locationsRepository.findLatestByDriverId(driverId);
   }
 
+  findByDailyRideId(dailyRideId: number): Promise<Location[]> {
+    return this.locationsRepository.findByDailyRideId(dailyRideId);
+  }
+
   async update(
     id: Location['id'],
     updateLocationDto: UpdateLocationDto,
@@ -152,5 +160,32 @@ export class LocationsService {
 
   async remove(id: Location['id']): Promise<void> {
     await this.locationsRepository.remove(id);
+  }
+
+  async deleteManyByDailyRideId(dailyRideId: number): Promise<void> {
+    return this.locationsRepository.deleteManyByDailyRideId(dailyRideId);
+  }
+
+  findByDriverIdSince(
+    driverId: Location['driver']['id'],
+    since: Date,
+  ): Promise<Location[]> {
+    return this.locationsRepository.findByDriverIdSince(driverId, since);
+  }
+
+  @Cron('0 0 * * 0') // "At 00:00 on Sunday"
+  async handleWeeklyCleanup() {
+    console.log('Running weekly location cleanup for orphaned records...');
+
+    // Calculate date: 7 days ago
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+    try {
+      await this.locationsRepository.deleteOldRecords(oneWeekAgo);
+      console.log('Weekly cleanup completed successfully.');
+    } catch (error) {
+      console.log('Failed to run weekly cleanup', error);
+    }
   }
 }

@@ -13,6 +13,8 @@ import { UserEntity } from '../../../../../users/infrastructure/persistence/rela
 import { VehicleStatus, VehicleType } from '../../../../../utils/types/enums';
 import { RideEntity } from '../../../../../rides/infrastructure/persistence/relational/entities/ride.entity';
 import { DailyRideEntity } from '../../../../../daily_rides/infrastructure/persistence/relational/entities/daily_ride.entity';
+import { FuelEntity } from './fuel.entity';
+import { MaintenanceEntity } from './maintenance.entity';
 
 @Entity({ name: 'vehicle' })
 export class VehicleEntity extends EntityRelationalHelper {
@@ -64,6 +66,12 @@ export class VehicleEntity extends EntityRelationalHelper {
   @Column({ type: 'jsonb', nullable: true })
   vehicle_data: any | null;
 
+  @Column({ type: 'text', nullable: true })
+  minders_name: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  minders_id_url: string | null;
+
   @CreateDateColumn()
   created_at: Date;
 
@@ -84,4 +92,10 @@ export class VehicleEntity extends EntityRelationalHelper {
 
   @OneToMany(() => DailyRideEntity, (dailyRide) => dailyRide.vehicle)
   daily_rides: DailyRideEntity[];
+
+  @OneToMany(() => FuelEntity, (fuel) => fuel.vehicle)
+  fuelLogs: FuelEntity[];
+
+  @OneToMany(() => MaintenanceEntity, (maint) => maint.vehicle)
+  maintenanceLogs: MaintenanceEntity[];
 }

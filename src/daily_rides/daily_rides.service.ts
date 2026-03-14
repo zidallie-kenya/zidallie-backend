@@ -360,11 +360,17 @@ export class DailyRidesService {
     // Fetch the latest location for this driver
     let latestLocation: Location | null = null;
 
+    console.log('embarkStudent - dailyRide.driver?.id:', dailyRide.driver?.id);
+
     if (dailyRide.driver?.id) {
       latestLocation = await this.locationsService.findLatestByDriverId(
         dailyRide?.driver.id,
       );
     }
+
+    console.log('embarkStudent - latestLocation:', latestLocation);
+    console.log('latestLocation?.latitude:', latestLocation?.latitude);
+    console.log('latestLocation?.longitude:', latestLocation?.longitude);
 
     const updated = await this.update(id, {
       status: DailyRideStatus.Active,
@@ -430,6 +436,9 @@ export class DailyRidesService {
       lng: loc.longitude,
       ts: loc.timestamp,
     }));
+
+    console.log('routeSnapshot:', routeSnapshot);
+    console.log('latestLocation:', latestLocation);
 
     // Compress to a base64 string
     const binaryString = pako.gzip(JSON.stringify(routeSnapshot));

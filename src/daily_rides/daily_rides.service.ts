@@ -756,21 +756,61 @@ export class DailyRidesService {
 
     const currentTime = new Date();
 
-    // update statuses
-    const updatedRides = rides.map((ride) => {
-      ride.status = status;
+    const updatedRides = await Promise.all(
+      rides.map(async (ride) => {
+        ride.status = status;
 
-      // Set embark_time when status changes to Active
-      if (status === DailyRideStatus.Active) {
-        ride.embark_time = currentTime;
-      }
+        if (status === DailyRideStatus.Active) {
+          ride.embark_time = currentTime;
 
-      // Set disembark_time when status changes to Finished
-      if (status === DailyRideStatus.Finished) {
-        ride.disembark_time = currentTime;
-      }
-      return ride;
-    });
+          // Fetch latest driver location for embark coordinates
+          if (ride.driver?.id) {
+            const latestLocation =
+              await this.locationsService.findLatestByDriverId(ride.driver.id);
+            ride.embark_latitude = latestLocation?.latitude ?? null;
+            ride.embark_longitude = latestLocation?.longitude ?? null;
+            console.log(
+              'batchUpdateStatus - latestLocation for Active:',
+              latestLocation,
+            );
+          }
+        }
+
+        if (status === DailyRideStatus.Finished) {
+          ride.disembark_time = currentTime;
+
+          // Fetch latest driver location for disembark coordinates
+          if (ride.driver?.id) {
+            const latestLocation =
+              await this.locationsService.findLatestByDriverId(ride.driver.id);
+            ride.disembark_latitude = latestLocation?.latitude ?? null;
+            ride.disembark_longitude = latestLocation?.longitude ?? null;
+            console.log(
+              'batchUpdateStatus - latestLocation for Finished:',
+              latestLocation,
+            );
+          }
+
+          // Fetch route snapshot and compress it
+          const locations = await this.locationsService.findByDailyRideId(
+            ride.id,
+          );
+
+          const routeSnapshot = locations.map((loc) => ({
+            lat: loc.latitude,
+            lng: loc.longitude,
+            ts: loc.timestamp,
+          }));
+
+          console.log('routeSnapshot:', routeSnapshot);
+
+          const binaryString = pako.gzip(JSON.stringify(routeSnapshot));
+          ride.route_data = Buffer.from(binaryString).toString('base64');
+        }
+
+        return ride;
+      }),
+    );
 
     const savedRides = await this.dailyRideRepository.saveAll(updatedRides);
 

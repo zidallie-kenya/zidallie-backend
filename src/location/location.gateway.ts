@@ -67,7 +67,11 @@ export class LocationGateway
 
   @SubscribeMessage('locationUpdate')
   async handleLocationUpdate(client: Socket, payload: any) {
-    const driverId = Number(payload.driverId); // force number
+    const driverId = Number(payload.driverId);
+    const dailyRideId = payload.dailyRideId
+      ? Number(payload.dailyRideId)
+      : undefined;
+
     payload.driverId = driverId;
 
     console.log('📍 Received location update:', payload);
@@ -94,6 +98,7 @@ export class LocationGateway
           latitude: payload.latitude,
           longitude: payload.longitude,
           timestamp: payload.timestamp,
+          dailyRideId,
         });
         console.log(`✅ Location saved to DB for driver ${driverId}`);
       } catch (error) {

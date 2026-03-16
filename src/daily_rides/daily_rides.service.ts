@@ -185,6 +185,28 @@ export class DailyRidesService {
     return this.dailyRideRepository.findByRideId(rideId);
   }
 
+  async findOngoingRideForDriver(
+    driverId: number,
+  ): Promise<NullableType<DailyRide>> {
+    const driver = await this.usersService.findById(driverId);
+
+    if (!driver) {
+      throw new NotFoundException({
+        status: HttpStatus.NOT_FOUND,
+        errors: { driver: 'Driver not found' },
+      });
+    }
+
+    if (driver.kind !== 'Driver') {
+      throw new UnprocessableEntityException({
+        status: HttpStatus.UNPROCESSABLE_ENTITY,
+        errors: { driver: 'User is not a driver' },
+      });
+    }
+
+    return this.dailyRideRepository.findActiveRideByDriverId(driverId);
+  }
+
   findByDateRange(startDate: Date, endDate: Date): Promise<DailyRide[]> {
     return this.dailyRideRepository.findByDateRange(startDate, endDate);
   }
@@ -795,6 +817,8 @@ export class DailyRidesService {
           const locations = await this.locationsService.findByDailyRideId(
             ride.id,
           );
+
+          console.log(locations);
 
           const routeSnapshot = locations.map((loc) => ({
             lat: loc.latitude,

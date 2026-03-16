@@ -228,6 +228,18 @@ export class DailyRidesController {
     return this.dailyRidesService.startDriverDay(userJwtPayload);
   }
 
+  // get the ongoing ride for a driver (if any)
+  @SerializeOptions({ groups: ['admin'] })
+  @Get('driver/:driverId/ongoing')
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
+  @HttpCode(HttpStatus.OK)
+  @ApiParam({ name: 'driverId', type: 'number' })
+  findOngoingRideForDriver(
+    @Param('driverId', ParseIntPipe) driverId: number,
+  ): Promise<NullableType<DailyRide>> {
+    return this.dailyRidesService.findOngoingRideForDriver(driverId);
+  }
+
   // changes a student's daily ride status to Active
   @SerializeOptions({
     groups: ['admin'],

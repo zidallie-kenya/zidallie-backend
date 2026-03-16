@@ -178,4 +178,8 @@ export abstract class DailyRideRepository {
    * @returns Promise resolving to the saved DailyRide objects
    */
   abstract saveAll(rides: DailyRide[]): Promise<DailyRide[]>;
+
+  abstract findActiveRideByDriverId(
+    driverId: number,
+  ): Promise<NullableType<DailyRide>>;
 }

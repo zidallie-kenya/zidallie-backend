@@ -24,6 +24,7 @@ const DAILY_RIDE_RELATIONS = [
   'vehicle',
   'driver',
   'locations',
+  'locations.driver',
 ];
 
 @Injectable()
@@ -157,6 +158,7 @@ export class DailyRidesRelationalRepository implements DailyRideRepository {
       .leftJoinAndSelect('daily_ride.vehicle', 'vehicle')
       .leftJoinAndSelect('daily_ride.driver', 'driver')
       .leftJoinAndSelect('daily_ride.locations', 'locations')
+      .leftJoinAndSelect('locations.driver', 'locationDriver')
       .getMany();
 
     return entities.map((dailyRide) => DailyRideMapper.toDomain(dailyRide));
@@ -179,6 +181,7 @@ export class DailyRidesRelationalRepository implements DailyRideRepository {
       .leftJoinAndSelect('daily_ride.vehicle', 'vehicle')
       .leftJoinAndSelect('daily_ride.driver', 'driver')
       .leftJoinAndSelect('daily_ride.locations', 'locations')
+      .leftJoinAndSelect('locations.driver', 'locationDriver')
       .where('daily_ride.driver.id = :driverId', { driverId })
       .andWhere('daily_ride.date BETWEEN :startDate AND :endDate', {
         startDate: startDate.toISOString().split('T')[0],
@@ -207,6 +210,7 @@ export class DailyRidesRelationalRepository implements DailyRideRepository {
       .leftJoinAndSelect('daily_ride.vehicle', 'vehicle')
       .leftJoinAndSelect('daily_ride.driver', 'driver')
       .leftJoinAndSelect('daily_ride.locations', 'locations')
+      .leftJoinAndSelect('locations.driver', 'locationDriver')
       .leftJoinAndSelect('ride.vehicle', 'ride_vehicle')
       .leftJoinAndSelect('ride.driver', 'ride_driver')
       .leftJoinAndSelect('ride.school', 'ride_school')
@@ -261,6 +265,7 @@ export class DailyRidesRelationalRepository implements DailyRideRepository {
       .leftJoinAndSelect('daily_ride.vehicle', 'vehicle')
       .leftJoinAndSelect('daily_ride.driver', 'driver')
       .leftJoinAndSelect('daily_ride.locations', 'locations')
+      .leftJoinAndSelect('locations.driver', 'locationDriver')
       .where('daily_ride.driver.id = :driverId', { driverId })
       .orderBy('daily_ride.date', 'DESC')
       .addOrderBy('daily_ride.start_time', 'ASC');
@@ -283,6 +288,7 @@ export class DailyRidesRelationalRepository implements DailyRideRepository {
       .leftJoinAndSelect('daily_ride.vehicle', 'vehicle')
       .leftJoinAndSelect('daily_ride.driver', 'driver')
       .leftJoinAndSelect('daily_ride.locations', 'locations')
+      .leftJoinAndSelect('locations.driver', 'locationDriver')
       .leftJoinAndSelect('ride.vehicle', 'ride_vehicle')
       .leftJoinAndSelect('ride.driver', 'ride_driver')
       .leftJoinAndSelect('ride.school', 'ride_school')
@@ -384,6 +390,7 @@ export class DailyRidesRelationalRepository implements DailyRideRepository {
       .leftJoinAndSelect('daily_ride.vehicle', 'vehicle')
       .leftJoinAndSelect('daily_ride.driver', 'driver')
       .leftJoinAndSelect('daily_ride.locations', 'locations')
+      .leftJoinAndSelect('locations.driver', 'locationDriver')
       .where('daily_ride.driver.id = :driverId', { driverId })
       .andWhere('daily_ride.status = :status', {
         status: DailyRideStatus.Active,

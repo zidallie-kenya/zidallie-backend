@@ -818,7 +818,13 @@ export class DailyRidesService {
             ride.id,
           );
 
-          console.log(locations);
+          console.log(
+            `DEBUG: Found ${locations.length} locations for ride ${ride.id}`,
+          );
+
+          if (locations.length > 0) {
+            console.log('DEBUG: First location sample:', locations[0]);
+          }
 
           const routeSnapshot = locations.map((loc) => ({
             lat: loc.latitude,

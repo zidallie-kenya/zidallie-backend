@@ -376,28 +376,18 @@ export class DailyRidesRelationalRepository implements DailyRideRepository {
     await this.dailyRidesRepository.softDelete(id);
   }
 
-  async findActiveRideByDriverId(
-    driverId: number,
-  ): Promise<NullableType<DailyRide>> {
-    const entity = await this.dailyRidesRepository
+  // In your Repository
+  findActiveRideByDriverId(driverId: number): Promise<DailyRide | null> {
+    return this.dailyRidesRepository
       .createQueryBuilder('daily_ride')
       .leftJoinAndSelect('daily_ride.ride', 'ride')
-      .leftJoinAndSelect('ride.vehicle', 'ride_vehicle')
-      .leftJoinAndSelect('ride.driver', 'ride_driver')
-      .leftJoinAndSelect('ride.school', 'ride_school')
-      .leftJoinAndSelect('ride.student', 'ride_student')
-      .leftJoinAndSelect('ride.parent', 'ride_parent')
       .leftJoinAndSelect('daily_ride.vehicle', 'vehicle')
       .leftJoinAndSelect('daily_ride.driver', 'driver')
-      .leftJoinAndSelect('daily_ride.locations', 'locations')
-      .leftJoinAndSelect('locations.driver', 'locationDriver')
-      .where('daily_ride.driver.id = :driverId', { driverId })
+      .where('daily_ride.driverId = :driverId', { driverId })
       .andWhere('daily_ride.status = :status', {
         status: DailyRideStatus.Active,
       })
       .getOne();
-
-    return entity ? DailyRideMapper.toDomain(entity) : null;
   }
 
   async saveAll(rides: DailyRide[]): Promise<DailyRide[]> {

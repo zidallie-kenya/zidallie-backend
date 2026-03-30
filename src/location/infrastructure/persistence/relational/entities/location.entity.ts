@@ -1,10 +1,10 @@
-// location/infrastructure/persistence/relational/entities/location.entity.ts
 import {
   Column,
   CreateDateColumn,
   Entity,
   ManyToOne,
   PrimaryGeneratedColumn,
+  JoinColumn,
 } from 'typeorm';
 import { EntityRelationalHelper } from '../../../../../utils/relational-entity-helper';
 import { DailyRideEntity } from '../../../../../daily_rides/infrastructure/persistence/relational/entities/daily_ride.entity';
@@ -18,9 +18,11 @@ export class LocationEntity extends EntityRelationalHelper {
   @ManyToOne(() => DailyRideEntity, (dailyRide) => dailyRide.locations, {
     nullable: false,
   })
+  @JoinColumn({ name: 'dailyRideId' })
   daily_ride: DailyRideEntity;
 
   @ManyToOne(() => UserEntity, { nullable: false })
+  @JoinColumn({ name: 'driverId' })
   driver: UserEntity;
 
   @Column({ type: 'float', nullable: false })

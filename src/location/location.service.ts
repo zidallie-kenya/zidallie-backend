@@ -162,6 +162,18 @@ export class LocationsService {
     await this.locationsRepository.remove(id);
   }
 
+  findByDailyRideIdInTimeRange(
+    dailyRideId: number,
+    from: Date,
+    to: Date,
+  ): Promise<Location[]> {
+    return this.locationsRepository.findByDailyRideIdInTimeRange(
+      dailyRideId,
+      from,
+      to,
+    );
+  }
+
   async deleteManyByDailyRideId(dailyRideId: number): Promise<void> {
     return this.locationsRepository.deleteManyByDailyRideId(dailyRideId);
   }

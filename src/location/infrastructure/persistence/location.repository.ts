@@ -47,6 +47,11 @@ export abstract class LocationRepository {
   ): Promise<Location[]>;
 
   abstract findByDailyRideId(dailyRideId: number): Promise<Location[]>;
+  abstract findByDailyRideIdInTimeRange(
+    dailyRideId: number,
+    from: Date,
+    to: Date,
+  ): Promise<Location[]>;
   abstract deleteManyByDailyRideId(dailyRideId: number): Promise<void>;
   abstract deleteOldRecords(beforeDate: Date): Promise<void>;
 }

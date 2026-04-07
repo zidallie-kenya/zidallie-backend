@@ -17,6 +17,7 @@ export class LocationGateway
 
   private lastSaved: Record<string, number> = {};
   private readonly SAVE_THROTTLE_MS = 30 * 1000; // 30 seconds
+  private readonly ACTIVE_RIDE_THROTTLE_MS = 5 * 1000; // active ride: 5s
 
   constructor(private readonly locationsService: LocationsService) {}
 
@@ -89,8 +90,19 @@ export class LocationGateway
     const now = Date.now();
     const last = this.lastSaved[driverId] || 0;
 
-    if (now - last >= this.SAVE_THROTTLE_MS) {
+    const throttle = dailyRideId
+      ? this.ACTIVE_RIDE_THROTTLE_MS
+      : this.SAVE_THROTTLE_MS;
+
+    if (now - last >= throttle) {
       this.lastSaved[driverId] = now;
+
+      if (!dailyRideId) {
+        console.log(
+          `⏭️ No dailyRideId, skipping DB save for driver ${driverId}`,
+        );
+        return;
+      }
 
       try {
         await this.locationsService.create({

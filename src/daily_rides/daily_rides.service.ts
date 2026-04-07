@@ -34,6 +34,12 @@ import { LocationsService } from '../location/location.service';
 import { Location } from '../location/domain/location';
 import * as pako from 'pako';
 
+interface RoutePoint {
+  lat: number;
+  lng: number;
+  ts: string;
+}
+
 @Injectable()
 export class DailyRidesService {
   constructor(
@@ -450,8 +456,12 @@ export class DailyRidesService {
     }
 
     // 1. Fetch all locations for this ride before finishing
-    const locations = await this.locationsService.findByDailyRideId(id);
-
+    const embarkTime = dailyRide.embark_time ?? disembarkTime;
+    const locations = await this.locationsService.findByDailyRideIdInTimeRange(
+      id,
+      embarkTime,
+      disembarkTime,
+    );
     // 2. Format them into a lightweight object
     const routeSnapshot = locations.map((loc) => ({
       lat: loc.latitude,
@@ -766,6 +776,7 @@ export class DailyRidesService {
       paginationOptions: { page: 1, limit: 1000 },
     });
   }
+
   async batchUpdateStatus(
     ids: number[],
     status: DailyRideStatus,
@@ -814,10 +825,14 @@ export class DailyRidesService {
           }
 
           // Fetch route snapshot and compress it
-          const locations = await this.locationsService.findByDailyRideId(
-            ride.id,
-          );
-
+          const embark_time = new Date();
+          const embarkTime = ride.embark_time ?? embark_time;
+          const locations =
+            await this.locationsService.findByDailyRideIdInTimeRange(
+              ride.id,
+              embarkTime,
+              currentTime,
+            );
           console.log(
             `DEBUG: Found ${locations.length} locations for ride ${ride.id}`,
           );
@@ -826,16 +841,18 @@ export class DailyRidesService {
             console.log('DEBUG: First location sample:', locations[0]);
           }
 
-          const routeSnapshot = locations.map((loc) => ({
+          const routeSnapshot: RoutePoint[] = locations.map((loc) => ({
             lat: loc.latitude,
             lng: loc.longitude,
-            ts: loc.timestamp,
+            ts: loc.timestamp.toISOString(),
           }));
 
           console.log('routeSnapshot:', routeSnapshot);
 
-          const binaryString = pako.gzip(JSON.stringify(routeSnapshot));
-          ride.route_data = Buffer.from(binaryString).toString('base64');
+          const compressed = Buffer.from(
+            pako.gzip(JSON.stringify(routeSnapshot)),
+          ).toString('base64');
+          ride.route_data = compressed;
         }
 
         return ride;
@@ -924,4 +941,10 @@ export class DailyRidesService {
       },
     };
   }
+
+  // private decodeRouteData(route_data: string): RoutePoint[] {
+  //   const buffer = Buffer.from(route_data, 'base64');
+  //   const decompressed = pako.ungzip(buffer, { to: 'string' });
+  //   return JSON.parse(decompressed);
+  // }
 }

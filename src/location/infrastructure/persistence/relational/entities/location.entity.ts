@@ -18,11 +18,11 @@ export class LocationEntity extends EntityRelationalHelper {
   @ManyToOne(() => DailyRideEntity, (dailyRide) => dailyRide.locations, {
     nullable: false,
   })
-  @JoinColumn({ name: 'dailyRideId' })
+  @JoinColumn({ name: 'dailyRideId', referencedColumnName: 'id' })
   daily_ride: DailyRideEntity;
 
   @ManyToOne(() => UserEntity, { nullable: false })
-  @JoinColumn({ name: 'driverId' })
+  @JoinColumn({ name: 'driverId', referencedColumnName: 'id' })
   driver: UserEntity;
 
   @Column({ type: 'float', nullable: false })

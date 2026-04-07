@@ -7,10 +7,9 @@ export class Location {
   @ApiProperty({ type: Number })
   id: number;
 
-  @ApiProperty({ type: () => DailyRide, nullable: true }) // <-- mark nullable
+  @ApiProperty({ type: () => DailyRide, nullable: true })
   @Expose({ groups: ['me', 'admin'] })
-  daily_ride: DailyRide | null = null; // <-- allow null
-
+  daily_ride: DailyRide | null = null;
   @ApiProperty({ type: () => User })
   @Expose({ groups: ['me', 'admin'] })
   driver: User;

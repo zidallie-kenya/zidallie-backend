@@ -179,11 +179,13 @@ export class LocationsRelationalRepository implements LocationRepository {
   }
 
   async findByDailyRideId(dailyRideId: number): Promise<Location[]> {
-    const entities = await this.locationsRepository.find({
-      where: { daily_ride: { id: dailyRideId } },
-      relations: ['daily_ride', 'driver'],
-      order: { timestamp: 'ASC' },
-    });
+    const entities = await this.locationsRepository
+      .createQueryBuilder('location')
+      .leftJoinAndSelect('location.daily_ride', 'daily_ride')
+      .leftJoinAndSelect('location.driver', 'driver')
+      .where('location.dailyRideId = :dailyRideId', { dailyRideId })
+      .orderBy('location.timestamp', 'ASC')
+      .getMany();
 
     return entities.map(LocationMapper.toDomain);
   }
@@ -198,5 +200,21 @@ export class LocationsRelationalRepository implements LocationRepository {
       .delete()
       .where('timestamp < :beforeDate', { beforeDate })
       .execute();
+  }
+
+  async findByDailyRideIdInTimeRange(
+    dailyRideId: number,
+    from: Date,
+    to: Date,
+  ): Promise<Location[]> {
+    const entities = await this.locationsRepository
+      .createQueryBuilder('location')
+      .where('location.dailyRideId = :dailyRideId', { dailyRideId })
+      .andWhere('location.timestamp >= :from', { from })
+      .andWhere('location.timestamp <= :to', { to })
+      .orderBy('location.timestamp', 'ASC')
+      .getMany();
+
+    return entities.map(LocationMapper.toDomain);
   }
 }

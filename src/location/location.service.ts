@@ -29,20 +29,26 @@ export class LocationsService {
 
   async create(createLocationDto: CreateLocationDto): Promise<Location> {
     let dailyRide: DailyRide | undefined = undefined;
-    if (createLocationDto.dailyRideId) {
-      const dailyRideEntity = await this.dailyRidesService.findById(
-        createLocationDto.dailyRideId,
-      );
-      if (!dailyRideEntity) {
-        throw new UnprocessableEntityException({
-          status: HttpStatus.UNPROCESSABLE_ENTITY,
-          errors: {
-            dailyRide: 'this dailyRide does not exists',
-          },
-        });
-      }
-      dailyRide = dailyRideEntity;
+
+    if (!createLocationDto.dailyRideId) {
+      throw new UnprocessableEntityException({
+        status: HttpStatus.UNPROCESSABLE_ENTITY,
+        errors: { dailyRide: 'dailyRideId is required to save a location' },
+      });
     }
+
+    const dailyRideEntity = await this.dailyRidesService.findById(
+      createLocationDto.dailyRideId,
+    );
+    if (!dailyRideEntity) {
+      throw new UnprocessableEntityException({
+        status: HttpStatus.UNPROCESSABLE_ENTITY,
+        errors: {
+          dailyRide: 'this dailyRide does not exists',
+        },
+      });
+    }
+    dailyRide = dailyRideEntity;
 
     let driver: User | undefined = undefined;
     if (createLocationDto.driverId) {
@@ -64,7 +70,7 @@ export class LocationsService {
       latitude: createLocationDto.latitude,
       longitude: createLocationDto.longitude,
       timestamp: new Date(createLocationDto.timestamp),
-      daily_ride: dailyRide!,
+      daily_ride: dailyRide,
       driver: driver!,
     });
   }

@@ -10,12 +10,12 @@ export class BatchUpdateDailyRideDto {
   @IsArray()
   @ArrayNotEmpty()
   @IsNumber({}, { each: true })
-  ids: number[];
+  ids!: number[];
 
   @ApiProperty({
     description: 'New status to set for all the rides',
     enum: DailyRideStatus,
   })
   @IsEnum(DailyRideStatus)
-  status: DailyRideStatus;
+  status!: DailyRideStatus;
 }

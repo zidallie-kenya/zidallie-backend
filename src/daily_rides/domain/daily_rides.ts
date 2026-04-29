@@ -10,55 +10,55 @@ import { Location } from '../../location/domain/location';
 
 export class DailyRide {
   @ApiProperty({ type: Number })
-  id: number;
+  id!: number;
 
   @ApiProperty({ type: () => Ride })
   @Expose({ groups: ['me', 'admin'] })
-  ride: Ride | null;
+  ride!: Ride | null;
 
   @ApiProperty({ type: () => Vehicle })
   @Expose({ groups: ['me', 'admin'] })
-  vehicle: Vehicle | null;
+  vehicle!: Vehicle | null;
 
   @ApiProperty({ type: () => User, required: false, nullable: true })
   @Expose({ groups: ['me', 'admin'] })
-  driver: User | null;
+  driver!: User | null;
 
   @ApiProperty({ enum: DailyRideKind })
   @Expose({ groups: ['me', 'admin'] })
-  kind: DailyRideKind;
+  kind!: DailyRideKind;
 
   @ApiProperty({ type: Date })
   @Expose({ groups: ['me', 'admin'] })
-  date: Date;
+  date!: Date;
 
   @ApiProperty({ type: Date, required: false, nullable: true })
   @Expose({ groups: ['me', 'admin'] })
-  start_time: Date | null;
+  start_time!: Date | null;
 
   @ApiProperty({ type: Date, required: false, nullable: true })
   @Expose({ groups: ['me', 'admin'] })
-  end_time: Date | null;
+  end_time!: Date | null;
 
   @ApiProperty({ type: String, required: false, nullable: true })
   @Expose({ groups: ['me', 'admin'] })
-  comments: string | null;
+  comments!: string | null;
 
   @ApiProperty({ type: Number, required: false, nullable: true })
   @Expose({ groups: ['me', 'admin'] })
-  embark_latitude: number | null;
+  embark_latitude!: number | null;
 
   @ApiProperty({ type: Number, required: false, nullable: true })
   @Expose({ groups: ['me', 'admin'] })
-  embark_longitude: number | null;
+  embark_longitude!: number | null;
 
   @ApiProperty({ type: Number, required: false, nullable: true })
   @Expose({ groups: ['me', 'admin'] })
-  disembark_latitude: number | null;
+  disembark_latitude!: number | null;
 
   @ApiProperty({ type: Number, required: false, nullable: true })
   @Expose({ groups: ['me', 'admin'] })
-  disembark_longitude: number | null;
+  disembark_longitude!: number | null;
 
   @ApiProperty({
     type: () => DailyRideMetaDto,
@@ -66,24 +66,24 @@ export class DailyRide {
     nullable: true,
   })
   @Expose({ groups: ['me', 'admin'] })
-  meta: DailyRideMeta | null;
+  meta!: DailyRideMeta | null;
 
   @ApiProperty({ enum: DailyRideStatus })
   @Expose({ groups: ['me', 'admin'] })
-  status: DailyRideStatus;
+  status!: DailyRideStatus;
 
   // Fix: Use your custom Location type instead of browser Location
   @ApiProperty({ type: () => [Location] })
   @Expose({ groups: ['me', 'admin'] })
-  locations: Location[];
+  locations!: Location[];
 
   @ApiProperty()
   @Expose({ groups: ['me', 'admin'] })
-  embark_time: Date | null;
+  embark_time!: Date | null;
 
   @ApiProperty()
   @Expose({ groups: ['me', 'admin'] })
-  disembark_time: Date | null;
+  disembark_time!: Date | null;
 
   @ApiProperty({ type: Object, required: false, nullable: true })
   @Expose({ groups: ['me', 'admin'] })
@@ -91,9 +91,13 @@ export class DailyRide {
 
   @ApiProperty()
   @Expose({ groups: ['me', 'admin'] })
-  created_at: Date;
+  created_at!: Date;
 
   @ApiProperty()
   @Expose({ groups: ['me', 'admin'] })
-  updated_at: Date;
+  updated_at!: Date;
+
+  @ApiProperty()
+  @Expose({ groups: ['me', 'admin'] })
+  earnings_processed!: boolean;
 }

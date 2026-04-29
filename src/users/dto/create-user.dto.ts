@@ -18,13 +18,20 @@ import { lowerCaseTransformer } from '../../utils/transformers/lower-case.transf
 import { UserMetaDto } from './user.dto'; // adjust path if needed
 
 export type UserKind = 'Parent' | 'Driver' | 'Admin';
+export class PayoutDto {
+  @ApiProperty({ enum: ['weekly', 'monthly'] })
+  payment_model!: 'weekly' | 'monthly';
+
+  @ApiProperty({ example: 50000 })
+  agreed_salary!: number;
+}
 
 export class CreateUserDto {
   @ApiProperty({ example: 'test1@example.com', type: String })
   @Transform(lowerCaseTransformer)
   @IsNotEmpty()
   @IsEmail()
-  email: string | null;
+  email!: string | null;
 
   @ApiProperty()
   @MinLength(6)
@@ -40,11 +47,11 @@ export class CreateUserDto {
 
   @ApiProperty({ example: 'John', type: String })
   @IsNotEmpty()
-  firstName: string | null;
+  firstName!: string | null;
 
   @ApiProperty({ example: 'Doe', type: String })
   @IsNotEmpty()
-  lastName: string | null;
+  lastName!: string | null;
 
   @ApiPropertyOptional({ example: '+254712345678', type: String })
   @IsOptional()
@@ -70,7 +77,7 @@ export class CreateUserDto {
   @ApiProperty({ enum: ['Parent', 'Driver', 'Admin'] })
   @IsNotEmpty()
   @IsEnum(['Parent', 'Driver', 'Admin'])
-  kind: UserKind;
+  kind!: UserKind;
 
   @ApiPropertyOptional({ type: () => UserMetaDto })
   @IsOptional()
@@ -102,4 +109,26 @@ export class CreateUserDto {
   @IsOptional()
   @Type(() => StatusDto)
   status?: StatusDto;
+
+  @ApiPropertyOptional({ example: 0.0, type: Number })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  pending_earnings?: number;
+
+  @ApiPropertyOptional({ type: () => PayoutDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => PayoutDto)
+  payout!: PayoutDto | null;
+
+  @ApiPropertyOptional({ type: String, example: '1234567890' })
+  @IsOptional()
+  @IsString()
+  sasapay_account_number?: string | null;
+
+  @ApiPropertyOptional({ type: String, example: 'ID12345678' })
+  @IsOptional()
+  @IsString()
+  ID_number?: string | null;
 }

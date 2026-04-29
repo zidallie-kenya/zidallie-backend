@@ -12,7 +12,7 @@ import { DailyRideMetaDto } from './daily-ride-meta.dto';
 
 class RelationDto {
   @IsNotEmpty()
-  id: number;
+  id!: number;
 }
 
 // Custom date transform function
@@ -62,12 +62,12 @@ export class CreateDailyRideDto {
   @ValidateNested()
   @Type(() => RelationDto)
   @IsNotEmpty()
-  ride: RelationDto;
+  ride!: RelationDto;
 
   @ValidateNested()
   @Type(() => RelationDto)
   @IsNotEmpty()
-  vehicle: RelationDto;
+  vehicle!: RelationDto;
 
   @ValidateNested()
   @Type(() => RelationDto)
@@ -76,12 +76,12 @@ export class CreateDailyRideDto {
 
   @IsEnum(DailyRideKind)
   @IsNotEmpty()
-  kind: DailyRideKind;
+  kind!: DailyRideKind;
 
   @Transform(transformDate)
   @IsDateString()
   @IsNotEmpty()
-  date: string;
+  date!: string;
 
   @Transform(transformDateTime)
   @IsOptional()
@@ -135,4 +135,7 @@ export class CreateDailyRideDto {
   @ValidateNested({ each: true })
   @Type(() => RelationDto)
   locations?: RelationDto[];
+
+  @IsOptional()
+  earnings_processed?: boolean;
 }

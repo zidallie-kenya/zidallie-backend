@@ -146,4 +146,42 @@ export class UsersRelationalRepository implements UserRepository {
   async remove(id: User['id']): Promise<void> {
     await this.usersRepository.softDelete(id);
   }
+
+  async incrementPendingEarnings(
+    id: User['id'],
+    amount: number,
+  ): Promise<void> {
+    await this.usersRepository
+      .createQueryBuilder('user')
+      .update(UserEntity)
+      .set({
+        // This tells the DB: SET pending_earnings = pending_earnings + amount
+        pending_earnings: () => `pending_earnings + ${amount}`,
+      })
+      .where('id = :id', { id })
+      .execute();
+  }
+
+  async resetPendingEarnings(id: User['id']): Promise<void> {
+    await this.usersRepository
+      .createQueryBuilder('user')
+      .update(UserEntity)
+      .set({
+        pending_earnings: 0,
+      })
+      .where('id = :id', { id })
+      .execute();
+  }
+
+  async findBySasapayAccountNumber(
+    accountNumber: string,
+  ): Promise<NullableType<User>> {
+    if (!accountNumber) return null;
+
+    const entity = await this.usersRepository.findOne({
+      where: { sasapay_account_number: accountNumber },
+    });
+
+    return entity ? UserMapper.toDomain(entity) : null;
+  }
 }

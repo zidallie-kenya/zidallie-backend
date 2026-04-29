@@ -22,42 +22,42 @@ import { LocationEntity } from '../../../../../location/infrastructure/persisten
 @Entity({ name: 'daily_ride' })
 export class DailyRideEntity extends EntityRelationalHelper {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @ManyToOne(() => RideEntity, (ride) => ride.daily_rides, { nullable: false })
-  ride: RideEntity;
+  ride!: RideEntity;
 
   @ManyToOne(() => VehicleEntity, (vehicle) => vehicle.daily_rides, {
     nullable: false,
   })
-  vehicle: VehicleEntity;
+  vehicle!: VehicleEntity;
 
   @ManyToOne(() => UserEntity, (user) => user.daily_rides, { nullable: true })
-  driver: UserEntity | null;
+  driver!: UserEntity | null;
 
   @Column({ type: 'varchar', length: 10, enum: DailyRideKind, nullable: false })
-  kind: DailyRideKind;
+  kind!: DailyRideKind;
 
   @Column({ type: 'date', nullable: false })
-  date: Date;
+  date!: Date;
 
   @Column({ type: 'timestamp', nullable: true })
-  start_time: Date | null;
+  start_time!: Date | null;
 
   @Column({ type: 'timestamp', nullable: true })
-  end_time: Date | null;
+  end_time!: Date | null;
 
   @Column({ type: 'text', nullable: true })
-  comments: string | null;
+  comments!: string | null;
 
   @Column({ type: 'jsonb', nullable: true })
-  meta: DailyRideMeta | null;
+  meta!: DailyRideMeta | null;
 
   @CreateDateColumn()
-  created_at: Date;
+  created_at!: Date;
 
   @UpdateDateColumn()
-  updated_at: Date;
+  updated_at!: Date;
 
   @Column({
     type: 'varchar',
@@ -65,29 +65,32 @@ export class DailyRideEntity extends EntityRelationalHelper {
     enum: DailyRideStatus,
     nullable: false,
   })
-  status: DailyRideStatus;
+  status!: DailyRideStatus;
 
   @Column({ type: 'timestamp', nullable: true })
-  embark_time: Date | null;
+  embark_time!: Date | null;
 
   @Column({ type: 'timestamp', nullable: true })
-  disembark_time: Date | null;
+  disembark_time!: Date | null;
 
   @Column({ type: 'float', nullable: true })
-  embark_latitude: number | null;
+  embark_latitude!: number | null;
 
   @Column({ type: 'float', nullable: true })
-  embark_longitude: number | null;
+  embark_longitude!: number | null;
 
   @Column({ type: 'float', nullable: true })
-  disembark_latitude: number | null;
+  disembark_latitude!: number | null;
 
   @Column({ type: 'float', nullable: true })
-  disembark_longitude: number | null;
+  disembark_longitude!: number | null;
 
   @Column({ type: 'jsonb', nullable: true })
   route_data: any;
 
+  @Column({ type: 'boolean', default: false })
+  earnings_processed!: boolean;
+
   @OneToMany(() => LocationEntity, (location) => location.daily_ride)
-  locations: LocationEntity[];
+  locations!: LocationEntity[];
 }

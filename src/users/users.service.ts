@@ -1,6 +1,7 @@
 import {
   HttpStatus,
   Injectable,
+  NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -121,6 +122,10 @@ export class UsersService {
       school_id: createUserDto.school_id ?? null,
       role,
       status,
+      pending_earnings: createUserDto.pending_earnings ?? 0,
+      payout: createUserDto.payout ?? null,
+      sasapay_account_number: createUserDto.sasapay_account_number ?? null,
+      ID_number: createUserDto.ID_number ?? null,
     });
   }
 
@@ -270,10 +275,53 @@ export class UsersService {
       school_id: updateUserDto.school_id,
       role,
       status,
+      pending_earnings: updateUserDto.pending_earnings,
+      payout: updateUserDto.payout,
+      sasapay_account_number: updateUserDto.sasapay_account_number,
+      ID_number: updateUserDto.ID_number,
     });
   }
 
   async remove(id: User['id']): Promise<void> {
     await this.usersRepository.remove(id);
+  }
+
+  async incrementPendingEarnings(
+    id: User['id'],
+    amount: number,
+  ): Promise<void> {
+    // Fetch the user first to get current meta
+    const user = await this.usersRepository.findById(id);
+    if (!user) {
+      throw new NotFoundException({
+        status: HttpStatus.NOT_FOUND,
+        errors: { user: 'Driver not found' },
+      });
+    }
+
+    // Update the pending earnings within the meta field
+    const newPendingEarnings = (user.pending_earnings || 0) + amount;
+
+    await this.usersRepository.update(id, {
+      pending_earnings: newPendingEarnings,
+    });
+  }
+
+  // Add this as well for the payout day
+  async resetPendingEarnings(id: User['id']): Promise<void> {
+    await this.usersRepository.update(id, {
+      pending_earnings: 0,
+    });
+  }
+
+  /**
+   * Find a user by their SasaPay account number.
+   * Used in the onboarding callback to look up who was approved/rejected,
+   * since by that point the account number is already saved from /confirm.
+   */
+  findBySasapayAccountNumber(
+    accountNumber: string,
+  ): Promise<NullableType<User>> {
+    return this.usersRepository.findBySasapayAccountNumber(accountNumber);
   }
 }

@@ -37,4 +37,13 @@ export abstract class UserRepository {
   ): Promise<User | null>;
 
   abstract remove(id: User['id']): Promise<void>;
+  abstract incrementPendingEarnings(
+    id: User['id'],
+    amount: number,
+  ): Promise<void>;
+  abstract resetPendingEarnings(id: User['id']): Promise<void>;
+
+  abstract findBySasapayAccountNumber(
+    accountNumber: string,
+  ): Promise<NullableType<User>>;
 }

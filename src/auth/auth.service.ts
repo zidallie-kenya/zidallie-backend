@@ -157,6 +157,7 @@ export class AuthService {
         meta: null,
         wallet_balance: 0,
         is_kyc_verified: false,
+        payout: null,
       });
 
       user = await this.usersService.findById(user.id);
@@ -226,6 +227,7 @@ export class AuthService {
       provider: AuthProvidersEnum.email,
       role: current_role,
       status: { id: StatusEnum.inactive },
+      payout: null,
     });
 
     const hash = await this.jwtService.signAsync(

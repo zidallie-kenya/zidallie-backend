@@ -43,21 +43,25 @@ export type UserMeta = {
     when_bus_is_1km_away: boolean;
     when_bus_is_0_5km_away: boolean;
   };
+  tempPhoneNumber?: string | null;
+  tempRequestId?: string | null;
+  sasapay_wallet_approval: boolean;
+  sasapay_onboarding_rejection_reason: string | null;
 };
 
 @Entity({ name: 'user' })
 export class UserEntity extends EntityRelationalHelper {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column({ type: 'varchar', unique: true, nullable: true })
-  email: string | null;
+  email!: string | null;
 
   @Column({ nullable: true })
   password?: string;
 
   @Column({ default: AuthProvidersEnum.email })
-  provider: string;
+  provider!: string;
 
   @Index()
   @Column({ type: 'varchar', nullable: true })
@@ -65,42 +69,42 @@ export class UserEntity extends EntityRelationalHelper {
 
   @Index()
   @Column({ type: 'varchar', nullable: true })
-  firstName: string | null;
+  firstName!: string | null;
 
   @Index()
   @Column({ type: 'varchar', nullable: true })
-  lastName: string | null;
+  lastName!: string | null;
 
   @Column({ type: 'varchar', nullable: true })
-  name: string | null;
+  name!: string | null;
 
   @Column({ type: 'varchar', nullable: true })
-  phone_number: string | null;
+  phone_number!: string | null;
 
   @Column({ type: 'varchar', nullable: true })
-  push_token: string | null;
+  push_token!: string | null;
 
   @Column({ type: 'int', nullable: true })
-  school_id: number | null;
+  school_id!: number | null;
 
   @Column({
     type: 'varchar',
     nullable: true,
     enum: ['Parent', 'Driver', 'Admin'],
   })
-  kind: UserKind;
+  kind!: UserKind;
 
   @Column({ type: 'jsonb', nullable: true })
-  meta: UserMeta | null;
+  meta!: UserMeta | null;
 
   @Column({ type: 'float', default: 0 })
-  wallet_balance: number;
+  wallet_balance!: number;
 
   @Column({ type: 'boolean', default: false })
-  is_kyc_verified: boolean;
+  is_kyc_verified!: boolean;
 
   @Column({ type: 'varchar', nullable: true })
-  photo: string | null;
+  photo!: string | null;
 
   @ManyToOne(() => RoleEntity, { eager: true })
   role?: RoleEntity | null;
@@ -108,40 +112,55 @@ export class UserEntity extends EntityRelationalHelper {
   @ManyToOne(() => StatusEntity, { eager: true })
   status?: StatusEntity;
 
+  @Column({ type: 'float', default: 0 })
+  pending_earnings!: number; // The money earned but not yet transferred
+
+  @Column({ type: 'jsonb', nullable: true })
+  payout!: {
+    payment_model: 'weekly' | 'monthly';
+    agreed_salary: number;
+  } | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  sasapay_account_number!: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  ID_number!: string | null;
+
   @CreateDateColumn()
-  created_at: Date;
+  created_at!: Date;
 
   @UpdateDateColumn()
-  updated_at: Date;
+  updated_at!: Date;
 
   @DeleteDateColumn()
-  deleted_at: Date;
+  deleted_at!: Date;
 
   // Relationships
   @OneToOne(() => KYCEntity, (kyc) => kyc.user, { nullable: true })
   kyc?: KYCEntity | null;
 
   @OneToMany(() => StudentEntity, (student) => student.parent)
-  students: StudentEntity[];
+  students!: StudentEntity[];
 
   @OneToMany(() => VehicleEntity, (vehicle) => vehicle.user)
-  vehicles: VehicleEntity[];
+  vehicles!: VehicleEntity[];
 
   @OneToMany(() => RideEntity, (ride) => ride.driver)
-  driver_rides: RideEntity[];
+  driver_rides!: RideEntity[];
 
   @OneToMany(() => RideEntity, (ride) => ride.parent)
-  parent_rides: RideEntity[];
+  parent_rides!: RideEntity[];
 
   @OneToMany(() => DailyRideEntity, (dailyRide) => dailyRide.driver)
-  daily_rides: DailyRideEntity[];
+  daily_rides!: DailyRideEntity[];
 
   @OneToMany(() => PaymentEntity, (payment) => payment.user)
-  payments: PaymentEntity[];
+  payments!: PaymentEntity[];
 
   @OneToMany(() => NotificationEntity, (notification) => notification.user)
-  notifications: NotificationEntity[];
+  notifications!: NotificationEntity[];
 
   @OneToMany(() => LocationEntity, (location) => location.driver)
-  locations: LocationEntity[];
+  locations!: LocationEntity[];
 }

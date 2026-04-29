@@ -158,6 +158,7 @@ export class DailyRidesService {
       disembark_latitude: createDailyRideDto.disembark_latitude ?? null,
       disembark_longitude: createDailyRideDto.disembark_longitude ?? null,
       route_data: createDailyRideDto.route_data ?? null,
+      earnings_processed: createDailyRideDto.earnings_processed ?? false,
     });
 
     return dailyRide;
@@ -426,81 +427,76 @@ export class DailyRidesService {
 
   // when driver disembarks a student (ride becomes Finished)
   async disembarkStudent(id: DailyRide['id']): Promise<DailyRide | null> {
-    const dailyRide = await this.dailyRideRepository.findById(id);
-
-    if (!dailyRide) {
-      throw new NotFoundException({
-        status: HttpStatus.NOT_FOUND,
-        errors: { dailyRide: 'Daily ride not found' },
-      });
-    }
-
-    // Check if ride is in correct status to disembark
-    if (dailyRide.status !== DailyRideStatus.Active) {
-      throw new UnprocessableEntityException({
-        status: HttpStatus.UNPROCESSABLE_ENTITY,
-        errors: {
-          status: `Cannot disembark student. Ride must be in 'Active' status, currently '${dailyRide.status}'`,
-        },
-      });
-    }
-
-    const disembarkTime = new Date();
-
-    let latestLocation: Location | null = null;
-
-    if (dailyRide.driver?.id) {
-      latestLocation = await this.locationsService.findLatestByDriverId(
-        dailyRide?.driver.id,
-      );
-    }
-
-    // 1. Fetch all locations for this ride before finishing
-    const embarkTime = dailyRide.embark_time ?? disembarkTime;
-    const locations = await this.locationsService.findByDailyRideIdInTimeRange(
-      id,
-      embarkTime,
-      disembarkTime,
-    );
-    // 2. Format them into a lightweight object
-    const routeSnapshot = locations.map((loc) => ({
-      lat: loc.latitude,
-      lng: loc.longitude,
-      ts: loc.timestamp,
-    }));
-
-    console.log('routeSnapshot:', routeSnapshot);
-    console.log('latestLocation:', latestLocation);
-
-    // Compress to a base64 string
-    const binaryString = pako.gzip(JSON.stringify(routeSnapshot));
-    const compressedString = Buffer.from(binaryString).toString('base64');
-
-    const updated = await this.update(id, {
-      status: DailyRideStatus.Finished,
-      end_time: new Date().toISOString(),
-      disembark_time: disembarkTime.toISOString(),
-      disembark_latitude: latestLocation?.latitude,
-      disembark_longitude: latestLocation?.longitude,
-      route_data: compressedString,
-    });
-
-    if (updated?.ride?.parent?.push_token && updated.ride.student?.name) {
-      try {
-        await this.expoPushService.sendPushNotification(
-          updated.ride.parent.push_token,
-          'Student Arrived',
-          `${updated.ride.student.name} has reached the destination.`,
-          { rideId: updated.id },
+    return await this.dataSource.transaction(
+      async (transactionalEntityManager) => {
+        // 1. Fetch
+        const dailyRide = await transactionalEntityManager.findOne(
+          DailyRideEntity,
+          {
+            where: { id },
+            relations: ['driver', 'ride', 'ride.parent', 'ride.student'],
+          },
         );
-      } catch (error) {
-        console.log(error);
-      }
-    }
 
-    await this.locationsService.deleteManyByDailyRideId(id);
+        if (!dailyRide || dailyRide.status !== DailyRideStatus.Active) {
+          throw new UnprocessableEntityException(
+            'Ride not found or not active',
+          );
+        }
 
-    return updated;
+        // 2. Earnings Logic (The Guard)
+        if (
+          !dailyRide.earnings_processed &&
+          dailyRide.driver?.payout &&
+          dailyRide.driver?.sasapay_account_number
+        ) {
+          const amountToEarn = this.EarningsHelper.calculatePerRide(
+            dailyRide.driver.payout.payment_model,
+            dailyRide.driver.payout.agreed_salary,
+          );
+          await this.usersService.incrementPendingEarnings(
+            dailyRide.driver.id,
+            amountToEarn,
+          );
+        }
+
+        // 3. Process Location Data inside the transaction
+        const disembarkTime = new Date();
+        const locations =
+          await this.locationsService.findByDailyRideIdInTimeRange(
+            id,
+            dailyRide.embark_time ?? disembarkTime,
+            disembarkTime,
+          );
+        const routeSnapshot = locations.map((loc) => ({
+          lat: loc.latitude,
+          lng: loc.longitude,
+          ts: loc.timestamp,
+        }));
+        const compressedString = Buffer.from(
+          pako.gzip(JSON.stringify(routeSnapshot)),
+        ).toString('base64');
+
+        // 4. Update the ride status AND earnings_processed flag
+        const updatedRide = await transactionalEntityManager.save(
+          DailyRideEntity,
+          {
+            ...dailyRide,
+            status: DailyRideStatus.Finished,
+            end_time: disembarkTime,
+            disembark_time: disembarkTime,
+            route_data: compressedString,
+            earnings_processed: true, // Mark as processed here
+          },
+        );
+
+        // 5. Cleanup
+        await this.locationsService.deleteManyByDailyRideId(id);
+
+        // Note: Push notifications are side-effects; keep them outside transaction or after commit
+        return updatedRide;
+      },
+    );
   }
 
   async cancelDailyRide(
@@ -705,6 +701,7 @@ export class DailyRidesService {
       disembark_latitude: updateDailyRideDto.disembark_latitude,
       disembark_longitude: updateDailyRideDto.disembark_longitude,
       route_data: updateDailyRideDto.route_data,
+      earnings_processed: updateDailyRideDto.earnings_processed,
     });
   }
 
@@ -789,6 +786,7 @@ export class DailyRidesService {
 
     const currentTime = new Date();
 
+    // Process in-memory
     const updatedRides = await Promise.all(
       rides.map(async (ride) => {
         ride.status = status;
@@ -796,23 +794,17 @@ export class DailyRidesService {
         if (status === DailyRideStatus.Active) {
           ride.embark_time = currentTime;
 
-          // Fetch latest driver location for embark coordinates
           if (ride.driver?.id) {
             const latestLocation =
               await this.locationsService.findLatestByDriverId(ride.driver.id);
             ride.embark_latitude = latestLocation?.latitude ?? null;
             ride.embark_longitude = latestLocation?.longitude ?? null;
-            console.log(
-              'batchUpdateStatus - latestLocation for Active:',
-              latestLocation,
-            );
           }
         }
 
         if (status === DailyRideStatus.Finished) {
           ride.disembark_time = currentTime;
 
-          // Fetch latest driver location for disembark coordinates
           if (ride.driver?.id) {
             const latestLocation =
               await this.locationsService.findLatestByDriverId(ride.driver.id);
@@ -824,15 +816,14 @@ export class DailyRidesService {
             );
           }
 
-          // Fetch route snapshot and compress it
-          const embark_time = new Date();
-          const embarkTime = ride.embark_time ?? embark_time;
+          const embarkTime = ride.embark_time ?? new Date();
           const locations =
             await this.locationsService.findByDailyRideIdInTimeRange(
               ride.id,
               embarkTime,
               currentTime,
             );
+
           console.log(
             `DEBUG: Found ${locations.length} locations for ride ${ride.id}`,
           );
@@ -849,19 +840,42 @@ export class DailyRidesService {
 
           console.log('routeSnapshot:', routeSnapshot);
 
-          const compressed = Buffer.from(
+          ride.route_data = Buffer.from(
             pako.gzip(JSON.stringify(routeSnapshot)),
           ).toString('base64');
-          ride.route_data = compressed;
+        }
+
+        //  Update earnings ONLY IF finished and not yet processed
+        if (
+          status === DailyRideStatus.Finished &&
+          ride.driver?.payout &&
+          !ride.earnings_processed &&
+          ride.driver?.sasapay_account_number
+        ) {
+          const { payment_model, agreed_salary } = ride.driver.payout;
+          const amountToEarn = this.EarningsHelper.calculatePerRide(
+            payment_model,
+            agreed_salary,
+          );
+
+          // Atomic DB update
+          await this.usersService.incrementPendingEarnings(
+            ride.driver.id,
+            amountToEarn,
+          );
+
+          // Update flag in memory to be persisted by saveAll
+          ride.earnings_processed = true;
         }
 
         return ride;
       }),
     );
 
+    // Save all changes in one bulk operation
     const savedRides = await this.dailyRideRepository.saveAll(updatedRides);
 
-    // collect Expo push tokens from parent users
+    // Notifications
     const pushTokens = savedRides
       .map((r) => r.ride?.parent?.push_token)
       .filter(
@@ -871,7 +885,6 @@ export class DailyRidesService {
             token.startsWith('ExponentPushToken')),
       );
 
-    // pick notification message based on status
     let message: string;
     switch (status) {
       case DailyRideStatus.Active:
@@ -885,7 +898,6 @@ export class DailyRidesService {
     }
 
     if (pushTokens.length > 0) {
-      // send notifications in parallel
       const notificationPromises = pushTokens.map((token) =>
         this.expoPushService
           .sendPushNotification(token, 'Ride Status Updated', message, {
@@ -893,13 +905,11 @@ export class DailyRidesService {
           })
           .catch((err) => console.error('Push send error:', err)),
       );
-
       await Promise.allSettled(notificationPromises);
     }
 
     return savedRides;
   }
-
   private formatDailyRideResponse(dailyRide: DailyRide): MyRidesResponseDto {
     return {
       id: dailyRide.id,
@@ -942,9 +952,24 @@ export class DailyRidesService {
     };
   }
 
-  // private decodeRouteData(route_data: string): RoutePoint[] {
-  //   const buffer = Buffer.from(route_data, 'base64');
-  //   const decompressed = pako.ungzip(buffer, { to: 'string' });
-  //   return JSON.parse(decompressed);
-  // }
+  private EarningsHelper = {
+    calculatePerRide: (model: 'weekly' | 'monthly', salary: number): number => {
+      const ridesPerPeriod = model === 'weekly' ? 10 : 40;
+      return salary / ridesPerPeriod;
+    },
+
+    isPayoutDay: (model: 'weekly' | 'monthly'): boolean => {
+      const now = new Date();
+      if (model === 'weekly') {
+        return now.getDay() === 6 || now.getDay() === 0; // Sat/Sun
+      } else {
+        const tomorrow = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate() + 1,
+        );
+        return tomorrow.getDate() === 1; // Last day of month
+      }
+    },
+  };
 }

@@ -8,18 +8,18 @@ export type UserKind = 'Parent' | 'Driver' | 'Admin';
 
 export class User {
   @ApiProperty({ type: Number })
-  id: number;
+  id!: number;
 
   @ApiProperty({ type: String, example: 'john.doe@example.com' })
   @Expose({ groups: ['me', 'admin'] })
-  email: string | null;
+  email!: string | null;
 
   @Exclude({ toPlainOnly: true })
   password?: string;
 
   @ApiProperty({ type: String, example: 'email' })
   @Expose({ groups: ['me', 'admin'] })
-  provider: string;
+  provider!: string;
 
   @ApiProperty({ type: String, example: '1234567890' })
   @Expose({ groups: ['me', 'admin'] })
@@ -27,53 +27,53 @@ export class User {
 
   @ApiProperty({ type: String, example: 'John' })
   @Expose({ groups: ['me', 'admin'] })
-  firstName: string | null;
+  firstName!: string | null;
 
   @ApiProperty({ type: String, example: 'Doe' })
   @Expose({ groups: ['me', 'admin'] })
-  lastName: string | null;
+  lastName!: string | null;
 
   @ApiProperty({ type: String, example: 'John Doe' })
   @Expose({ groups: ['me', 'admin'] })
-  name: string | null;
+  name!: string | null;
 
   @ApiProperty({ type: String, example: '+254712345678' })
   @Expose({ groups: ['me', 'admin'] })
-  phone_number: string | null;
+  phone_number!: string | null;
 
   @ApiProperty({
     type: String,
     example: 'ExponentPushToken[QxGljeKLHqZPRsgb9R6GxX]',
   })
   @Expose({ groups: ['me', 'admin'] })
-  push_token: string | null;
+  push_token!: string | null;
 
   @ApiProperty({
     type: Number,
     example: 1,
   })
   @Expose({ groups: ['me', 'admin'] })
-  school_id: number | null;
+  school_id!: number | null;
 
   @ApiProperty({ enum: ['Parent', 'Driver'] })
   @Expose({ groups: ['me', 'admin'] })
-  kind: UserKind;
+  kind!: UserKind;
 
   @ApiProperty({ type: () => UserMetaDto, required: false })
   @Expose({ groups: ['me', 'admin'] })
-  meta: UserMetaDto | null;
+  meta!: UserMetaDto | null;
 
   @ApiProperty({ type: Number, example: 250.0 })
   @Expose({ groups: ['me', 'admin'] })
-  wallet_balance: number;
+  wallet_balance!: number;
 
   @ApiProperty({ type: Boolean })
   @Expose({ groups: ['me', 'admin'] })
-  is_kyc_verified: boolean;
+  is_kyc_verified!: boolean;
 
   @ApiProperty({ type: String, example: 'agfhtjtj.jpg' })
   @Expose({ groups: ['me', 'admin'] })
-  photo: string | null;
+  photo!: string | null;
 
   @ApiProperty({ type: () => Role })
   @Expose({ groups: ['me', 'admin'] })
@@ -85,13 +85,39 @@ export class User {
 
   @ApiProperty()
   @Expose({ groups: ['me', 'admin'] })
-  created_at: Date;
+  created_at!: Date;
 
   @ApiProperty()
   @Expose({ groups: ['me', 'admin'] })
-  updated_at: Date;
+  updated_at!: Date;
 
   @ApiProperty()
   @Expose({ groups: ['me', 'admin'] })
-  deleted_at: Date;
+  deleted_at!: Date;
+
+  @ApiProperty({ type: Number, example: 100.0 })
+  @Expose({ groups: ['me', 'admin'] })
+  pending_earnings!: number; // The money earned but not yet transferred
+
+  @ApiProperty({
+    type: Object,
+    required: false,
+    example: {
+      payment_model: 'weekly',
+      agreed_salary: 5000,
+    },
+  })
+  @Expose({ groups: ['me', 'admin'] })
+  payout!: {
+    payment_model: 'weekly' | 'monthly';
+    agreed_salary: number;
+  } | null;
+
+  @ApiProperty({ type: String, example: '1234567890' })
+  @Expose({ groups: ['me', 'admin'] })
+  sasapay_account_number!: string | null;
+
+  @ApiProperty({ type: String, example: '12345678' })
+  @Expose({ groups: ['me', 'admin'] })
+  ID_number!: string | null;
 }

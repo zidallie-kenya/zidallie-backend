@@ -7,12 +7,15 @@ import {
   NotFoundException,
   BadRequestException,
   Get,
+  UseGuards,
 } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { ApiTags } from '@nestjs/swagger';
 import { Roles } from '../roles/roles.decorator';
 import { RoleEnum } from '../roles/roles.enum';
 import { SasaPayService } from './sasa_pay.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../roles/roles.guard';
 
 @ApiTags('SasaPay')
 @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
@@ -101,6 +104,7 @@ export class PaymentsController {
     return { received: true };
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Post('register')
   async register(
     @Body() body: { documentNumber: string; phone_number: string },
@@ -128,6 +132,7 @@ export class PaymentsController {
     return { message: 'OTP sent to driver', requestId: result.requestId };
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Post('confirm')
   async confirm(@Req() req, @Body('otp') otp: string) {
     const user = await this.usersService.findById(req.user.id);
@@ -180,6 +185,7 @@ export class PaymentsController {
     }
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Post('withdraw')
   async withdraw(@Req() req, @Body('amount') amount: number) {
     const user = await this.usersService.findById(req.user.id);
@@ -216,7 +222,7 @@ export class PaymentsController {
     return { message: 'Withdrawal request received', data: result };
   }
 
-  // payments.controller.ts
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Get('transactions')
   async getTransactions(@Req() req) {
     const user = await this.usersService.findById(req.user.id);
@@ -243,8 +249,7 @@ export class PaymentsController {
     return Number(parts[1]);
   }
 
-  // payments.controller.ts
-
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Get('balance')
   async getBalance(@Req() req) {
     const user = await this.usersService.findById(req.user.id);

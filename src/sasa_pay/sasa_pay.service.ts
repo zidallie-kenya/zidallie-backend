@@ -9,8 +9,7 @@ export class SasaPayService {
   // Obtain these from your developer portal
   private readonly CLIENT_ID = process.env.SASAPAY_CLIENT_ID;
   private readonly CLIENT_SECRET = process.env.SASAPAY_CLIENT_SECRET;
-  private readonly BASE_URL = 'https://sandbox.sasapay.app/api/v2/waas';
-  // private readonly BASE_URL = 'https://api.sasapay.app/api/v2/waas';
+  private readonly SASA_BASE_URL = process.env.SASA_BASE_URL;
 
   private async getAccessToken(): Promise<string> {
     if (this.accessToken && Date.now() < this.tokenExpiry) {
@@ -22,7 +21,7 @@ export class SasaPayService {
     ).toString('base64');
 
     const res = await axios.get(
-      `${this.BASE_URL}/auth/token/?grant_type=client_credentials`,
+      `${this.SASA_BASE_URL}/auth/token/?grant_type=client_credentials`,
       {
         headers: { Authorization: `Basic ${auth}` },
       },
@@ -58,7 +57,7 @@ export class SasaPayService {
     };
 
     const res = await axios.post(
-      `${this.BASE_URL}/personal-onboarding/`,
+      `${this.SASA_BASE_URL}/personal-onboarding/`,
       payload,
       {
         headers: { Authorization: `Bearer ${token}` },
@@ -71,7 +70,7 @@ export class SasaPayService {
   async confirmOnboarding(otp: string, requestId: string) {
     const token = await this.getAccessToken();
     const res = await axios.post(
-      `${this.BASE_URL}/personal-onboarding/confirmation/`,
+      `${this.SASA_BASE_URL}/personal-onboarding/confirmation/`,
       {
         merchantCode: process.env.SASAPAY_MERCHANT_CODE,
         otp,
@@ -81,6 +80,7 @@ export class SasaPayService {
         headers: { Authorization: `Bearer ${token}` },
       },
     );
+    console.log(res.data);
     return res.data;
   }
 
@@ -97,7 +97,7 @@ export class SasaPayService {
 
     try {
       const response = await axios.post(
-        `${this.BASE_URL}/payments/merchant-transfers/`,
+        `${this.SASA_BASE_URL}/payments/merchant-transfers/`,
         {
           merchantCode,
           transactionReference: reference,
@@ -113,6 +113,7 @@ export class SasaPayService {
           headers: { Authorization: `Bearer ${token}` },
         },
       );
+      console.log(response.data);
       return response.data;
     } catch (error) {
       const err = error as AxiosError;
@@ -131,24 +132,37 @@ export class SasaPayService {
   async getWalletBalance(merchantCode: string) {
     const token = await this.getAccessToken();
     const res = await axios.get(
-      `${this.BASE_URL}/merchant-balances/?merchantCode=${merchantCode}`,
+      `${this.SASA_BASE_URL}/merchant-balances/?merchantCode=${merchantCode}`,
       {
         headers: { Authorization: `Bearer ${token}` },
       },
     );
+    console.log(res.data);
     return res.data;
   }
 
-  // sasa_pay.service.ts
   async getTransactionHistory(merchantCode: string, accountNumber: string) {
-    const token = await this.getAccessToken();
-    // Note: Use your actual production/sandbox endpoint as per documentation
-    const res = await axios.get(
-      `${this.BASE_URL}/transactions/?merchantCode=${merchantCode}&accountNumber=${accountNumber}`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      },
-    );
-    return res.data; // This returns the list of transactions
+    try {
+      const token = await this.getAccessToken();
+      const res = await axios.get(
+        `${this.SASA_BASE_URL}/transactions/?merchantCode=${merchantCode}&accountNumber=${accountNumber}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      console.log(res.data);
+      return res.data;
+    } catch (error) {
+      const err = error as AxiosError;
+      console.error(
+        'SasaPay Get Transactions Error:',
+        err.response?.status,
+        err.response?.data ? JSON.stringify(err.response.data) : err.message,
+      );
+
+      console.log(error);
+
+      throw error;
+    }
   }
 }

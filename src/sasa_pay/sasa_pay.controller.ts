@@ -229,11 +229,20 @@ export class PaymentsController {
     if (!user?.sasapay_account_number)
       throw new NotFoundException('Wallet not active');
 
-    const history = await this.sasaPayService.getTransactionHistory(
-      process.env.SASAPAY_MERCHANT_CODE!,
-      user.sasapay_account_number,
-    );
-    return history.data.transactions;
+    try {
+      const history = await this.sasaPayService.getTransactionHistory(
+        process.env.SASAPAY_MERCHANT_CODE!,
+        user.sasapay_account_number,
+      );
+      console.log('Transaction history for user', user.id, history.data);
+      return history.data?.transactions || [];
+    } catch (error) {
+      console.log(error);
+      console.warn(
+        'Could not fetch transaction history from SasaPay. Returning empty list.',
+      );
+      return [];
+    }
   }
 
   /**

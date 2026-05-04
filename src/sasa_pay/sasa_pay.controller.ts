@@ -87,12 +87,14 @@ export class PaymentsController {
       await this.usersService.update(user.id, {
         meta: {
           ...user.meta,
-          sasapay_wallet_approval: true,
-          sasapay_onboarding_rejection_reason: null,
+          tempRequestId: null,
+          tempPhoneNumber: null,
           payments: {
             ...user.meta?.payments,
             account_name: displayName,
           },
+          sasapay_wallet_approval: true,
+          sasapay_onboarding_rejection_reason: null,
         },
       });
       console.log('wallet approved for user', user.id);

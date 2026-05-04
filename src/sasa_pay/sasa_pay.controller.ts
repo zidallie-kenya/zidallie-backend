@@ -2,7 +2,6 @@ import {
   Controller,
   Post,
   Body,
-  UnprocessableEntityException,
   Req,
   NotFoundException,
   BadRequestException,
@@ -61,6 +60,7 @@ export class PaymentsController {
    */
   @Post('onboarding-callback')
   async handleOnboardingCallback(@Body() body: any) {
+    console.log('============================================');
     console.log('SasaPay Onboarding Callback Received', body);
 
     const { accountNumber, accountStatus, description, displayName } = body;
@@ -79,6 +79,11 @@ export class PaymentsController {
     }
 
     if (accountStatus === 'APPROVED') {
+      console.log(
+        `Onboarding approved for user ${user.id}. Updating wallet approval status.`,
+      );
+      console.log('============================================');
+
       await this.usersService.update(user.id, {
         meta: {
           ...user.meta,
@@ -93,6 +98,10 @@ export class PaymentsController {
       console.log('wallet approved for user', user.id);
     } else {
       // Clear the sasapay account so the user can re-register
+      console.log(
+        `Onboarding rejected for user ${user.id}. Reason: ${description}`,
+      );
+      console.log('============================================');
       await this.usersService.update(user.id, {
         meta: {
           ...user.meta,
@@ -156,10 +165,13 @@ export class PaymentsController {
       user.meta.tempRequestId,
     );
 
+    const description = result.message;
+
     if (result.responseCode === '0') {
       // 2. Extract account number from the SasaPay response
       const sasapayAccountNumber = result.data.accountNumber;
       const verifiedMpesaNumber = user.meta.tempPhoneNumber;
+      const displayName = result.data.displayName;
 
       // We update sasapay_account_number and clear the tempRequestId
       await this.usersService.update(user.id, {
@@ -172,10 +184,10 @@ export class PaymentsController {
             kind: 'M-Pesa',
             bank: null,
             account_number: verifiedMpesaNumber,
-            account_name: null,
+            account_name: displayName,
           },
-          sasapay_wallet_approval: false,
-          sasapay_onboarding_rejection_reason: 'Pending KYC Verification',
+          sasapay_wallet_approval: true,
+          sasapay_onboarding_rejection_reason: null,
         },
       });
       console.log(
@@ -189,9 +201,15 @@ export class PaymentsController {
         account: sasapayAccountNumber,
       };
     } else {
-      throw new UnprocessableEntityException(
-        result.message || 'Verification failed',
-      );
+      await this.usersService.update(user.id, {
+        meta: {
+          ...user.meta,
+          sasapay_wallet_approval: false,
+          sasapay_onboarding_rejection_reason: description,
+        },
+      });
+
+      console.error(result.message || 'Verification failed');
     }
   }
 

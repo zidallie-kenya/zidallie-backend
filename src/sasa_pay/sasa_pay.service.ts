@@ -201,10 +201,6 @@ export class SasaPayService {
         err.response?.status,
         err.response?.data ? JSON.stringify(err.response.data) : err.message,
       );
-
-      console.log(error);
-
-      throw error;
     }
   }
 }

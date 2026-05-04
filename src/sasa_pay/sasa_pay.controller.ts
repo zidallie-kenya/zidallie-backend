@@ -8,6 +8,7 @@ import {
   BadRequestException,
   Get,
   UseGuards,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { ApiTags } from '@nestjs/swagger';
@@ -62,7 +63,7 @@ export class PaymentsController {
   async handleOnboardingCallback(@Body() body: any) {
     console.log('SasaPay Onboarding Callback Received', body);
 
-    const { accountNumber, accountStatus, description } = body;
+    const { accountNumber, accountStatus, description, displayName } = body;
 
     // The user already has sasapay_account_number set from the /confirm step
     const user =
@@ -82,14 +83,17 @@ export class PaymentsController {
         meta: {
           ...user.meta,
           sasapay_wallet_approval: true,
-          sasapay_onboarding_rejection_reason: 'Approved',
+          sasapay_onboarding_rejection_reason: null,
+          payments: {
+            ...user.meta?.payments,
+            account_name: displayName,
+          },
         },
       });
       console.log('wallet approved for user', user.id);
-    } else if (accountStatus === 'REJECTED') {
+    } else {
       // Clear the sasapay account so the user can re-register
       await this.usersService.update(user.id, {
-        sasapay_account_number: null,
         meta: {
           ...user.meta,
           sasapay_wallet_approval: false,
@@ -113,23 +117,28 @@ export class PaymentsController {
     const user = await this.usersService.findById(req.user.id);
     if (!user) throw new NotFoundException('User not found');
 
-    const result = await this.sasaPayService.initiateOnboarding(
-      user,
-      body.documentNumber,
-      body.phone_number,
-    );
+    try {
+      const result = await this.sasaPayService.initiateOnboarding(
+        user,
+        body.documentNumber,
+        body.phone_number,
+      );
 
-    // Save requestId in user meta so we can use it during confirmation
-    await this.usersService.update(user.id, {
-      meta: {
-        ...user.meta,
-        tempRequestId: result.requestId,
-        tempPhoneNumber: body.phone_number,
-      },
-    });
+      // Save requestId in user meta so we can use it during confirmation
+      await this.usersService.update(user.id, {
+        meta: {
+          ...user.meta,
+          tempRequestId: result.requestId,
+          tempPhoneNumber: body.phone_number,
+        },
+      });
 
-    console.log('otp sent to driver', result);
-    return { message: 'OTP sent to driver', requestId: result.requestId };
+      console.log('otp sent to driver', result);
+      return { message: 'OTP sent to driver', requestId: result.requestId };
+    } catch (error: any) {
+      console.error('Error during onboarding initiation:', error.message);
+      this.handleSasaPayError(error);
+    }
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -152,20 +161,21 @@ export class PaymentsController {
       const sasapayAccountNumber = result.data.accountNumber;
       const verifiedMpesaNumber = user.meta.tempPhoneNumber;
 
-      // 3. Update the database using your existing UsersService
       // We update sasapay_account_number and clear the tempRequestId
       await this.usersService.update(user.id, {
         sasapay_account_number: sasapayAccountNumber,
         meta: {
           ...user.meta,
-          tempRequestId: null, // Clear the temp ID after success
-          tempPhoneNumber: null, // Clear temp data
+          tempRequestId: null,
+          tempPhoneNumber: null,
           payments: {
             kind: 'M-Pesa',
             bank: null,
-            account_number: verifiedMpesaNumber, // <-- STORED SECURELY HERE FOREVER
-            account_name: result.data.displayName,
+            account_number: verifiedMpesaNumber,
+            account_name: null,
           },
+          sasapay_wallet_approval: false,
+          sasapay_onboarding_rejection_reason: 'Pending KYC Verification',
         },
       });
       console.log(
@@ -189,15 +199,24 @@ export class PaymentsController {
   @Post('withdraw')
   async withdraw(@Req() req, @Body('amount') amount: number) {
     const user = await this.usersService.findById(req.user.id);
-    if (!user || !user.sasapay_account_number) {
-      throw new BadRequestException('Wallet not active');
+
+    // Check if wallet is active and approved
+    if (
+      !user ||
+      !user.sasapay_account_number ||
+      !user.meta?.sasapay_wallet_approval
+    ) {
+      throw new BadRequestException('Wallet not active or awaiting approval');
     }
+
     if (!amount || amount <= 0) {
       throw new BadRequestException('Invalid withdrawal amount');
     }
-    const verifiedMpesaNumber = user.meta?.payments?.account_number;
 
-    if (!verifiedMpesaNumber) {
+    // The user's M-Pesa number stored during registration
+    const recipientMpesaNumber = user.meta?.payments?.account_number;
+
+    if (!recipientMpesaNumber) {
       throw new BadRequestException('No verified M-Pesa number found.');
     }
 
@@ -206,7 +225,8 @@ export class PaymentsController {
     const result = await this.sasaPayService.transferToDriver(
       process.env.SASAPAY_MERCHANT_CODE!,
       amount,
-      verifiedMpesaNumber,
+      user.sasapay_account_number, // The wallet to debit (the driver's SasaPay account)
+      recipientMpesaNumber, //mpesa number stored in user meta during registration
       reference,
     );
 
@@ -266,22 +286,63 @@ export class PaymentsController {
       throw new NotFoundException('Wallet not active');
     }
 
-    // Call SasaPay Service to get balance for this merchant code
-    const result = await this.sasaPayService.getWalletBalance(
-      process.env.SASAPAY_MERCHANT_CODE!,
-    );
+    try {
+      const result = await this.sasaPayService.getWalletBalance(
+        process.env.SASAPAY_MERCHANT_CODE!,
+        user.sasapay_account_number,
+      );
 
-    // Filter the account balance for this specific driver
-    // SasaPay returns an array of accounts, we find the one matching the driver
-    const driverAccount = result.data.Accounts.find(
-      (acc: any) =>
-        acc.account_label === user.sasapay_account_number ||
-        acc.account_label === user.phone_number,
-    );
+      const wallets = result.data?.CustomerWallets || [];
+      const wallet = wallets.find(
+        (w: any) => w.account_number === user.sasapay_account_number,
+      );
 
-    return {
-      balance: driverAccount ? driverAccount.account_balance : 0,
-      currency: result.data.CurrencyCode,
-    };
+      return {
+        balance: wallet ? parseFloat(wallet.account_balance_derived) : 0,
+        currency: wallet ? wallet.currency_code : 'KES',
+      };
+    } catch (error: any) {
+      // This will now catch the error thrown from SasaPayService
+      console.error(`Balance fetch failed for user ${user.id}:`, error.message);
+
+      // If SasaPay says the account is invalid, return 400
+      if (error.message.includes('not found')) {
+        throw new BadRequestException('Wallet account not found in SasaPay');
+      }
+
+      throw new InternalServerErrorException(
+        'Could not retrieve balance from SasaPay',
+      );
+    }
+  }
+
+  // Add this helper method inside PaymentsController
+  private handleSasaPayError(error: any) {
+    const data = error.response?.data;
+    const code = data?.responseCode;
+    const message =
+      data?.message || 'An error occurred with the payment service';
+
+    console.error(`SasaPay Error [${code}]: ${message}`);
+
+    switch (code) {
+      case 'SP8000':
+        throw new BadRequestException('Insufficient wallet balance.');
+      case 'SP4000': // Added this one as it's common for registrations
+      case 'SP4090':
+        throw new BadRequestException('This account is already registered.');
+      case 'SP6000':
+        throw new BadRequestException('Amount is below the minimum allowed.');
+      case 'SP4045':
+        throw new BadRequestException(
+          'Account has incomplete KYC. Please verify your documents.',
+        );
+      case 'SP5030':
+        throw new InternalServerErrorException(
+          'SasaPay service is temporarily unavailable.',
+        );
+      default:
+        throw new BadRequestException(message);
+    }
   }
 }

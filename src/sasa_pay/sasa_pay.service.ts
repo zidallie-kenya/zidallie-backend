@@ -39,14 +39,17 @@ export class SasaPayService {
     phone_number: string,
   ) {
     const token = await this.getAccessToken();
-    const parts = user.name.trim().split(' ');
-    const firstName = parts[0];
-    const lastName = parts[parts.length - 1];
+
+    const nameParts = (user.name || 'Zidallie Customer').trim().split(/\s+/);
+    const firstName = nameParts[0];
+    const lastName =
+      nameParts.length > 1 ? nameParts[nameParts.length - 1] : 'User';
+    const middleName = nameParts.length > 2 ? nameParts[1] : '';
 
     const payload = {
       merchantCode: process.env.SASAPAY_MERCHANT_CODE,
       firstName: firstName,
-      middleName: '',
+      middleName: middleName,
       lastName: lastName,
       countryCode: '254',
       mobileNumber: phone_number,
@@ -56,15 +59,29 @@ export class SasaPayService {
       callbackUrl: `https://zidallie-backend.onrender.com/api/v1/sasa-pay/onboarding-callback`,
     };
 
-    const res = await axios.post(
-      `${this.SASA_BASE_URL}/personal-onboarding/`,
-      payload,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      },
-    );
-    console.log('Onboarding initiation response', res.data);
-    return res.data; // Should return { requestId: "..." }
+    console.log('Final Payload Sent to SasaPay:', JSON.stringify(payload));
+
+    try {
+      const res = await axios.post(
+        `${this.SASA_BASE_URL}/personal-onboarding/`,
+        payload,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        },
+      );
+      return res.data;
+    } catch (error: any) {
+      if (error.response) {
+        console.error(
+          'SasaPay SP4000 Detail:',
+          JSON.stringify(error.response.data),
+        );
+      }
+      throw error;
+    }
   }
 
   async confirmOnboarding(otp: string, requestId: string) {
@@ -85,11 +102,12 @@ export class SasaPayService {
   }
 
   /**
-   * Transfers earnings from Merchant Wallet to Driver Wallet
+   * Transfers earnings from wallet to MPESA
    */
   async transferToDriver(
     merchantCode: string,
     amount: number,
+    senderAccountNumber: string,
     receiverNumber: string,
     reference: string,
   ) {
@@ -97,23 +115,26 @@ export class SasaPayService {
 
     try {
       const response = await axios.post(
-        `${this.SASA_BASE_URL}/payments/merchant-transfers/`,
+        `${this.SASA_BASE_URL}/payments/send-money/`,
         {
           merchantCode,
           transactionReference: reference,
           currencyCode: 'KES',
           TransactionDesc: 'Driver Earnings Payout',
-          amount: amount,
+          senderNumber: senderAccountNumber, // The wallet being charged
+          amount: amount.toFixed(2), // API expects string, 2 decimal places
           reason: 'Earnings Payout',
-          channel: '01', // 01 is SasaPay wallet
+          chargeAccount: senderAccountNumber, // Usually the beneficiary wallet
+          transactionFee: '0.00', // Adjust based on your business logic
+          channel: '01', // 01 = M-PESA
           receiverNumber: receiverNumber,
-          callbackUrl: `${process.env.APP_URL}/v1/sasa-pay/callback`,
+          callbackUrl: `${process.env.APP_URL}/api/v1/sasa-pay/callback`,
         },
         {
           headers: { Authorization: `Bearer ${token}` },
         },
       );
-      console.log(response.data);
+      console.log('Transfer Response:', response.data);
       return response.data;
     } catch (error) {
       const err = error as AxiosError;
@@ -129,16 +150,37 @@ export class SasaPayService {
   /**
    * Check balance of a specific wallet
    */
-  async getWalletBalance(merchantCode: string) {
-    const token = await this.getAccessToken();
-    const res = await axios.get(
-      `${this.SASA_BASE_URL}/merchant-balances/?merchantCode=${merchantCode}`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      },
-    );
-    console.log(res.data);
-    return res.data;
+  async getWalletBalance(merchantCode: string, accountNumber: string) {
+    try {
+      const token = await this.getAccessToken();
+
+      const res = await axios.post(
+        `${this.SASA_BASE_URL}/customer-details/`,
+        {
+          merchantCode,
+          accountNumber,
+          countryCode: '254',
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+
+      // SasaPay often returns a "success" status but with non-zero responseCodes
+      if (res.data.statusCode !== 0 && res.data.status !== true) {
+        throw new Error(
+          res.data.message || 'Failed to retrieve customer details',
+        );
+      }
+
+      return res.data;
+    } catch (error: any) {
+      const message =
+        error.response?.data?.message || error.message || 'SasaPay API Error';
+      console.error(`SasaPay [getCustomerDetails] Error: ${message}`);
+      // Throw a standard Error that the Controller can catch
+      throw new Error(message);
+    }
   }
 
   async getTransactionHistory(merchantCode: string, accountNumber: string) {

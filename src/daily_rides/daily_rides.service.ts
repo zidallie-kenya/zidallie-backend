@@ -816,29 +816,31 @@ export class DailyRidesService {
             );
           }
 
-          const embarkTime = ride.embark_time ?? new Date();
-          const locations =
-            await this.locationsService.findByDailyRideIdInTimeRange(
-              ride.id,
-              embarkTime,
-              currentTime,
-            );
+          // const embarkTime = ride.embark_time ?? new Date();
+          // const locations =
+          //   await this.locationsService.findByDailyRideIdInTimeRange(
+          //     ride.id,
+          //     embarkTime,
+          //     currentTime,
+          //   );
 
-          console.log(
-            `DEBUG: Found ${locations.length} locations for ride ${ride.id}`,
-          );
+          // console.log(
+          //   `DEBUG: Found ${locations.length} locations for ride ${ride.id}`,
+          // );
 
-          if (locations.length > 0) {
-            console.log('DEBUG: First location sample:', locations[0]);
-          }
+          // if (locations.length > 0) {
+          //   console.log('DEBUG: First location sample:', locations[0]);
+          // }
 
-          const routeSnapshot: RoutePoint[] = locations.map((loc) => ({
-            lat: loc.latitude,
-            lng: loc.longitude,
-            ts: loc.timestamp.toISOString(),
-          }));
+          // const routeSnapshot: RoutePoint[] = locations.map((loc) => ({
+          //   lat: loc.latitude,
+          //   lng: loc.longitude,
+          //   ts: loc.timestamp.toISOString(),
+          // }));
 
-          console.log('routeSnapshot:', routeSnapshot);
+          // console.log('routeSnapshot:', routeSnapshot);
+
+          const routeSnapshot: RoutePoint[] = [];
 
           ride.route_data = Buffer.from(
             pako.gzip(JSON.stringify(routeSnapshot)),

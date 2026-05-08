@@ -182,4 +182,6 @@ export abstract class DailyRideRepository {
   abstract findActiveRideByDriverId(
     driverId: number,
   ): Promise<NullableType<DailyRide>>;
+
+  abstract exists(id: DailyRide['id']): Promise<boolean>;
 }

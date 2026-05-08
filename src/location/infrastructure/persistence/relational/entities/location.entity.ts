@@ -13,27 +13,27 @@ import { UserEntity } from '../../../../../users/infrastructure/persistence/rela
 @Entity({ name: 'location' })
 export class LocationEntity extends EntityRelationalHelper {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @ManyToOne(() => DailyRideEntity, (dailyRide) => dailyRide.locations, {
     nullable: false,
   })
   @JoinColumn({ name: 'dailyRideId', referencedColumnName: 'id' })
-  daily_ride: DailyRideEntity;
+  daily_ride!: DailyRideEntity;
 
   @ManyToOne(() => UserEntity, { nullable: false })
   @JoinColumn({ name: 'driverId', referencedColumnName: 'id' })
-  driver: UserEntity;
+  driver!: UserEntity;
 
   @Column({ type: 'float', nullable: false })
-  latitude: number;
+  latitude!: number;
 
   @Column({ type: 'float', nullable: false })
-  longitude: number;
+  longitude!: number;
 
   @Column({ type: 'timestamp', nullable: false })
-  timestamp: Date;
+  timestamp!: Date;
 
   @CreateDateColumn()
-  created_at: Date;
+  created_at!: Date;
 }

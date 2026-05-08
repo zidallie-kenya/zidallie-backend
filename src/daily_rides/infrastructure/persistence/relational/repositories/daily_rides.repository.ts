@@ -23,8 +23,8 @@ const DAILY_RIDE_RELATIONS = [
   'ride.parent',
   'vehicle',
   'driver',
-  'locations',
-  'locations.driver',
+  // 'locations',
+  // 'locations.driver',
 ];
 
 @Injectable()
@@ -157,8 +157,8 @@ export class DailyRidesRelationalRepository implements DailyRideRepository {
       .leftJoinAndSelect('ride.parent', 'ride_parent')
       .leftJoinAndSelect('daily_ride.vehicle', 'vehicle')
       .leftJoinAndSelect('daily_ride.driver', 'driver')
-      .leftJoinAndSelect('daily_ride.locations', 'locations')
-      .leftJoinAndSelect('locations.driver', 'locationDriver')
+      // .leftJoinAndSelect('daily_ride.locations', 'locations')
+      // .leftJoinAndSelect('locations.driver', 'locationDriver')
       .getMany();
 
     return entities.map((dailyRide) => DailyRideMapper.toDomain(dailyRide));
@@ -180,8 +180,8 @@ export class DailyRidesRelationalRepository implements DailyRideRepository {
       .leftJoinAndSelect('ride.parent', 'ride_parent')
       .leftJoinAndSelect('daily_ride.vehicle', 'vehicle')
       .leftJoinAndSelect('daily_ride.driver', 'driver')
-      .leftJoinAndSelect('daily_ride.locations', 'locations')
-      .leftJoinAndSelect('locations.driver', 'locationDriver')
+      // .leftJoinAndSelect('daily_ride.locations', 'locations')
+      // .leftJoinAndSelect('locations.driver', 'locationDriver')
       .where('daily_ride.driver.id = :driverId', { driverId })
       .andWhere('daily_ride.date BETWEEN :startDate AND :endDate', {
         startDate: startDate.toISOString().split('T')[0],
@@ -209,8 +209,8 @@ export class DailyRidesRelationalRepository implements DailyRideRepository {
       .leftJoinAndSelect('daily_ride.ride', 'ride')
       .leftJoinAndSelect('daily_ride.vehicle', 'vehicle')
       .leftJoinAndSelect('daily_ride.driver', 'driver')
-      .leftJoinAndSelect('daily_ride.locations', 'locations')
-      .leftJoinAndSelect('locations.driver', 'locationDriver')
+      // .leftJoinAndSelect('daily_ride.locations', 'locations')
+      // .leftJoinAndSelect('locations.driver', 'locationDriver')
       .leftJoinAndSelect('ride.vehicle', 'ride_vehicle')
       .leftJoinAndSelect('ride.driver', 'ride_driver')
       .leftJoinAndSelect('ride.school', 'ride_school')
@@ -264,8 +264,8 @@ export class DailyRidesRelationalRepository implements DailyRideRepository {
       .leftJoinAndSelect('ride.parent', 'ride_parent')
       .leftJoinAndSelect('daily_ride.vehicle', 'vehicle')
       .leftJoinAndSelect('daily_ride.driver', 'driver')
-      .leftJoinAndSelect('daily_ride.locations', 'locations')
-      .leftJoinAndSelect('locations.driver', 'locationDriver')
+      // .leftJoinAndSelect('daily_ride.locations', 'locations')
+      // .leftJoinAndSelect('locations.driver', 'locationDriver')
       .where('daily_ride.driver.id = :driverId', { driverId })
       .orderBy('daily_ride.date', 'DESC')
       .addOrderBy('daily_ride.start_time', 'ASC');
@@ -287,8 +287,8 @@ export class DailyRidesRelationalRepository implements DailyRideRepository {
       .leftJoinAndSelect('daily_ride.ride', 'ride')
       .leftJoinAndSelect('daily_ride.vehicle', 'vehicle')
       .leftJoinAndSelect('daily_ride.driver', 'driver')
-      .leftJoinAndSelect('daily_ride.locations', 'locations')
-      .leftJoinAndSelect('locations.driver', 'locationDriver')
+      // .leftJoinAndSelect('daily_ride.locations', 'locations')
+      // .leftJoinAndSelect('locations.driver', 'locationDriver')
       .leftJoinAndSelect('ride.vehicle', 'ride_vehicle')
       .leftJoinAndSelect('ride.driver', 'ride_driver')
       .leftJoinAndSelect('ride.school', 'ride_school')
@@ -403,5 +403,12 @@ export class DailyRidesRelationalRepository implements DailyRideRepository {
     });
 
     return completeEntities.map((entity) => DailyRideMapper.toDomain(entity));
+  }
+
+  async exists(id: number): Promise<boolean> {
+    const count = await this.dailyRidesRepository.count({
+      where: { id: Number(id) },
+    });
+    return count > 0;
   }
 }

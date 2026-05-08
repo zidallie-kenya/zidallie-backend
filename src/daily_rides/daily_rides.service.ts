@@ -28,17 +28,12 @@ import { IPaginationOptions } from '../utils/types/pagination-options';
 import { JwtPayloadType } from '../auth/strategies/types/jwt-payload.type';
 import { MyRidesResponseDto } from './dto/response.dto';
 import { ExpoPushService } from './expopush.service';
-import { DataSource } from 'typeorm'; // Add for transactions
+import { DataSource, In } from 'typeorm'; // Add for transactions
 import { DailyRideEntity } from './infrastructure/persistence/relational/entities/daily_ride.entity';
 import { LocationsService } from '../location/location.service';
 import { Location } from '../location/domain/location';
 import * as pako from 'pako';
-
-interface RoutePoint {
-  lat: number;
-  lng: number;
-  ts: string;
-}
+import { DailyRideMapper } from './infrastructure/persistence/relational/mappers/daily_rides.mapper';
 
 @Injectable()
 export class DailyRidesService {
@@ -774,144 +769,270 @@ export class DailyRidesService {
     });
   }
 
+  // async batchUpdateStatus(
+  //   ids: number[],
+  //   status: DailyRideStatus,
+  // ): Promise<DailyRide[]> {
+  //   const rides = await this.dailyRideRepository.findByIds(ids);
+
+  //   if (rides.length === 0) {
+  //     throw new NotFoundException(`No rides found for given IDs`);
+  //   }
+
+  //   const currentTime = new Date();
+
+  //   // Process in-memory
+  //   const updatedRides = await Promise.all(
+  //     rides.map(async (ride) => {
+  //       ride.status = status;
+
+  //       if (status === DailyRideStatus.Active) {
+  //         ride.embark_time = currentTime;
+
+  //         if (ride.driver?.id) {
+  //           const latestLocation =
+  //             await this.locationsService.findLatestByDriverId(ride.driver.id);
+  //           ride.embark_latitude = latestLocation?.latitude ?? null;
+  //           ride.embark_longitude = latestLocation?.longitude ?? null;
+  //         }
+  //       }
+
+  //       if (status === DailyRideStatus.Finished) {
+  //         ride.disembark_time = currentTime;
+
+  //         if (ride.driver?.id) {
+  //           const latestLocation =
+  //             await this.locationsService.findLatestByDriverId(ride.driver.id);
+  //           ride.disembark_latitude = latestLocation?.latitude ?? null;
+  //           ride.disembark_longitude = latestLocation?.longitude ?? null;
+  //         }
+
+  //         // Fetch all locations recorded for this specific ride
+  //         const locations = await this.locationsService.findByDailyRideId(
+  //           ride.id,
+  //         );
+
+  //         const routeSnapshot = locations.map((loc) => ({
+  //           lat: loc.latitude,
+  //           lng: loc.longitude,
+  //           ts: loc.timestamp,
+  //         }));
+
+  //         // Compress the GPS points into a single string for long-term storage
+  //         ride.route_data = Buffer.from(
+  //           pako.gzip(JSON.stringify(routeSnapshot)),
+  //         ).toString('base64');
+
+  //         await this.locationsService.deleteManyByDailyRideId(ride.id);
+
+  //         //  Update earnings ONLY IF finished and not yet processed
+  //         if (
+  //           ride.driver?.payout &&
+  //           !ride.earnings_processed &&
+  //           ride.driver?.sasapay_account_number
+  //         ) {
+  //           const { payment_model, agreed_salary } = ride.driver.payout;
+  //           const amountToEarn = this.EarningsHelper.calculatePerRide(
+  //             payment_model,
+  //             agreed_salary,
+  //           );
+
+  //           // Atomic DB update
+  //           await this.usersService.incrementPendingEarnings(
+  //             ride.driver.id,
+  //             amountToEarn,
+  //           );
+
+  //           // Update flag in memory to be persisted by saveAll
+  //           ride.earnings_processed = true;
+  //         }
+  //       }
+  //       return ride;
+  //     }),
+  //   );
+
+  //   // Save all changes in one bulk operation
+  //   const savedRides = await this.dailyRideRepository.saveAll(updatedRides);
+
+  //   // Notifications
+  //   const pushTokens = savedRides
+  //     .map((r) => r.ride?.parent?.push_token)
+  //     .filter(
+  //       (token): token is string =>
+  //         !!token &&
+  //         (token.startsWith('ExpoPushToken') ||
+  //           token.startsWith('ExponentPushToken')),
+  //     );
+
+  //   let message: string;
+  //   switch (status) {
+  //     case DailyRideStatus.Active:
+  //       message = 'Your child has safely boarded and is on their way.';
+  //       break;
+  //     case DailyRideStatus.Finished:
+  //       message = 'Your child has safely arrived at their destination.';
+  //       break;
+  //     default:
+  //       message = `Your ride status is now ${status}`;
+  //   }
+
+  //   if (pushTokens.length > 0) {
+  //     const notificationPromises = pushTokens.map((token) =>
+  //       this.expoPushService
+  //         .sendPushNotification(token, 'Ride Status Updated', message, {
+  //           status,
+  //         })
+  //         .catch((err) => console.error('Push send error:', err)),
+  //     );
+  //     await Promise.allSettled(notificationPromises);
+  //   }
+
+  //   return savedRides;
+  // }
+
   async batchUpdateStatus(
     ids: number[],
     status: DailyRideStatus,
   ): Promise<DailyRide[]> {
-    const rides = await this.dailyRideRepository.findByIds(ids);
+    // We use the dataSource to start a transaction
+    return await this.dataSource.transaction(
+      async (transactionalEntityManager) => {
+        // 1. Fetch rides using the transactional manager to ensure consistency
+        const rides = await transactionalEntityManager.find(DailyRideEntity, {
+          where: { id: In(ids) },
+          relations: [
+            'driver',
+            'ride',
+            'ride.parent',
+            'ride.student',
+            'driver.payout',
+          ],
+        });
 
-    if (rides.length === 0) {
-      throw new NotFoundException(`No rides found for given IDs`);
-    }
+        if (rides.length === 0) {
+          throw new NotFoundException(`No rides found for given IDs`);
+        }
 
-    const currentTime = new Date();
+        const currentTime = new Date();
 
-    // Process in-memory
-    const updatedRides = await Promise.all(
-      rides.map(async (ride) => {
-        ride.status = status;
+        for (const ride of rides) {
+          ride.status = status;
 
-        if (status === DailyRideStatus.Active) {
-          ride.embark_time = currentTime;
-
-          if (ride.driver?.id) {
+          if (status === DailyRideStatus.Active) {
+            ride.embark_time = currentTime;
+            // Logic for latest location...
             const latestLocation =
-              await this.locationsService.findLatestByDriverId(ride.driver.id);
+              await this.locationsService.findLatestByDriverId(
+                ride.driver?.id ?? 0,
+              );
             ride.embark_latitude = latestLocation?.latitude ?? null;
             ride.embark_longitude = latestLocation?.longitude ?? null;
           }
-        }
 
-        if (status === DailyRideStatus.Finished) {
-          ride.disembark_time = currentTime;
+          if (status === DailyRideStatus.Finished) {
+            ride.disembark_time = currentTime;
 
-          if (ride.driver?.id) {
+            // Capture Disembark Location
             const latestLocation =
-              await this.locationsService.findLatestByDriverId(ride.driver.id);
+              await this.locationsService.findLatestByDriverId(
+                ride.driver?.id ?? 0,
+              );
             ride.disembark_latitude = latestLocation?.latitude ?? null;
             ride.disembark_longitude = latestLocation?.longitude ?? null;
-            console.log(
-              'batchUpdateStatus - latestLocation for Finished:',
-              latestLocation,
+
+            // 2. Process Route Data (Compress)
+            const locations = await this.locationsService.findByDailyRideId(
+              ride.id,
             );
+            const routeSnapshot = locations.map((loc) => ({
+              lat: loc.latitude,
+              lng: loc.longitude,
+              ts: loc.timestamp,
+            }));
+
+            ride.route_data = Buffer.from(
+              pako.gzip(JSON.stringify(routeSnapshot)),
+            ).toString('base64');
+
+            // 3. DELETE RAW LOCATIONS (Inside Transaction)
+            // We use the manager directly to ensure it's part of this transaction
+            await transactionalEntityManager.delete(LocationEntity, {
+              daily_ride: { id: ride.id },
+            });
+
+            // 4. PAY DRIVER (Inside Transaction)
+            if (
+              ride.driver?.payout &&
+              !ride.earnings_processed &&
+              ride.driver?.sasapay_account_number
+            ) {
+              const amountToEarn = this.EarningsHelper.calculatePerRide(
+                ride.driver.payout.payment_model,
+                ride.driver.payout.agreed_salary,
+              );
+
+              // Atomic increment using the transaction manager
+              await transactionalEntityManager.increment(
+                UserEntity,
+                { id: ride.driver.id },
+                'pending_earnings',
+                amountToEarn,
+              );
+
+              ride.earnings_processed = true;
+            }
           }
-
-          // const embarkTime = ride.embark_time ?? new Date();
-          // const locations =
-          //   await this.locationsService.findByDailyRideIdInTimeRange(
-          //     ride.id,
-          //     embarkTime,
-          //     currentTime,
-          //   );
-
-          // console.log(
-          //   `DEBUG: Found ${locations.length} locations for ride ${ride.id}`,
-          // );
-
-          // if (locations.length > 0) {
-          //   console.log('DEBUG: First location sample:', locations[0]);
-          // }
-
-          // const routeSnapshot: RoutePoint[] = locations.map((loc) => ({
-          //   lat: loc.latitude,
-          //   lng: loc.longitude,
-          //   ts: loc.timestamp.toISOString(),
-          // }));
-
-          // console.log('routeSnapshot:', routeSnapshot);
-
-          const routeSnapshot: RoutePoint[] = [];
-
-          ride.route_data = Buffer.from(
-            pako.gzip(JSON.stringify(routeSnapshot)),
-          ).toString('base64');
         }
 
-        //  Update earnings ONLY IF finished and not yet processed
-        if (
-          status === DailyRideStatus.Finished &&
-          ride.driver?.payout &&
-          !ride.earnings_processed &&
-          ride.driver?.sasapay_account_number
-        ) {
-          const { payment_model, agreed_salary } = ride.driver.payout;
-          const amountToEarn = this.EarningsHelper.calculatePerRide(
-            payment_model,
-            agreed_salary,
-          );
+        // 5. SAVE ALL RIDES AT ONCE
+        const savedEntities = await transactionalEntityManager.save(
+          DailyRideEntity,
+          rides,
+        );
 
-          // Atomic DB update
-          await this.usersService.incrementPendingEarnings(
-            ride.driver.id,
-            amountToEarn,
-          );
+        // 6. MAP BACK TO DOMAIN
+        const savedRides = savedEntities.map((entity) =>
+          DailyRideMapper.toDomain(entity),
+        );
 
-          // Update flag in memory to be persisted by saveAll
-          ride.earnings_processed = true;
-        }
+        // Side Effects (Notifications) - Run these after the transaction is committed
+        this.sendBatchNotifications(savedRides, status);
 
-        return ride;
-      }),
+        return savedRides;
+      },
     );
+  }
 
-    // Save all changes in one bulk operation
-    const savedRides = await this.dailyRideRepository.saveAll(updatedRides);
-
-    // Notifications
-    const pushTokens = savedRides
+  // Helper method to keep the transaction block clean
+  private sendBatchNotifications(rides: DailyRide[], status: DailyRideStatus) {
+    const pushTokens = rides
       .map((r) => r.ride?.parent?.push_token)
-      .filter(
-        (token): token is string =>
-          !!token &&
-          (token.startsWith('ExpoPushToken') ||
-            token.startsWith('ExponentPushToken')),
-      );
+      .filter((token): token is string => !!token && token.startsWith('Expo'));
 
-    let message: string;
-    switch (status) {
-      case DailyRideStatus.Active:
-        message = 'Your child has safely boarded and is on their way.';
-        break;
-      case DailyRideStatus.Finished:
-        message = 'Your child has safely arrived at their destination.';
-        break;
-      default:
-        message = `Your ride status is now ${status}`;
-    }
+    const message =
+      status === DailyRideStatus.Active
+        ? 'Your child has safely boarded and is on their way.'
+        : 'Your child has safely arrived at their destination.';
 
     if (pushTokens.length > 0) {
-      const notificationPromises = pushTokens.map((token) =>
-        this.expoPushService
-          .sendPushNotification(token, 'Ride Status Updated', message, {
-            status,
-          })
-          .catch((err) => console.error('Push send error:', err)),
+      const promises = pushTokens.map((token) =>
+        this.expoPushService.sendPushNotification(
+          token,
+          'Ride Update',
+          message,
+          { status },
+        ),
       );
-      await Promise.allSettled(notificationPromises);
+      Promise.allSettled(promises).catch((e) =>
+        console.error('Notification Error', e),
+      );
     }
-
-    return savedRides;
   }
+
+  async exists(id: number): Promise<boolean> {
+    return this.dailyRideRepository.exists(id);
+  }
+
   private formatDailyRideResponse(dailyRide: DailyRide): MyRidesResponseDto {
     return {
       id: dailyRide.id,

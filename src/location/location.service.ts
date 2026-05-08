@@ -17,6 +17,8 @@ import { User } from '../users/domain/user';
 import { DailyRidesService } from '../daily_rides/daily_rides.service';
 import { UsersService } from '../users/users.service';
 import { Cron } from '@nestjs/schedule';
+import { DailyRideEntity } from '../daily_rides/infrastructure/persistence/relational/entities/daily_ride.entity';
+import { UserEntity } from '../users/infrastructure/persistence/relational/entities/user.entity';
 
 @Injectable()
 export class LocationsService {
@@ -28,8 +30,6 @@ export class LocationsService {
   ) {}
 
   async create(createLocationDto: CreateLocationDto): Promise<Location> {
-    let dailyRide: DailyRide | undefined = undefined;
-
     if (!createLocationDto.dailyRideId) {
       throw new UnprocessableEntityException({
         status: HttpStatus.UNPROCESSABLE_ENTITY,
@@ -37,20 +37,17 @@ export class LocationsService {
       });
     }
 
-    const dailyRideEntity = await this.dailyRidesService.findById(
+    const rideExists = await this.dailyRidesService.exists(
       createLocationDto.dailyRideId,
     );
-    if (!dailyRideEntity) {
+
+    if (!rideExists) {
       throw new UnprocessableEntityException({
         status: HttpStatus.UNPROCESSABLE_ENTITY,
-        errors: {
-          dailyRide: 'this dailyRide does not exists',
-        },
+        errors: { dailyRide: 'this dailyRide does not exist' },
       });
     }
-    dailyRide = dailyRideEntity;
 
-    let driver: User | undefined = undefined;
     if (createLocationDto.driverId) {
       const driverEntity = await this.usersService.findById(
         createLocationDto.driverId,
@@ -63,15 +60,16 @@ export class LocationsService {
           },
         });
       }
-      driver = driverEntity;
     }
 
     return this.locationsRepository.create({
       latitude: createLocationDto.latitude,
       longitude: createLocationDto.longitude,
       timestamp: new Date(createLocationDto.timestamp),
-      daily_ride: dailyRide,
-      driver: driver!,
+      daily_ride: { id: createLocationDto.dailyRideId } as DailyRideEntity,
+      driver: createLocationDto.driverId
+        ? ({ id: createLocationDto.driverId } as UserEntity)
+        : (undefined as any),
     });
   }
 

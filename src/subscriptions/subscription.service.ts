@@ -86,6 +86,17 @@ export class SubscriptionService {
   // SCHOOL PAYMENT HANDLER
   // -------------------------------
   private async handleSchoolPayment(student, phoneNumber, amount, school) {
+    // Check for active subscription
+    const activeSubscription =
+      await this.subscriptionsRepository.findActiveByStudentId(student.id);
+
+    if (!activeSubscription) {
+      console.log('No active subscription found for student:', student.id);
+      throw new BadRequestException(
+        'No active subscription found for the student. Please contact support.',
+      );
+    }
+
     const consumerKey = process.env.MPESA_CONSUMER_KEY;
     const secretKey = process.env.MPESA_SECRET_KEY;
     if (!consumerKey || !secretKey) {
@@ -132,17 +143,6 @@ export class SubscriptionService {
       if (data.ResponseCode !== '0' && data.ResponseCode !== 0) {
         throw new BadRequestException(
           data.ResponseDescription || 'MPESA Error',
-        );
-      }
-
-      // Check for active subscription
-      const activeSubscription =
-        await this.subscriptionsRepository.findActiveByStudentId(student.id);
-
-      if (!activeSubscription) {
-        console.log('No active subscription found for student:', student.id);
-        throw new BadRequestException(
-          'No active subscription found for the student. Please contact support.',
         );
       }
 

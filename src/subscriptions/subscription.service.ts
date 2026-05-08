@@ -214,7 +214,7 @@ export class SubscriptionService {
         pendingPayment: pending,
         checkoutRequestId: data.CheckoutRequestID,
       };
-    } catch (error) {
+    } catch (error: any) {
       logger.error(`M-Pesa STK Push Error for student ${student.id}`);
       console.error(
         'MPESA STK Push Error:',
@@ -327,7 +327,7 @@ export class SubscriptionService {
       );
 
       return { message: 'Payment initiated', pendingPayment: pending };
-    } catch (error) {
+    } catch (error: any) {
       console.error(
         'MPESA STK Push Error:',
         error.response?.data || error.message,
@@ -529,7 +529,7 @@ export class SubscriptionService {
         );
         console.log(`✅ Disbursement completed`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(
         `Error handling callback for ${checkoutRequestID}:`,
         error.message,
@@ -735,7 +735,7 @@ export class SubscriptionService {
         disbursementRecord,
         amountToDisburse: amt,
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error processing daily payment:', error);
       logger.error('Error processing daily payment: ' + error.message);
       return { shouldDisburse: false };
@@ -1000,7 +1000,7 @@ export class SubscriptionService {
         disbursementRecord,
         amountToDisburse,
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error processing term payment:', error);
       logger.error('Error processing term payment: ' + error.message);
       return { shouldDisburse: false };
@@ -1137,7 +1137,7 @@ export class SubscriptionService {
       logger.info(
         `Carpool/Private payment processed successfully with Transaction ID: ${transactionId} for student: ${student.id}`,
       );
-    } catch (error) {
+    } catch (error: any) {
       console.error(
         `Error processing carpool/private payment for studentId ${student.id}:`,
         error,
@@ -1218,7 +1218,7 @@ export class SubscriptionService {
           status: 'failed',
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error disbursing funds:', error);
       logger.error('Error disbursing funds: ' + error.message);
 
@@ -1227,7 +1227,7 @@ export class SubscriptionService {
         await this.schoolDisbursementRepository.update(disbursementRecord.id, {
           status: 'failed',
         });
-      } catch (updateError) {
+      } catch (updateError: any) {
         console.error('Error updating disbursement status:', updateError);
         logger.error(
           'Error updating disbursement status: ' + updateError.message,
@@ -1369,7 +1369,7 @@ export class SubscriptionService {
       );
 
       return { ResultCode: 0, ResultDesc: 'Accepted' };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error processing M-Pesa callback:', error);
       logger.error('Error processing M-Pesa callback: ' + error.message);
       return { ResultCode: 0, ResultDesc: 'Accepted' };
@@ -1427,7 +1427,7 @@ export class SubscriptionService {
         },
       });
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('B2C error:', error.response?.data || error.message);
       logger.error(
         'Error during B2C disbursement: ' +
@@ -1490,7 +1490,7 @@ export class SubscriptionService {
         },
       });
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       logger.error(
         'Error during B2B disbursement: ' +
           (error.response?.data || error.message),
@@ -1511,7 +1511,7 @@ export class SubscriptionService {
         { headers: { Authorization: `Basic ${auth}` } },
       );
       return response.data.access_token;
-    } catch (error) {
+    } catch (error: any) {
       logger.error(
         'Error getting M-Pesa access token: ' +
           (error.response?.data || error.message),
@@ -1548,7 +1548,7 @@ export class SubscriptionService {
         Buffer.from(password),
       );
       return encryptedBuffer.toString('base64');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error generating security credentials:', error);
       logger.error('Error generating security credentials: ' + error.message);
       throw error;

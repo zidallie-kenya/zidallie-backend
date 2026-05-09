@@ -71,6 +71,8 @@ export class SubscriptionService {
           'Student is not associated with a school',
         );
       const school = student.school;
+      console.log(`Initiating school payment for student: ${student.id}`);
+      console.log(`Amount: ${dto.amount}, Phone Number: ${dto.phone_number}`);
 
       return this.handleSchoolPayment(
         student,

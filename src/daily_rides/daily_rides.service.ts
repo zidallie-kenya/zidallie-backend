@@ -900,13 +900,7 @@ export class DailyRidesService {
         // 1. Fetch rides using the transactional manager to ensure consistency
         const rides = await transactionalEntityManager.find(DailyRideEntity, {
           where: { id: In(ids) },
-          relations: [
-            'driver',
-            'ride',
-            'ride.parent',
-            'ride.student',
-            'driver.payout',
-          ],
+          relations: ['driver', 'ride', 'ride.parent', 'ride.student'],
         });
 
         if (rides.length === 0) {

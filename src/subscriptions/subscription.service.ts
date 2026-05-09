@@ -51,39 +51,33 @@ export class SubscriptionService {
   // INITIATE PAYMENT
   // -------------------------------
   async initiatePayment(dto: CreateSubscriptionDto) {
-    const student = await this.studentsService.findById(dto.student_id);
+    const consumerKey = process.env.MPESA_CONSUMER_KEY;
+    const secretKey = process.env.MPESA_SECRET_KEY;
+    if (!consumerKey || !secretKey) {
+      logger.error('Missing M-Pesa credentials');
+      throw new Error('Missing M-Pesa credentials');
+    }
+
+    const [student, accessToken] = await Promise.all([
+      this.studentRepository.findOne(dto.student_id),
+      this.getAccessToken(consumerKey, secretKey),
+    ]);
+
     if (!student) throw new BadRequestException('Student not found');
 
-    // Route based on service_type
     if (student.service_type === 'school') {
       if (!student.school)
         throw new BadRequestException(
           'Student is not associated with a school',
         );
-      const school = await this.schoolsService.findById(student.school.id);
-      if (!school) throw new BadRequestException('School not found');
-
-      console.log(
-        '++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++',
-      );
-
-      // console.log(`Initiating school payment for student: ${student.id}`);
-      // console.log(`Amount: ${dto.amount}, Phone Number: ${dto.phone_number}`);
-      const student_try = await this.studentRepository.findOne(student.id);
-
-      if (!student_try) throw new BadRequestException('Student not found');
-
-      console.log(student_try);
-
-      console.log(
-        '++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++',
-      );
+      const school = student.school;
 
       return this.handleSchoolPayment(
         student,
         dto.phone_number,
         dto.amount,
         school,
+        accessToken,
       );
     } else if (
       student.service_type === 'carpool' ||
@@ -93,6 +87,7 @@ export class SubscriptionService {
         student,
         dto.phone_number,
         dto.amount,
+        accessToken,
       );
     } else {
       throw new BadRequestException('Invalid service type');
@@ -102,7 +97,13 @@ export class SubscriptionService {
   // -------------------------------
   // SCHOOL PAYMENT HANDLER
   // -------------------------------
-  private async handleSchoolPayment(student, phoneNumber, amount, school) {
+  private async handleSchoolPayment(
+    student,
+    phoneNumber,
+    amount,
+    school,
+    accessToken,
+  ) {
     // Check for active subscription
     const activeSubscription =
       await this.subscriptionsRepository.findActiveByStudentId(student.id);
@@ -114,14 +115,14 @@ export class SubscriptionService {
       );
     }
 
-    const consumerKey = process.env.MPESA_CONSUMER_KEY;
-    const secretKey = process.env.MPESA_SECRET_KEY;
-    if (!consumerKey || !secretKey) {
-      logger.error('Missing M-Pesa credentials');
-      throw new Error('Missing M-Pesa credentials');
-    }
+    // const consumerKey = process.env.MPESA_CONSUMER_KEY;
+    // const secretKey = process.env.MPESA_SECRET_KEY;
+    // if (!consumerKey || !secretKey) {
+    //   logger.error('Missing M-Pesa credentials');
+    //   throw new Error('Missing M-Pesa credentials');
+    // }
 
-    const accessToken = await this.getAccessToken(consumerKey, secretKey);
+    // const accessToken = await this.getAccessToken(consumerKey, secretKey);
     const timestamp = this.getTimestamp();
     const password = Buffer.from(
       `${process.env.MPESA_C2B_PAYBILL}${process.env.MPESA_PASS_KEY}${timestamp}`,
@@ -255,14 +256,19 @@ export class SubscriptionService {
   // -------------------------------
   // CARPOOL/PRIVATE PAYMENT HANDLER
   // -------------------------------
-  private async handleCarpoolPrivatePayment(student, phoneNumber, amount) {
-    const consumerKey = process.env.MPESA_CONSUMER_KEY;
-    const secretKey = process.env.MPESA_SECRET_KEY;
+  private async handleCarpoolPrivatePayment(
+    student,
+    phoneNumber,
+    amount,
+    accessToken,
+  ) {
+    // const consumerKey = process.env.MPESA_CONSUMER_KEY;
+    // const secretKey = process.env.MPESA_SECRET_KEY;
 
-    if (!consumerKey || !secretKey) {
-      logger.error('Missing M-Pesa credentials');
-      throw new Error('Missing M-Pesa credentials');
-    }
+    // if (!consumerKey || !secretKey) {
+    //   logger.error('Missing M-Pesa credentials');
+    //   throw new Error('Missing M-Pesa credentials');
+    // }
 
     const subscription =
       await this.subscriptionsRepository.findActiveByStudentId(student.id);
@@ -290,7 +296,7 @@ export class SubscriptionService {
       );
     }
 
-    const accessToken = await this.getAccessToken(consumerKey, secretKey);
+    // const accessToken = await this.getAccessToken(consumerKey, secretKey);
     const timestamp = this.getTimestamp();
     const password = Buffer.from(
       `${process.env.MPESA_C2B_PAYBILL}${process.env.MPESA_PASS_KEY}${timestamp}`,

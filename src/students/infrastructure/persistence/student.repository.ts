@@ -20,6 +20,8 @@ export abstract class StudentRepository {
 
   abstract findById(id: Student['id']): Promise<NullableType<Student>>;
 
+  abstract findOne(id: Student['id']): Promise<NullableType<Student>>;
+
   abstract findByIds(ids: Student['id'][]): Promise<Student[]>;
 
   abstract findByParentId(parentId: number): Promise<Student[]>;

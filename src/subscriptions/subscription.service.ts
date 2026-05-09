@@ -19,6 +19,7 @@ import { StudentPaymentEntity } from './infrastructure/persistence/relational/en
 import { SchoolDisbursementEntity } from './infrastructure/persistence/relational/entities/school_disbursement.entity';
 import { SubscriptionEntity } from './infrastructure/persistence/relational/entities/subscription.entity';
 import { subscriptionLogger as logger } from './subscription.logger';
+import { StudentRepository } from '../students/infrastructure/persistence/student.repository';
 
 interface DisbursementData {
   school: any;
@@ -29,6 +30,8 @@ interface DisbursementData {
 @Injectable()
 export class SubscriptionService {
   private readonly MPESA_BASEURL = process.env.MPESA_BASE_URL;
+  private cachedToken: string | null = null;
+  private tokenExpiry: number = 0;
 
   constructor(
     private readonly pendingPaymentsRepository: PendingPaymentRepository,
@@ -38,6 +41,7 @@ export class SubscriptionService {
     private readonly studentPaymentRepository: StudentPaymentRepository,
     private readonly schoolDisbursementRepository: SchoolDisbursementRepository,
     private readonly b2cMpesaTransactionRepository: B2cMpesaTransactionRepository,
+    private readonly studentRepository: StudentRepository,
     private readonly studentsService: StudentsService,
     private readonly schoolsService: SchoolsService,
     private readonly dataSource: DataSource,
@@ -59,8 +63,21 @@ export class SubscriptionService {
       const school = await this.schoolsService.findById(student.school.id);
       if (!school) throw new BadRequestException('School not found');
 
-      console.log(`Initiating school payment for student: ${student.id}`);
-      console.log(`Amount: ${dto.amount}, Phone Number: ${dto.phone_number}`);
+      console.log(
+        '++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++',
+      );
+
+      // console.log(`Initiating school payment for student: ${student.id}`);
+      // console.log(`Amount: ${dto.amount}, Phone Number: ${dto.phone_number}`);
+      const student_try = await this.studentRepository.findOne(student.id);
+
+      if (!student_try) throw new BadRequestException('Student not found');
+
+      console.log(student_try);
+
+      console.log(
+        '++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++',
+      );
 
       return this.handleSchoolPayment(
         student,
@@ -1504,13 +1521,27 @@ export class SubscriptionService {
   // HELPER FUNCTIONS
   // -------------------------------
   private async getAccessToken(consumerKey: string, secretKey: string) {
+    const now = Date.now();
+
+    if (this.cachedToken && now < this.tokenExpiry) {
+      return this.cachedToken;
+    }
+
     const auth = Buffer.from(`${consumerKey}:${secretKey}`).toString('base64');
+
     try {
       const response = await axios.get(
         `${this.MPESA_BASEURL}/oauth/v3/generate?grant_type=client_credentials`,
         { headers: { Authorization: `Basic ${auth}` } },
       );
-      return response.data.access_token;
+
+      this.cachedToken = response.data.access_token;
+      this.tokenExpiry =
+        now + parseInt(response.data.expires_in) * 1000 - 60000;
+
+      return this.cachedToken;
+
+      // return response.data.access_token;
     } catch (error: any) {
       logger.error(
         'Error getting M-Pesa access token: ' +

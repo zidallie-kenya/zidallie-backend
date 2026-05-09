@@ -85,6 +85,15 @@ export class StudentsRelationalRepository implements StudentRepository {
     return entity ? StudentMapper.toDomain(entity) : null;
   }
 
+  async findOne(id: Student['id']): Promise<NullableType<Student>> {
+    const entity = await this.studentsRepository.findOne({
+      where: { id: Number(id) },
+      relations: ['school', 'parent', 'subscriptions'],
+    });
+
+    return entity ? StudentMapper.toDomain(entity) : null;
+  }
+
   async findByIds(ids: Student['id'][]): Promise<Student[]> {
     const entities = await this.studentsRepository.find({
       where: { id: In(ids) },

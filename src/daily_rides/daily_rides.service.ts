@@ -34,6 +34,7 @@ import { LocationsService } from '../location/location.service';
 import { Location } from '../location/domain/location';
 import * as pako from 'pako';
 import { DailyRideMapper } from './infrastructure/persistence/relational/mappers/daily_rides.mapper';
+import { SubscriptionRepository } from '../subscriptions/infrastructure/persistence/relational/repositories/subscription.repository';
 
 @Injectable()
 export class DailyRidesService {
@@ -43,6 +44,7 @@ export class DailyRidesService {
     private readonly vehiclesService: VehicleService,
     private readonly usersService: UsersService,
     private readonly expoPushService: ExpoPushService,
+    private readonly subscriptionRepository: SubscriptionRepository,
     private readonly dataSource: DataSource,
     @Inject(forwardRef(() => LocationsService))
     private readonly locationsService: LocationsService,
@@ -769,127 +771,6 @@ export class DailyRidesService {
     });
   }
 
-  // async batchUpdateStatus(
-  //   ids: number[],
-  //   status: DailyRideStatus,
-  // ): Promise<DailyRide[]> {
-  //   const rides = await this.dailyRideRepository.findByIds(ids);
-
-  //   if (rides.length === 0) {
-  //     throw new NotFoundException(`No rides found for given IDs`);
-  //   }
-
-  //   const currentTime = new Date();
-
-  //   // Process in-memory
-  //   const updatedRides = await Promise.all(
-  //     rides.map(async (ride) => {
-  //       ride.status = status;
-
-  //       if (status === DailyRideStatus.Active) {
-  //         ride.embark_time = currentTime;
-
-  //         if (ride.driver?.id) {
-  //           const latestLocation =
-  //             await this.locationsService.findLatestByDriverId(ride.driver.id);
-  //           ride.embark_latitude = latestLocation?.latitude ?? null;
-  //           ride.embark_longitude = latestLocation?.longitude ?? null;
-  //         }
-  //       }
-
-  //       if (status === DailyRideStatus.Finished) {
-  //         ride.disembark_time = currentTime;
-
-  //         if (ride.driver?.id) {
-  //           const latestLocation =
-  //             await this.locationsService.findLatestByDriverId(ride.driver.id);
-  //           ride.disembark_latitude = latestLocation?.latitude ?? null;
-  //           ride.disembark_longitude = latestLocation?.longitude ?? null;
-  //         }
-
-  //         // Fetch all locations recorded for this specific ride
-  //         const locations = await this.locationsService.findByDailyRideId(
-  //           ride.id,
-  //         );
-
-  //         const routeSnapshot = locations.map((loc) => ({
-  //           lat: loc.latitude,
-  //           lng: loc.longitude,
-  //           ts: loc.timestamp,
-  //         }));
-
-  //         // Compress the GPS points into a single string for long-term storage
-  //         ride.route_data = Buffer.from(
-  //           pako.gzip(JSON.stringify(routeSnapshot)),
-  //         ).toString('base64');
-
-  //         await this.locationsService.deleteManyByDailyRideId(ride.id);
-
-  //         //  Update earnings ONLY IF finished and not yet processed
-  //         if (
-  //           ride.driver?.payout &&
-  //           !ride.earnings_processed &&
-  //           ride.driver?.sasapay_account_number
-  //         ) {
-  //           const { payment_model, agreed_salary } = ride.driver.payout;
-  //           const amountToEarn = this.EarningsHelper.calculatePerRide(
-  //             payment_model,
-  //             agreed_salary,
-  //           );
-
-  //           // Atomic DB update
-  //           await this.usersService.incrementPendingEarnings(
-  //             ride.driver.id,
-  //             amountToEarn,
-  //           );
-
-  //           // Update flag in memory to be persisted by saveAll
-  //           ride.earnings_processed = true;
-  //         }
-  //       }
-  //       return ride;
-  //     }),
-  //   );
-
-  //   // Save all changes in one bulk operation
-  //   const savedRides = await this.dailyRideRepository.saveAll(updatedRides);
-
-  //   // Notifications
-  //   const pushTokens = savedRides
-  //     .map((r) => r.ride?.parent?.push_token)
-  //     .filter(
-  //       (token): token is string =>
-  //         !!token &&
-  //         (token.startsWith('ExpoPushToken') ||
-  //           token.startsWith('ExponentPushToken')),
-  //     );
-
-  //   let message: string;
-  //   switch (status) {
-  //     case DailyRideStatus.Active:
-  //       message = 'Your child has safely boarded and is on their way.';
-  //       break;
-  //     case DailyRideStatus.Finished:
-  //       message = 'Your child has safely arrived at their destination.';
-  //       break;
-  //     default:
-  //       message = `Your ride status is now ${status}`;
-  //   }
-
-  //   if (pushTokens.length > 0) {
-  //     const notificationPromises = pushTokens.map((token) =>
-  //       this.expoPushService
-  //         .sendPushNotification(token, 'Ride Status Updated', message, {
-  //           status,
-  //         })
-  //         .catch((err) => console.error('Push send error:', err)),
-  //     );
-  //     await Promise.allSettled(notificationPromises);
-  //   }
-
-  //   return savedRides;
-  // }
-
   async batchUpdateStatus(
     ids: number[],
     status: DailyRideStatus,
@@ -914,7 +795,24 @@ export class DailyRidesService {
 
           if (status === DailyRideStatus.Active) {
             ride.embark_time = currentTime;
-            // Logic for latest location...
+
+            if (ride.ride?.student?.id) {
+              const activeSub =
+                await this.subscriptionRepository.checkActiveStatusByDate(
+                  ride.ride.student.id,
+                  currentTime,
+                );
+
+              console.log(
+                `Checked active subscription for student ${ride.ride.student.id} on ride ${ride.id}:`,
+                activeSub,
+              );
+
+              // Permanent record for reporting: Did they have a valid sub on this date?
+              ride.had_active_subscription = !!activeSub;
+              ride.snapshot_subscription_id = activeSub ? activeSub.id : null;
+            }
+
             const latestLocation =
               await this.locationsService.findLatestByDriverId(
                 ride.driver?.id ?? 0,

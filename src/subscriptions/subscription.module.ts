@@ -5,6 +5,7 @@ import { RelationalSubscriptionPersistenceModule } from './infrastructure/persis
 import { StudentsModule } from '../students/students.module';
 import { PaymentsModule } from '../payments/payments.module';
 import { SchoolsModule } from '../schools/schools.module';
+import { SubscriptionRepository } from './infrastructure/persistence/relational/repositories/subscription.repository';
 
 @Module({
   imports: [
@@ -14,7 +15,7 @@ import { SchoolsModule } from '../schools/schools.module';
     SchoolsModule,
   ],
   controllers: [SubscriptionController],
-  providers: [SubscriptionService],
-  exports: [SubscriptionService],
+  providers: [SubscriptionService, SubscriptionRepository],
+  exports: [SubscriptionService, SubscriptionRepository],
 })
 export class SubscriptionModule {}

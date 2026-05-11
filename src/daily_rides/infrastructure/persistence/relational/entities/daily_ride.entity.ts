@@ -91,6 +91,12 @@ export class DailyRideEntity extends EntityRelationalHelper {
   @Column({ type: 'boolean', default: false })
   earnings_processed!: boolean;
 
+  @Column({ type: 'boolean', default: false })
+  had_active_subscription!: boolean;
+
+  @Column({ type: 'integer', nullable: true })
+  snapshot_subscription_id!: number | null;
+
   @OneToMany(() => LocationEntity, (location) => location.daily_ride)
   locations!: LocationEntity[];
 }

@@ -8,6 +8,7 @@ import { VehicleModule } from '../vehicles/vehicles.module';
 import { RelationalDailyRidePersistenceModule } from './infrastructure/persistence/relational/relational-persistence.module';
 import { ExpoPushService } from './expopush.service';
 import { LocationModule } from '../location/location.module';
+import { SubscriptionModule } from '../subscriptions/subscription.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { LocationModule } from '../location/location.module';
     RidesModule,
     VehicleModule,
     UsersModule,
+    SubscriptionModule,
     forwardRef(() => LocationModule),
   ],
   controllers: [DailyRidesController],

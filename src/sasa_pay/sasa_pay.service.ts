@@ -122,7 +122,7 @@ export class SasaPayService {
           currencyCode: 'KES',
           TransactionDesc: 'Driver Earnings Payout',
           senderNumber: senderAccountNumber, // The wallet being charged
-          amount: amount.toFixed(2), // API expects string, 2 decimal places
+          amount: amount.toFixed(2).toString(), // API expects string, 2 decimal places
           reason: 'Earnings Payout',
           chargeAccount: senderAccountNumber, // Usually the beneficiary wallet
           transactionFee: '0.00', // Adjust based on your business logic
@@ -192,7 +192,6 @@ export class SasaPayService {
           headers: { Authorization: `Bearer ${token}` },
         },
       );
-      console.log(res.data);
       return res.data;
     } catch (error) {
       const err = error as AxiosError;

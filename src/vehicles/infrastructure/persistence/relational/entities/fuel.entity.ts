@@ -11,17 +11,29 @@ import { VehicleEntity } from './vehicle.entity';
 @Entity()
 export class FuelEntity {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column('decimal')
-  amount: number;
+  amount!: number;
 
   @Column()
-  receipt_url: string;
+  receipt_url!: string;
+
+  @Column({
+    type: 'text',
+    nullable: true,
+  })
+  fuel_pump_url!: string | null;
+
+  @Column({
+    type: 'text',
+    nullable: true,
+  })
+  notes!: string | null;
 
   @CreateDateColumn()
-  fuel_date: Date;
+  fuel_date!: Date;
 
   @ManyToOne(() => VehicleEntity, (vehicle) => vehicle.fuelLogs)
-  vehicle: VehicleEntity;
+  vehicle!: VehicleEntity;
 }

@@ -128,13 +128,13 @@ export class SasaPayService {
           transactionFee: '0.00', // Adjust based on your business logic
           channel: '01', // 01 = M-PESA
           receiverNumber: receiverNumber,
-          callbackUrl: `${process.env.APP_URL}/api/v1/sasa-pay/callback`,
+          callbackUrl: `https://zidallie-backend.onrender.com/api/v1/sasa-pay/callback`,
         },
         {
           headers: { Authorization: `Bearer ${token}` },
         },
       );
-      console.log('Transfer Response:', response.data);
+      console.log('Transfer Response:', response.data.data);
       return response.data;
     } catch (error) {
       const err = error as AxiosError;

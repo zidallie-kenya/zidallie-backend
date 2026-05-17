@@ -47,6 +47,7 @@ export type UserMeta = {
   tempRequestId?: string | null;
   sasapay_wallet_approval: boolean;
   sasapay_onboarding_rejection_reason: string | null;
+  kyc_submitted: boolean;
 };
 
 @Entity({ name: 'user' })

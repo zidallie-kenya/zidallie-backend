@@ -62,11 +62,11 @@ export class SortUserDto {
   @ApiProperty()
   @Type(() => String)
   @IsString()
-  orderBy: keyof User;
+  orderBy?: keyof User;
 
   @ApiProperty()
   @IsString()
-  order: 'asc' | 'desc';
+  order?: 'asc' | 'desc';
 }
 
 export class QueryUserDto {

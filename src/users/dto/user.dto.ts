@@ -109,5 +109,10 @@ export class UserMetaDto {
   @ApiProperty({ nullable: true })
   @IsOptional()
   @IsString()
+  kyc_submitted?: boolean;
+
+  @ApiProperty({ nullable: true })
+  @IsOptional()
+  @IsString()
   sasapay_onboarding_rejection_reason?: string | null;
 }

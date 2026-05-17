@@ -375,6 +375,9 @@ export class PaymentsController {
 
     if (result.responseCode === '0') {
       console.log('KYC documents uploaded for user', user.id);
+      await this.usersService.update(user.id, {
+        meta: { ...user.meta, kyc_submitted: true },
+      });
       return {
         message:
           'KYC documents submitted successfully. Verification takes 24-48 hours.',

@@ -90,6 +90,7 @@ export class UserMapper {
         neighborhood: domainEntity.meta.neighborhood ?? null,
         tempRequestId: domainEntity.meta.tempRequestId ?? null,
         tempPhoneNumber: domainEntity.meta.tempPhoneNumber ?? null,
+        kyc_submitted: domainEntity.meta.kyc_submitted ?? false,
         sasapay_wallet_approval:
           domainEntity.meta.sasapay_wallet_approval ?? false,
         sasapay_onboarding_rejection_reason:

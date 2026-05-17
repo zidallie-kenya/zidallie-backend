@@ -8,6 +8,8 @@ import {
   Get,
   UseGuards,
   InternalServerErrorException,
+  UseInterceptors,
+  UploadedFiles,
 } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { ApiTags } from '@nestjs/swagger';
@@ -16,6 +18,7 @@ import { RoleEnum } from '../roles/roles.enum';
 import { SasaPayService } from './sasa_pay.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../roles/roles.guard';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
 
 @ApiTags('SasaPay')
 @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
@@ -333,6 +336,51 @@ export class PaymentsController {
       throw new InternalServerErrorException(
         'Could not retrieve balance from SasaPay',
       );
+    }
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Post('upload-kyc')
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'id_front', maxCount: 1 },
+      { name: 'id_back', maxCount: 1 },
+      { name: 'passport_photo', maxCount: 1 },
+    ]),
+  )
+  async uploadKyc(@Req() req, @UploadedFiles() files: any) {
+    const user = await this.usersService.findById(req.user.id);
+    if (!user) throw new NotFoundException('User not found');
+
+    const phone_number = user.meta?.payments?.account_number;
+
+    if (!phone_number) {
+      throw new BadRequestException(
+        'No verified phone number found for user. Please complete registration first.',
+      );
+    }
+
+    if (!files.id_front || !files.id_back || !files.passport_photo) {
+      throw new BadRequestException(
+        'All 3 images (ID Front, ID Back, Photo) are required.',
+      );
+    }
+
+    const result = await this.sasaPayService.uploadKycDocuments(
+      phone_number,
+      files.id_front[0].buffer,
+      files.id_back[0].buffer,
+      files.passport_photo[0].buffer,
+    );
+
+    if (result.responseCode === '0') {
+      console.log('KYC documents uploaded for user', user.id);
+      return {
+        message:
+          'KYC documents submitted successfully. Verification takes 24-48 hours.',
+      };
+    } else {
+      throw new BadRequestException(result.message);
     }
   }
 

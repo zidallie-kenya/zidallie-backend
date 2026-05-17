@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import axios, { AxiosError } from 'axios';
+import FormData from 'form-data';
 
 @Injectable()
 export class SasaPayService {
@@ -31,6 +32,39 @@ export class SasaPayService {
     console.log('Access token from sasa pay', this.accessToken);
     this.tokenExpiry = Date.now() + res.data.expires_in * 1000 - 60000; // Refresh 1 min early
     return this.accessToken!;
+  }
+
+  async uploadKycDocuments(
+    phone_number: string,
+    id_front: Buffer,
+    id_back: Buffer,
+    passport_photo: Buffer,
+  ) {
+    const token = await this.getAccessToken();
+    const formData = new FormData();
+
+    formData.append('merchantCode', process.env.SASAPAY_MERCHANT_CODE);
+    formData.append('customerMobileNumber', phone_number);
+    formData.append('documentImageFront', id_front, {
+      filename: 'id_front.jpg',
+    });
+    formData.append('documentImageBack', id_back, { filename: 'id_back.jpg' });
+    formData.append('passportSizePhoto', passport_photo, {
+      filename: 'photo.jpg',
+    });
+
+    const response = await axios.post(
+      'https://api.sasapay.app/api/v2/waas/personal-onboarding/kyc/',
+      formData,
+      {
+        headers: {
+          ...formData.getHeaders(),
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+    console.log('KYC Upload Response:', response.data);
+    return response.data;
   }
 
   async initiateOnboarding(

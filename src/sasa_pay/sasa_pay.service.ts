@@ -47,10 +47,15 @@ export class SasaPayService {
     formData.append('customerMobileNumber', phone_number);
     formData.append('documentImageFront', id_front, {
       filename: 'id_front.jpg',
+      contentType: 'image/jpeg',
     });
-    formData.append('documentImageBack', id_back, { filename: 'id_back.jpg' });
+    formData.append('documentImageBack', id_back, {
+      filename: 'id_back.jpg',
+      contentType: 'image/jpeg',
+    });
     formData.append('passportSizePhoto', passport_photo, {
       filename: 'photo.jpg',
+      contentType: 'image/jpeg',
     });
 
     const response = await axios.post(

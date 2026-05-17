@@ -165,7 +165,7 @@ export class SasaPayService {
           reason: 'Earnings Payout',
           chargeAccount: senderAccountNumber, // Usually the beneficiary wallet
           transactionFee: '0.00', // Adjust based on your business logic
-          channel: '01', // 01 = M-PESA
+          channel: '0',
           receiverNumber: receiverNumber,
           callbackUrl: `https://zidallie-backend.onrender.com/api/v1/sasa-pay/callback`,
         },

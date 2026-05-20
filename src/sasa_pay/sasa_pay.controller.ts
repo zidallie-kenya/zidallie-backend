@@ -246,27 +246,47 @@ export class PaymentsController {
     if (!recipientMpesaNumber) {
       throw new BadRequestException('No verified M-Pesa number found.');
     }
+    try {
+      const profile_result = await this.sasaPayService.getDriversProfile(
+        process.env.SASAPAY_MERCHANT_CODE!,
+        user.sasapay_account_number,
+      );
 
-    // 2. Call SasaPay service (assuming you add this method to your SasaPayService)
-    const reference = `WD-${user.id}-${Date.now()}`;
-    const result = await this.sasaPayService.transferToDriver(
-      process.env.SASAPAY_MERCHANT_CODE!,
-      amount,
-      user.sasapay_account_number, // The wallet to debit (the driver's SasaPay account)
-      recipientMpesaNumber, //mpesa number stored in user meta during registration
-      reference,
-    );
+      const account_status = profile_result.data?.profile?.account_status;
 
-    // 3. Logic to update balance in your DB should be done in the callback handler
-    console.log(
-      'Withdrawal initiated for user',
-      user.id,
-      'Amount:',
-      amount,
-      'Reference:',
-      reference,
-    );
-    return { message: 'Withdrawal request received', data: result };
+      if (account_status === 'REJECTED') {
+        await this.usersService.update(user.id, {
+          meta: { ...user.meta, kyc_submitted: true },
+        });
+
+        return {
+          message:
+            'Your wallet KYC was rejected. Please re-upload your documents for verification.',
+        };
+      }
+
+      const reference = `WD-${user.id}-${Date.now()}`;
+      const result = await this.sasaPayService.transferToDriver(
+        process.env.SASAPAY_MERCHANT_CODE!,
+        amount,
+        user.sasapay_account_number, // The wallet to debit (the driver's SasaPay account)
+        recipientMpesaNumber, //mpesa number stored in user meta during registration
+        reference,
+      );
+
+      console.log(
+        'Withdrawal initiated for user',
+        user.id,
+        'Amount:',
+        amount,
+        'Reference:',
+        reference,
+      );
+      return { message: 'Withdrawal request received', data: result };
+    } catch (error: any) {
+      console.error('Error during withdrawal:', error.message);
+      this.handleSasaPayError(error);
+    }
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -314,7 +334,7 @@ export class PaymentsController {
     }
 
     try {
-      const result = await this.sasaPayService.getWalletBalance(
+      const result = await this.sasaPayService.getDriversProfile(
         process.env.SASAPAY_MERCHANT_CODE!,
         user.sasapay_account_number,
       );

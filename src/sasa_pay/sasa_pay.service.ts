@@ -198,10 +198,7 @@ export class SasaPayService {
     }
   }
 
-  /**
-   * Check balance of a specific wallet
-   */
-  async getWalletBalance(merchantCode: string, accountNumber: string) {
+  async getDriversProfile(merchantCode: string, accountNumber: string) {
     try {
       const token = await this.getAccessToken();
 

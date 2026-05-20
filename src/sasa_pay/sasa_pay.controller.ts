@@ -256,7 +256,7 @@ export class PaymentsController {
 
       if (account_status === 'REJECTED') {
         await this.usersService.update(user.id, {
-          meta: { ...user.meta, kyc_submitted: true },
+          meta: { ...user.meta, kyc_submitted: false },
         });
         console.log(
           `User ${user.id} has rejected KYC. Prompting re-upload of documents.`,

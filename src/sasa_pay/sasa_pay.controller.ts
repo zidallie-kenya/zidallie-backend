@@ -125,7 +125,8 @@ export class PaymentsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Post('register')
   async register(
-    @Body() body: { documentNumber: string; phone_number: string },
+    @Body()
+    body: { documentNumber: string; phone_number: string; name: string },
     @Req() req,
   ) {
     const user = await this.usersService.findById(req.user.id);
@@ -136,6 +137,7 @@ export class PaymentsController {
         user,
         body.documentNumber,
         body.phone_number,
+        body.name,
       );
 
       // Save requestId in user meta so we can use it during confirmation
@@ -220,7 +222,11 @@ export class PaymentsController {
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Post('withdraw')
-  async withdraw(@Req() req, @Body('amount') amount: number) {
+  async withdraw(
+    @Req() req,
+    @Body('amount') amount: number,
+    @Body('phone_number') phone_number: string,
+  ) {
     const user = await this.usersService.findById(req.user.id);
 
     // Check if wallet is active and approved
@@ -236,9 +242,7 @@ export class PaymentsController {
       throw new BadRequestException('Invalid withdrawal amount');
     }
 
-    // The user's M-Pesa number stored during registration
-    const recipientMpesaNumber = user.meta?.payments?.account_number;
-
+    const recipientMpesaNumber = phone_number;
     if (!recipientMpesaNumber) {
       throw new BadRequestException('No verified M-Pesa number found.');
     }

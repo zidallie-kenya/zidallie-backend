@@ -76,14 +76,26 @@ export class SasaPayService {
     user: any,
     documentNumber: string,
     phone_number: string,
+    name: string,
   ) {
     const token = await this.getAccessToken();
 
-    const nameParts = (user.name || 'Zidallie Customer').trim().split(/\s+/);
+    // Use the passed-in name parameter instead of user.name
+    const fullName = (name || 'Zidallie Customer').trim();
+
+    // Split the full name into parts
+    const nameParts = fullName.split(/\s+/);
+
+    // First word = first name
     const firstName = nameParts[0];
+
+    // Last word = last name
     const lastName =
       nameParts.length > 1 ? nameParts[nameParts.length - 1] : 'User';
-    const middleName = nameParts.length > 2 ? nameParts[1] : '';
+
+    // Everything between first and last = middle name
+    const middleName =
+      nameParts.length > 2 ? nameParts.slice(1, -1).join(' ') : '';
 
     const payload = {
       merchantCode: process.env.SASAPAY_MERCHANT_CODE,
@@ -165,7 +177,7 @@ export class SasaPayService {
           reason: 'Earnings Payout',
           chargeAccount: senderAccountNumber, // Usually the beneficiary wallet
           transactionFee: '0.00', // Adjust based on your business logic
-          channel: '01',
+          channel: '63902',
           receiverNumber: receiverNumber,
           callbackUrl: `https://zidallie-backend.onrender.com/api/v1/sasa-pay/callback`,
         },

@@ -258,10 +258,13 @@ export class PaymentsController {
         await this.usersService.update(user.id, {
           meta: { ...user.meta, kyc_submitted: true },
         });
-
+        console.log(
+          `User ${user.id} has rejected KYC. Prompting re-upload of documents.`,
+        );
         return {
           message:
             'Your wallet KYC was rejected. Please re-upload your documents for verification.',
+          rejected: true,
         };
       }
 
@@ -282,7 +285,11 @@ export class PaymentsController {
         'Reference:',
         reference,
       );
-      return { message: 'Withdrawal request received', data: result };
+      return {
+        message: 'Withdrawal request received',
+        data: result,
+        rejected: false,
+      };
     } catch (error: any) {
       console.error('Error during withdrawal:', error.message);
       this.handleSasaPayError(error);

@@ -7,6 +7,7 @@ import { UserMapper } from '../../../../../users/infrastructure/persistence/rela
 import { mapRelation } from '../../../../../utils/relation.mapper';
 import { Vehicle } from '../../../../domain/vehicles';
 import { VehicleEntity } from '../entities/vehicle.entity';
+import { VehicleReportEntity } from '../entities/vehicle_report.entity';
 
 export class VehicleMapper {
   static toDomain(raw: VehicleEntity): Vehicle {
@@ -40,7 +41,20 @@ export class VehicleMapper {
     domainEntity.insurance_certificate = raw.insurance_certificate;
     domainEntity.vehicle_data = raw.vehicle_data;
     domainEntity.status = raw.status;
+    domainEntity.minders_name = raw.minders_name;
+    domainEntity.minders_id_url = raw.minders_id_url;
 
+    if (raw.vehicle_report) {
+      domainEntity.vehicle_report = raw.vehicle_report.map((report) => ({
+        id: report.id,
+        report_url: report.report_url,
+        file_name: report.file_name,
+        created_at: report.created_at,
+        vehicleId: report.vehicleId,
+      }));
+    } else {
+      domainEntity.vehicle_report = [];
+    }
     if (raw.rides) {
       domainEntity.rides = raw.rides.map((ride) => RideMapper.toDomain(ride));
     } else {
@@ -107,6 +121,12 @@ export class VehicleMapper {
     if (domainEntity.status !== undefined)
       persistence.status = domainEntity.status;
 
+    if (domainEntity.minders_name !== undefined)
+      persistence.minders_name = domainEntity.minders_name;
+
+    if (domainEntity.minders_id_url !== undefined)
+      persistence.minders_id_url = domainEntity.minders_id_url;
+
     //arrays
     if (domainEntity.rides !== undefined) {
       persistence.rides = domainEntity.rides.map(
@@ -118,6 +138,25 @@ export class VehicleMapper {
         (dailyRide) =>
           DailyRideMapper.toPersistence(dailyRide) as DailyRideEntity,
       );
+    }
+
+    if (domainEntity.vehicle_report !== undefined) {
+      // Map domain array to our Entity relationship array
+      persistence.vehicle_report = domainEntity.vehicle_report.map(
+        (report: any) => {
+          const reportEntity = new VehicleReportEntity();
+          if (report.id) reportEntity.id = report.id;
+          reportEntity.report_url = report.report_url;
+          reportEntity.file_name = report.file_name;
+          reportEntity.vehicleId = domainEntity.id as number;
+          return reportEntity;
+        },
+      );
+
+      // Update the physical ID column with the first report's ID
+      if (domainEntity.vehicle_report.length > 0) {
+        persistence.latest_report_id = domainEntity.vehicle_report[0].id;
+      }
     }
 
     //relations

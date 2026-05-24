@@ -15,68 +15,72 @@ import { RideEntity } from '../../../../../rides/infrastructure/persistence/rela
 import { DailyRideEntity } from '../../../../../daily_rides/infrastructure/persistence/relational/entities/daily_ride.entity';
 import { FuelEntity } from './fuel.entity';
 import { MaintenanceEntity } from './maintenance.entity';
+import { VehicleReportEntity } from './vehicle_report.entity';
 
 @Entity({ name: 'vehicle' })
 export class VehicleEntity extends EntityRelationalHelper {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @ManyToOne(() => UserEntity, (user) => user.vehicles, { nullable: true })
-  user: UserEntity | null;
+  user!: UserEntity | null;
 
   @Column({ type: 'text', nullable: true })
-  vehicle_name: string | null;
+  vehicle_name!: string | null;
 
   @Column({ type: 'text', nullable: false })
-  registration_number: string;
+  registration_number!: string;
 
   @Column({ type: 'varchar', length: 10, enum: VehicleType, nullable: false })
-  vehicle_type: VehicleType;
+  vehicle_type!: VehicleType;
 
   @Column({ type: 'text', nullable: false })
-  vehicle_model: string;
+  vehicle_model!: string;
 
   @Column({ type: 'integer', nullable: false })
-  vehicle_year: number;
+  vehicle_year!: number;
 
   @Column({ type: 'text', nullable: true })
-  vehicle_image_url: string | null;
+  vehicle_image_url!: string | null;
 
   @Column({ type: 'integer', nullable: false })
-  seat_count: number;
+  seat_count!: number;
 
   @Column({ type: 'integer', nullable: false })
-  available_seats: number;
+  available_seats!: number;
 
   @Column({ type: 'boolean', nullable: false })
-  is_inspected: boolean;
+  is_inspected!: boolean;
 
   @Column({ type: 'text', nullable: true })
-  comments: string | null;
+  comments!: string | null;
 
   @Column({ type: 'jsonb', nullable: true })
   meta: any | null;
 
   @Column({ type: 'text', nullable: true })
-  vehicle_registration: string | null;
+  vehicle_registration!: string | null;
+
+  @Column({ type: 'integer', name: 'vehicle_report', nullable: true })
+  latest_report_id!: number | null;
 
   @Column({ type: 'text', nullable: true })
-  insurance_certificate: string | null;
+  insurance_certificate!: string | null;
 
   @Column({ type: 'jsonb', nullable: true })
-  vehicle_data: any | null;
+  vehicle_data!: any | null;
 
   @Column({ type: 'text', nullable: true })
-  minders_name: string | null;
+  minders_name!: string | null;
 
   @Column({ type: 'text', nullable: true })
-  minders_id_url: string | null;
+  minders_id_url!: string | null;
 
   @CreateDateColumn()
-  created_at: Date;
+  created_at!: Date;
 
   @UpdateDateColumn()
-  updated_at: Date;
+  updated_at!: Date;
 
   @Column({
     type: 'varchar',
@@ -85,17 +89,22 @@ export class VehicleEntity extends EntityRelationalHelper {
     nullable: false,
     default: VehicleStatus.Active,
   })
-  status: VehicleStatus;
+  status!: VehicleStatus;
 
   @OneToMany(() => RideEntity, (ride) => ride.vehicle)
-  rides: RideEntity[];
+  rides!: RideEntity[];
 
   @OneToMany(() => DailyRideEntity, (dailyRide) => dailyRide.vehicle)
-  daily_rides: DailyRideEntity[];
+  daily_rides!: DailyRideEntity[];
 
   @OneToMany(() => FuelEntity, (fuel) => fuel.vehicle)
-  fuelLogs: FuelEntity[];
+  fuelLogs!: FuelEntity[];
 
   @OneToMany(() => MaintenanceEntity, (maint) => maint.vehicle)
-  maintenanceLogs: MaintenanceEntity[];
+  maintenanceLogs!: MaintenanceEntity[];
+
+  @OneToMany(() => VehicleReportEntity, (report) => report.vehicle, {
+    cascade: true,
+  })
+  vehicle_report!: VehicleReportEntity[];
 }

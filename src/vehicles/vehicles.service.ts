@@ -97,6 +97,9 @@ export class VehicleService {
       insurance_certificate: createVehicleDto.insurance_certificate ?? null,
       vehicle_data: createVehicleDto.vehicle_data ?? null,
       status: createVehicleDto.status,
+      vehicle_report: createVehicleDto.vehicle_report ?? [],
+      minders_name: createVehicleDto.minders_name ?? null,
+      minders_id_url: createVehicleDto.minders_id_url ?? null,
     });
   }
 
@@ -198,6 +201,9 @@ export class VehicleService {
       insurance_certificate: updateVehicleDto.insurance_certificate,
       vehicle_data: updateVehicleDto.vehicle_data,
       status: updateVehicleDto.status,
+      vehicle_report: updateVehicleDto.vehicle_report,
+      minders_name: updateVehicleDto.minders_name,
+      minders_id_url: updateVehicleDto.minders_id_url,
     });
   }
 

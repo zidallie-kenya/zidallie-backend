@@ -4,14 +4,15 @@ import { User } from '../../users/domain/user';
 import { VehicleStatus, VehicleType } from '../../utils/types/enums';
 import { Ride } from '../../rides/domain/rides';
 import { DailyRide } from '../../daily_rides/domain/daily_rides';
+import { VehicleReport } from './vehicle_report';
 
 export class Vehicle {
   @ApiProperty({ type: Number })
-  id: number;
+  id!: number;
 
   @ApiProperty({ type: () => User, required: false, nullable: true })
   @Expose({ groups: ['me', 'admin'] })
-  user: User | null;
+  user!: User | null;
 
   @ApiProperty({
     type: String,
@@ -20,23 +21,23 @@ export class Vehicle {
     nullable: true,
   })
   @Expose({ groups: ['me', 'admin'] })
-  vehicle_name: string | null;
+  vehicle_name!: string | null;
 
   @ApiProperty({ type: String, example: 'KCA 123A' })
   @Expose({ groups: ['me', 'admin'] })
-  registration_number: string;
+  registration_number!: string;
 
   @ApiProperty({ enum: VehicleType, example: VehicleType.Bus })
   @Expose({ groups: ['me', 'admin'] })
-  vehicle_type: VehicleType;
+  vehicle_type!: VehicleType;
 
   @ApiProperty({ type: String, example: 'Toyota Hiace' })
   @Expose({ groups: ['me', 'admin'] })
-  vehicle_model: string;
+  vehicle_model!: string;
 
   @ApiProperty({ type: Number, example: 2018 })
   @Expose({ groups: ['me', 'admin'] })
-  vehicle_year: number;
+  vehicle_year!: number;
 
   @ApiProperty({
     type: String,
@@ -45,19 +46,19 @@ export class Vehicle {
     nullable: true,
   })
   @Expose({ groups: ['me', 'admin'] })
-  vehicle_image_url: string | null;
+  vehicle_image_url!: string | null;
 
   @ApiProperty({ type: Number, example: 14 })
   @Expose({ groups: ['me', 'admin'] })
-  seat_count: number;
+  seat_count!: number;
 
   @ApiProperty({ type: Number, example: 12 })
   @Expose({ groups: ['me', 'admin'] })
-  available_seats: number;
+  available_seats!: number;
 
   @ApiProperty({ type: Boolean, example: true })
   @Expose({ groups: ['me', 'admin'] })
-  is_inspected: boolean;
+  is_inspected!: boolean;
 
   @ApiProperty({
     type: String,
@@ -66,11 +67,11 @@ export class Vehicle {
     nullable: true,
   })
   @Expose({ groups: ['me', 'admin'] })
-  comments: string | null;
+  comments!: string | null;
 
   @ApiProperty({ type: Object, required: false, nullable: true })
   @Expose({ groups: ['me', 'admin'] })
-  meta: any | null;
+  meta!: any | null;
 
   @ApiProperty({
     type: String,
@@ -79,7 +80,7 @@ export class Vehicle {
     nullable: true,
   })
   @Expose({ groups: ['me', 'admin'] })
-  vehicle_registration: string | null;
+  vehicle_registration!: string | null;
 
   @ApiProperty({
     type: String,
@@ -88,38 +89,42 @@ export class Vehicle {
     nullable: true,
   })
   @Expose({ groups: ['me', 'admin'] })
-  insurance_certificate: string | null;
+  insurance_certificate!: string | null;
 
   @ApiProperty({ type: Object, required: false, nullable: true })
   @Expose({ groups: ['me', 'admin'] })
-  vehicle_data: any | null;
+  vehicle_data!: any | null;
 
   @ApiProperty({ enum: VehicleStatus, example: VehicleStatus.Active })
   @Expose({ groups: ['me', 'admin'] })
-  status: VehicleStatus;
+  status!: VehicleStatus;
 
   @ApiProperty({ type: () => [Ride] })
   @Expose({ groups: ['me', 'admin'] })
-  rides: Ride[];
+  rides!: Ride[];
 
   @ApiProperty({ type: () => [DailyRide] })
   @Expose({ groups: ['me', 'admin'] })
-  daily_rides: DailyRide[];
+  daily_rides!: DailyRide[];
 
   @ApiProperty()
   @Expose({ groups: ['me', 'admin'] })
-  created_at: Date;
+  created_at!: Date;
 
   @ApiProperty()
   @Expose({ groups: ['me', 'admin'] })
-  updated_at: Date;
+  updated_at!: Date;
 
   // Add these to the class
   @ApiProperty({ type: String, required: false })
   @Expose({ groups: ['me', 'admin'] })
-  minders_name: string | null;
+  minders_name!: string | null;
 
   @ApiProperty({ type: String, required: false })
   @Expose({ groups: ['me', 'admin'] })
-  minders_id_url: string | null;
+  minders_id_url!: string | null;
+
+  @ApiProperty({ type: () => [VehicleReport] })
+  @Expose({ groups: ['me', 'admin'] })
+  vehicle_report!: VehicleReport[];
 }

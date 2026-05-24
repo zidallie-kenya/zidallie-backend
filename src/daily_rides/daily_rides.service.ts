@@ -855,8 +855,8 @@ export class DailyRidesService {
             // 4. PAY DRIVER (Inside Transaction)
             if (
               ride.driver?.payout &&
-              !ride.earnings_processed &&
-              ride.driver?.sasapay_account_number
+              !ride.earnings_processed
+              // && ride.driver?.sasapay_account_number
             ) {
               const amountToEarn = this.EarningsHelper.calculatePerRide(
                 ride.driver.payout.payment_model,

@@ -6,133 +6,97 @@ import {
   IsEnum,
   IsOptional,
   IsNotEmpty,
+  ValidateNested,
+  IsArray,
 } from 'class-validator';
 import { VehicleStatus, VehicleType } from '../../utils/types/enums';
+import { CreateVehicleReportDto } from './create-vehicle_report.dto';
+import { Type } from 'class-transformer';
 
 export class CreateVehicleDto {
-  @ApiPropertyOptional({
-    description: 'User ID owning the vehicle',
-    type: Number,
-    nullable: true,
-  })
+  @ApiPropertyOptional({ type: Number, nullable: true })
   @IsOptional()
   user?: { id: number } | null;
 
-  @ApiPropertyOptional({
-    description: 'Vehicle name',
-    example: 'School Bus Alpha',
-    nullable: true,
-  })
+  @ApiPropertyOptional({ example: 'School Bus Alpha', nullable: true })
   @IsOptional()
   @IsString()
   vehicle_name?: string | null;
 
-  @ApiProperty({
-    description: 'Unique vehicle registration number',
-    example: 'KCA 123A',
-  })
+  @ApiProperty({ example: 'KCA 123A' })
   @IsString()
-  registration_number: string;
+  @IsNotEmpty()
+  registration_number!: string;
 
-  @ApiProperty({
-    description: 'Vehicle type',
-    enum: VehicleType,
-    example: VehicleType.Bus,
-  })
+  @ApiProperty({ enum: VehicleType, example: VehicleType.Bus })
   @IsEnum(VehicleType)
-  vehicle_type: VehicleType;
+  vehicle_type!: VehicleType;
 
-  @ApiProperty({
-    description: 'Vehicle model',
-    example: 'Toyota Hiace',
-  })
+  @ApiProperty({ example: 'Toyota Hiace' })
   @IsString()
-  vehicle_model: string;
+  vehicle_model!: string;
 
-  @ApiProperty({
-    description: 'Year of manufacture',
-    example: 2018,
-  })
+  @ApiProperty({ example: 2018 })
   @IsNumber()
-  vehicle_year: number;
+  vehicle_year!: number;
 
-  @ApiPropertyOptional({
-    description: 'Vehicle image file ID',
-    example: 'dsjkhfdjhgudgut.jpg',
-    nullable: true,
-  })
+  @ApiPropertyOptional({ example: 'bus_image.jpg', nullable: true })
   @IsOptional()
   vehicle_image_url?: string | null;
 
-  @ApiProperty({
-    description: 'Total seat count',
-    example: 14,
-  })
-  @IsNumber()
-  seat_count: number;
+  @ApiPropertyOptional({ example: 'minder_id.jpg', nullable: true })
+  @IsOptional()
+  minders_id_url?: string | null;
 
-  @ApiProperty({
-    description: 'Number of available seats',
-    example: 12,
-  })
-  @IsNumber()
-  available_seats: number;
+  @ApiPropertyOptional({ example: 'John Doe', nullable: true })
+  @IsOptional()
+  @IsString()
+  minders_name?: string | null;
 
-  @ApiPropertyOptional({
-    description: 'Has vehicle passed inspection',
-    example: true,
-    default: false,
-  })
+  @ApiProperty({ example: 14 })
+  @IsNumber()
+  seat_count!: number;
+
+  @ApiProperty({ example: 12 })
+  @IsNumber()
+  available_seats!: number;
+
+  @ApiPropertyOptional({ example: true, default: false })
   @IsOptional()
   @IsBoolean()
   is_inspected?: boolean;
 
-  @ApiPropertyOptional({
-    description: 'Additional comments',
-    example: 'Recently serviced, good condition',
-    nullable: true,
-  })
+  @ApiPropertyOptional({ example: 'Good condition', nullable: true })
   @IsOptional()
   @IsString()
   comments?: string | null;
 
-  @ApiPropertyOptional({
-    description: 'Additional metadata as JSON',
-    nullable: true,
-    type: Object,
-  })
+  @ApiPropertyOptional({ type: Object, nullable: true })
   @IsOptional()
   meta?: any | null;
 
-  @ApiPropertyOptional({
-    description: 'Vehicle registration string',
-    nullable: true,
-  })
+  @ApiPropertyOptional({ nullable: true })
   @IsOptional()
   vehicle_registration?: string | null;
 
-  @ApiPropertyOptional({
-    description: 'Insurance certificate file string',
-    nullable: true,
-  })
+  @ApiPropertyOptional({ nullable: true })
   @IsOptional()
   insurance_certificate?: string | null;
 
-  @ApiPropertyOptional({
-    description: 'Additional vehicle data (JSON)',
-    nullable: true,
-    type: Object,
-  })
+  @ApiPropertyOptional({ type: Object, nullable: true })
   @IsOptional()
   vehicle_data?: any | null;
 
-  @ApiPropertyOptional({
-    description: 'Vehicle status',
-    enum: VehicleStatus,
-    example: VehicleStatus.Active,
-    default: VehicleStatus.Active,
-  })
+  @ApiPropertyOptional({ enum: VehicleStatus, example: VehicleStatus.Active })
   @IsEnum(VehicleStatus)
   @IsNotEmpty()
-  status: VehicleStatus;
+  status!: VehicleStatus;
+
+  // This handles the historical reports relationship
+  @ApiPropertyOptional({ type: [CreateVehicleReportDto] })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateVehicleReportDto)
+  vehicle_report?: CreateVehicleReportDto[];
 }

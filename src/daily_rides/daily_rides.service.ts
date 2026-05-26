@@ -869,6 +869,9 @@ export class DailyRidesService {
 
                 // Final safety check before DB operation
                 if (!isNaN(amountToEarn) && isFinite(amountToEarn)) {
+                  console.log(
+                    `Crediting driver ${ride.driver.id} with amount ${amountToEarn} for ride ${ride.id}`,
+                  );
                   await transactionalEntityManager.increment(
                     UserEntity,
                     { id: ride.driver.id },

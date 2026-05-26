@@ -853,25 +853,39 @@ export class DailyRidesService {
             });
 
             // 4. PAY DRIVER (Inside Transaction)
-            if (
-              ride.driver?.payout &&
-              !ride.earnings_processed
-              // && ride.driver?.sasapay_account_number
-            ) {
-              const amountToEarn = this.EarningsHelper.calculatePerRide(
-                ride.driver.payout.payment_model,
-                ride.driver.payout.agreed_salary,
-              );
+            if (ride.driver?.payout && !ride.earnings_processed) {
+              const salary = Number(ride.driver.payout.agreed_salary);
 
-              // Atomic increment using the transaction manager
-              await transactionalEntityManager.increment(
-                UserEntity,
-                { id: ride.driver.id },
-                'pending_earnings',
-                amountToEarn,
-              );
+              // Check if salary is a valid number and model exists
+              if (
+                !isNaN(salary) &&
+                salary > 0 &&
+                ride.driver.payout.payment_model
+              ) {
+                const amountToEarn = this.EarningsHelper.calculatePerRide(
+                  ride.driver.payout.payment_model,
+                  salary,
+                );
 
-              ride.earnings_processed = true;
+                // Final safety check before DB operation
+                if (!isNaN(amountToEarn) && isFinite(amountToEarn)) {
+                  await transactionalEntityManager.increment(
+                    UserEntity,
+                    { id: ride.driver.id },
+                    'pending_earnings',
+                    amountToEarn,
+                  );
+                  ride.earnings_processed = true;
+                } else {
+                  console.error(
+                    `Invalid earnings calculated for driver ${ride.driver.id}: ${amountToEarn}`,
+                  );
+                }
+              } else {
+                console.warn(
+                  `Driver ${ride.driver.id} has invalid payout configuration. Salary: ${ride.driver.payout.agreed_salary}`,
+                );
+              }
             }
           }
         }

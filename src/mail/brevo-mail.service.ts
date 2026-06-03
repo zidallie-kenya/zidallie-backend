@@ -13,7 +13,43 @@ export class BrevoMailService {
     private readonly configService: ConfigService<AllConfigType>,
   ) {}
 
-  async userSignUp(mailData: MailData<{ hash: string }>): Promise<void> {
+  // async userSignUp(mailData: MailData<{ hash: string }>): Promise<void> {
+  //   const i18n = I18nContext.current();
+  //   let emailConfirmTitle: MaybeType<string>;
+  //   let text1: MaybeType<string>;
+  //   let text2: MaybeType<string>;
+  //   let text3: MaybeType<string>;
+
+  //   if (i18n) {
+  //     [emailConfirmTitle, text1, text2, text3] = await Promise.all([
+  //       i18n.t('common.confirmEmail'),
+  //       i18n.t('confirm-email.text1'),
+  //       i18n.t('confirm-email.text2'),
+  //       i18n.t('confirm-email.text3'),
+  //     ]);
+  //   }
+
+  //   const url = new URL(
+  //     this.configService.getOrThrow('app.backendDomain', { infer: true }) +
+  //       '/api/v1/auth/email/confirm',
+  //   );
+  //   url.searchParams.set('hash', mailData.data.hash);
+
+  //   await this.brevoMailerService.sendMail({
+  //     to: mailData.to,
+  //     subject: emailConfirmTitle ?? 'Confirm Your Email',
+  //     htmlContent: `
+  //       <h1>${emailConfirmTitle}</h1>
+  //       <p>${text1}</p>
+  //       <p><a href="${url.toString()}">${url.toString()}</a></p>
+  //       <p>${text2}</p>
+  //       <p>${text3}</p>
+  //     `,
+  //     textContent: `${emailConfirmTitle} - ${url.toString()}`,
+  //   });
+  // }
+
+  async userSignUp(mailData: MailData<{ otp: string }>): Promise<void> {
     const i18n = I18nContext.current();
     let emailConfirmTitle: MaybeType<string>;
     let text1: MaybeType<string>;
@@ -29,26 +65,22 @@ export class BrevoMailService {
       ]);
     }
 
-    const url = new URL(
-      this.configService.getOrThrow('app.backendDomain', { infer: true }) +
-        '/api/v1/auth/email/confirm',
-    );
-    url.searchParams.set('hash', mailData.data.hash);
-
+    // Remove the URL block entirely, replace sendMail with:
     await this.brevoMailerService.sendMail({
       to: mailData.to,
       subject: emailConfirmTitle ?? 'Confirm Your Email',
       htmlContent: `
-        <h1>${emailConfirmTitle}</h1>
-        <p>${text1}</p>
-        <p><a href="${url.toString()}">${url.toString()}</a></p>
-        <p>${text2}</p>
-        <p>${text3}</p>
-      `,
-      textContent: `${emailConfirmTitle} - ${url.toString()}`,
+      <h1>${emailConfirmTitle ?? 'Confirm Your Email'}</h1>
+      <p>${text1 ?? 'Use the code below to verify your email address.'}</p>
+      <div style="margin: 24px 0; padding: 16px 32px; background: #f4f4f4; border-radius: 8px; display: inline-block;">
+        <h2 style="letter-spacing: 8px; font-size: 32px; margin: 0;">${mailData.data.otp}</h2>
+      </div>
+      <p>${text2 ?? 'This code expires in 10 minutes.'}</p>
+      <p>${text3 ?? 'If you did not create an account, ignore this email.'}</p>
+    `,
+      textContent: `Your verification code is: ${mailData.data.otp}. It expires in 10 minutes.`,
     });
   }
-
   async forgotPassword(
     mailData: MailData<{ hash: string; tokenExpires: number }>,
   ): Promise<void> {

@@ -789,6 +789,8 @@ export class DailyRidesService {
         }
 
         const currentTime = new Date();
+        const mostRecentMonday = this.getMostRecentMonday();
+        const driversProcessedInThisBatch = new Set<number>();
 
         for (const ride of rides) {
           ride.status = status;
@@ -831,6 +833,35 @@ export class DailyRidesService {
               );
             ride.disembark_latitude = latestLocation?.latitude ?? null;
             ride.disembark_longitude = latestLocation?.longitude ?? null;
+
+            // ------------- WEEKLY EARNINGS RESET (LAZY LOGIC) -------------------
+            if (
+              ride.driver &&
+              !driversProcessedInThisBatch.has(ride.driver.id)
+            ) {
+              const lastReset = ride.driver.last_earnings_reset_at;
+
+              // If they have never been reset, or the last reset was BEFORE this week's Monday
+              if (!lastReset || new Date(lastReset) < mostRecentMonday) {
+                console.log(
+                  `Weekly Reset: Wiping earnings for driver ${ride.driver.id}. Last reset: ${lastReset}`,
+                );
+
+                await transactionalEntityManager.update(
+                  UserEntity,
+                  ride.driver.id,
+                  {
+                    pending_earnings: 0,
+                    last_earnings_reset_at: currentTime,
+                  },
+                );
+
+                // Update the local object so the increment below starts from 0
+                ride.driver.pending_earnings = 0;
+              }
+              driversProcessedInThisBatch.add(ride.driver.id);
+            }
+            // ----------------------------------------------------------------------
 
             // 2. Process Route Data (Compress)
             const locations = await this.locationsService.findByDailyRideId(
@@ -886,7 +917,7 @@ export class DailyRidesService {
                 }
               } else {
                 console.warn(
-                  `Driver ${ride.driver.id} has invalid payout configuration. Salary: ${ride.driver.payout.agreed_salary}`,
+                  `Driver ${ride.driver.id} has invalid payout configuration. Salary: ${ride.driver?.payout.agreed_salary}`,
                 );
               }
             }
@@ -1004,4 +1035,16 @@ export class DailyRidesService {
       }
     },
   };
+
+  private getMostRecentMonday(): Date {
+    const now = new Date();
+    const day = now.getDay(); // 0 is Sunday, 1 is Monday...
+
+    // Calculate difference: If Sunday(0), go back 6 days. Otherwise, go back to day 1.
+    const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+
+    const monday = new Date(now.setDate(diff));
+    monday.setHours(0, 0, 0, 0);
+    return monday;
+  }
 }

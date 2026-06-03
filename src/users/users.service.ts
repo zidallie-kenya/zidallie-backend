@@ -126,6 +126,9 @@ export class UsersService {
       payout: createUserDto.payout ?? null,
       sasapay_account_number: createUserDto.sasapay_account_number ?? null,
       ID_number: createUserDto.ID_number ?? null,
+      last_earnings_reset_at: createUserDto.last_earnings_reset_at ?? null,
+      emailOtp: createUserDto.emailOtp ?? null,
+      emailOtpExpires: createUserDto.emailOtpExpires ?? null,
     });
   }
 
@@ -279,6 +282,9 @@ export class UsersService {
       payout: updateUserDto.payout,
       sasapay_account_number: updateUserDto.sasapay_account_number,
       ID_number: updateUserDto.ID_number,
+      last_earnings_reset_at: updateUserDto.last_earnings_reset_at,
+      emailOtp: updateUserDto.emailOtp,
+      emailOtpExpires: updateUserDto.emailOtpExpires,
     });
   }
 

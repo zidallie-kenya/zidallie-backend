@@ -254,7 +254,7 @@ export class PaymentsController {
 
       const account_status = profile_result.data?.profile?.account_status;
 
-      if (account_status === 'REJECTED') {
+      if (account_status !== 'ACTIVE') {
         await this.usersService.update(user.id, {
           meta: { ...user.meta, kyc_submitted: false },
         });

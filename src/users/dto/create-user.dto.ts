@@ -131,4 +131,19 @@ export class CreateUserDto {
   @IsOptional()
   @IsString()
   ID_number?: string | null;
+
+  @ApiPropertyOptional({ type: Date, example: 'ID12345678' })
+  @IsOptional()
+  @IsString()
+  last_earnings_reset_at!: Date | null;
+
+  @ApiPropertyOptional({ type: String, example: 'ID12345678' })
+  @IsOptional()
+  @IsString()
+  emailOtp!: string | null;
+
+  @ApiPropertyOptional({ type: Number, example: 12345 })
+  @IsOptional()
+  @IsString()
+  emailOtpExpires!: number | null;
 }

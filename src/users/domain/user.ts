@@ -93,6 +93,18 @@ export class User {
 
   @ApiProperty()
   @Expose({ groups: ['me', 'admin'] })
+  last_earnings_reset_at!: Date | null;
+
+  @ApiProperty()
+  @Expose({ groups: ['me', 'admin'] })
+  emailOtpExpires!: number | null;
+
+  @ApiProperty()
+  @Expose({ groups: ['me', 'admin'] })
+  emailOtp!: string | null;
+
+  @ApiProperty()
+  @Expose({ groups: ['me', 'admin'] })
   deleted_at!: Date;
 
   @ApiProperty({ type: Number, example: 100.0 })

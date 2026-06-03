@@ -253,6 +253,9 @@ export class PaymentsController {
       );
 
       const account_status = profile_result.data?.profile?.account_status;
+      console.log(
+        `User ${profile_result.data?.profile?.display_name} wallet status: ${account_status}`,
+      );
 
       if (account_status !== 'ACTIVE') {
         await this.usersService.update(user.id, {
@@ -346,6 +349,9 @@ export class PaymentsController {
         user.sasapay_account_number,
       );
       const account_status = result.data?.profile?.account_status;
+      console.log(
+        `User ${result.data?.profile?.display_name} wallet status: ${account_status}`,
+      );
       if (account_status !== 'ACTIVE') {
         await this.usersService.update(user.id, {
           meta: { ...user.meta, kyc_submitted: false },

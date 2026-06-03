@@ -257,7 +257,10 @@ export class PaymentsController {
         `User ${profile_result.data?.profile?.display_name} wallet status: ${account_status}`,
       );
 
-      if (account_status !== 'ACTIVE') {
+      if (
+        account_status === 'AWAITING_KYC_UPLOAD' ||
+        account_status === 'REJECTED'
+      ) {
         await this.usersService.update(user.id, {
           meta: { ...user.meta, kyc_submitted: false },
         });
@@ -352,7 +355,10 @@ export class PaymentsController {
       console.log(
         `User ${result.data?.profile?.display_name} wallet status: ${account_status}`,
       );
-      if (account_status !== 'ACTIVE') {
+      if (
+        account_status === 'AWAITING_KYC_UPLOAD' ||
+        account_status === 'REJECTED'
+      ) {
         await this.usersService.update(user.id, {
           meta: { ...user.meta, kyc_submitted: false },
         });

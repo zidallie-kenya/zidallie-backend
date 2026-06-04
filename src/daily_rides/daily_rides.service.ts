@@ -33,7 +33,6 @@ import { DailyRideEntity } from './infrastructure/persistence/relational/entitie
 import { LocationsService } from '../location/location.service';
 import { Location } from '../location/domain/location';
 import * as pako from 'pako';
-import { DailyRideMapper } from './infrastructure/persistence/relational/mappers/daily_rides.mapper';
 import { SubscriptionRepository } from '../subscriptions/infrastructure/persistence/relational/repositories/subscription.repository';
 
 @Injectable()
@@ -1070,17 +1069,30 @@ export class DailyRidesService {
       }
 
       // Save rides and delete raw locations
-      const entities = ridesToSave.map((r) => DailyRideMapper.toPersistence(r));
-      const savedEntities = await manager.save(DailyRideEntity, entities);
+      // const entities = ridesToSave.map((r) => DailyRideMapper.toPersistence(r));
+      // const savedEntities = await manager.save(DailyRideEntity, entities);
+      for (const ride of ridesToSave) {
+        await manager.update(DailyRideEntity, ride.id, {
+          status: ride.status,
+          embark_time: ride.embark_time,
+          disembark_time: ride.disembark_time,
+          embark_latitude: ride.embark_latitude,
+          embark_longitude: ride.embark_longitude,
+          disembark_latitude: ride.disembark_latitude,
+          disembark_longitude: ride.disembark_longitude,
+          route_data: ride.route_data,
+          earnings_processed: ride.earnings_processed,
+          had_active_subscription: ride.had_active_subscription,
+          snapshot_subscription_id: ride.snapshot_subscription_id,
+        });
+      }
 
       if (status === DailyRideStatus.Finished) {
         await manager.delete(LocationEntity, { daily_ride: { id: In(ids) } });
       }
 
-      // Return domain objects
-      const finalRides = savedEntities.map((e) => DailyRideMapper.toDomain(e));
-      this.sendBatchNotifications(finalRides, status);
-      return finalRides;
+      this.sendBatchNotifications(ridesToSave, status);
+      return ridesToSave;
     });
   }
 

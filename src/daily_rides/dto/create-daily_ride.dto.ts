@@ -138,4 +138,10 @@ export class CreateDailyRideDto {
 
   @IsOptional()
   earnings_processed?: boolean;
+
+  @IsOptional()
+  had_active_subscription!: boolean;
+
+  @IsOptional()
+  snapshot_subscription_id!: number | null;
 }

@@ -100,4 +100,12 @@ export class DailyRide {
   @ApiProperty()
   @Expose({ groups: ['me', 'admin'] })
   earnings_processed!: boolean;
+
+  @ApiProperty()
+  @Expose({ groups: ['me', 'admin'] })
+  had_active_subscription!: boolean;
+
+  @ApiProperty()
+  @Expose({ groups: ['me', 'admin'] })
+  snapshot_subscription_id!: number | null;
 }

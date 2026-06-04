@@ -1008,9 +1008,10 @@ export class DailyRidesService {
         ride.disembark_longitude = latestLocation?.longitude ?? null;
 
         // COMPRESSION (CPU Intensive - Safe here because we aren't in a transaction yet)
-        const locations = await this.locationsService.findByDailyRideId(
-          ride.id,
-        );
+        // const locations = await this.locationsService.findByDailyRideId(
+        //   ride.id,
+        // );
+        const locations: any = [];
         const routeSnapshot = locations.map((loc) => ({
           lat: loc.latitude,
           lng: loc.longitude,

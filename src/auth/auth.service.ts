@@ -318,10 +318,11 @@ export class AuthService {
   async confirmEmailByOtp(email: string, otp: string): Promise<void> {
     const user = await this.usersService.findByEmail(email);
 
-    if (
-      !user ||
-      user?.status?.id?.toString() !== StatusEnum.inactive.toString()
-    ) {
+    const statusId = user?.status?.id?.toString();
+    const isInactiveOrNull =
+      statusId === StatusEnum.inactive.toString() || statusId == null;
+
+    if (!user || !isInactiveOrNull) {
       throw new NotFoundException({
         status: HttpStatus.NOT_FOUND,
         error: 'User not found or already verified',

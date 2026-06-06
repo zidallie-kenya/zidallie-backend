@@ -86,6 +86,21 @@ export class AuthService {
     }
 
     if (user.status?.id?.toString() !== StatusEnum.active.toString()) {
+      // Generate and save a fresh OTP
+      if (user.email) {
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const otpExpires = Date.now() + 10 * 60 * 1000;
+
+        await this.usersService.update(user.id, {
+          emailOtp: otp,
+          emailOtpExpires: otpExpires,
+        });
+
+        await this.brevoService.userSignUp({
+          to: user.email,
+          data: { otp },
+        });
+      }
       throw new UnprocessableEntityException({
         status: HttpStatus.UNPROCESSABLE_ENTITY,
         errors: {
@@ -322,10 +337,17 @@ export class AuthService {
     const isInactiveOrNull =
       statusId === StatusEnum.inactive.toString() || statusId == null;
 
-    if (!user || !isInactiveOrNull) {
+    if (!user) {
       throw new NotFoundException({
         status: HttpStatus.NOT_FOUND,
-        error: 'User not found or already verified',
+        error: 'User not found',
+      });
+    }
+
+    if (!isInactiveOrNull) {
+      throw new NotFoundException({
+        status: HttpStatus.NOT_FOUND,
+        error: 'User already verified',
       });
     }
 

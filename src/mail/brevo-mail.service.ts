@@ -101,25 +101,31 @@ export class BrevoMailService {
       ]);
     }
 
-    const url = new URL(
-      this.configService.getOrThrow('app.frontendDomain', { infer: true }) +
-        '/password-change',
-    );
-    url.searchParams.set('hash', mailData.data.hash);
-    url.searchParams.set('expires', mailData.data.tokenExpires.toString());
+    // Deep link — opens the app directly instead of a web page
+    const deepLink = `zidallieparents://password-change?hash=${mailData.data.hash}&expires=${mailData.data.tokenExpires}`;
 
     await this.brevoMailerService.sendMail({
       to: mailData.to,
       subject: resetPasswordTitle ?? 'Reset Your Password',
       htmlContent: `
-        <h1>${resetPasswordTitle}</h1>
-        <p>${text1}</p>
-        <p><a href="${url.toString()}">${url.toString()}</a></p>
-        <p>${text2}</p>
-        <p>${text3}</p>
-        <p>${text4}</p>
-      `,
-      textContent: `${resetPasswordTitle} - ${url.toString()}`,
+      <h1>${resetPasswordTitle ?? 'Reset Your Password'}</h1>
+      <p>${text1 ?? 'Trouble signing in?'}</p>
+      <p>
+        <a href="${deepLink}" style="
+          display: inline-block;
+          padding: 12px 24px;
+          background-color: #1a1a1a;
+          color: #ffffff;
+          text-decoration: none;
+          border-radius: 8px;
+          font-weight: bold;
+        ">Reset password</a>
+      </p>
+      <p>${text2 ?? 'Resetting your password is easy.'}</p>
+      <p>${text3 ?? 'Just press the button above and follow the instructions.'}</p>
+      <p>${text4 ?? 'If you did not make this request then please ignore this email.'}</p>
+    `,
+      textContent: `${resetPasswordTitle ?? 'Reset Your Password'} - ${deepLink}`,
     });
   }
 

@@ -333,6 +333,17 @@ export class AuthService {
   async confirmEmailByOtp(email: string, otp: string): Promise<void> {
     const user = await this.usersService.findByEmail(email);
 
+    console.log('=== confirmEmailByOtp ===');
+    console.log('email received:', email);
+    console.log('otp received:', otp);
+    console.log('user found:', user?.id);
+    console.log('user status:', user?.status);
+    console.log('user.emailOtp:', user?.emailOtp);
+    console.log('user.emailOtpExpires:', user?.emailOtpExpires);
+    console.log('Date.now():', Date.now());
+    console.log('otp match:', user?.emailOtp === otp);
+    console.log('expired:', Date.now() > Number(user?.emailOtpExpires));
+
     if (!user) {
       throw new NotFoundException({
         status: HttpStatus.NOT_FOUND,

@@ -53,6 +53,7 @@ export class UserMapper {
     if (domainEntity.status !== undefined && domainEntity.status !== null) {
       const status = new StatusEntity();
       status.id = Number(domainEntity.status.id);
+      persistence.status = status; // ← add this line
     }
 
     if (domainEntity.email !== undefined)

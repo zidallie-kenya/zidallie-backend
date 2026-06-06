@@ -333,10 +333,6 @@ export class AuthService {
   async confirmEmailByOtp(email: string, otp: string): Promise<void> {
     const user = await this.usersService.findByEmail(email);
 
-    const statusId = user?.status?.id?.toString();
-    const isInactiveOrNull =
-      statusId === StatusEnum.inactive.toString() || statusId == null;
-
     if (!user) {
       throw new NotFoundException({
         status: HttpStatus.NOT_FOUND,
@@ -344,10 +340,14 @@ export class AuthService {
       });
     }
 
-    if (!isInactiveOrNull) {
-      throw new NotFoundException({
-        status: HttpStatus.NOT_FOUND,
-        error: 'User already verified',
+    const statusId = user?.status?.id?.toString();
+    const isInactive =
+      statusId === StatusEnum.inactive.toString() || statusId == null;
+
+    if (!isInactive) {
+      throw new UnprocessableEntityException({
+        status: HttpStatus.UNPROCESSABLE_ENTITY,
+        errors: { email: 'User already verified' },
       });
     }
 

@@ -33,6 +33,7 @@ import { SubscriptionModule } from './subscriptions/subscription.module';
 
 import { ScheduleModule } from '@nestjs/schedule';
 import { SasaPayModule } from './sasa_pay/sasa_pay.module';
+import { TransportBookingModule } from './booking/booking.module';
 
 const infrastructureDatabaseModule = TypeOrmModule.forRootAsync({
   useClass: TypeOrmConfigService,
@@ -93,6 +94,7 @@ const infrastructureDatabaseModule = TypeOrmModule.forRootAsync({
     LocationModule,
     SubscriptionModule,
     SasaPayModule,
+    TransportBookingModule,
   ],
 })
 export class AppModule {}

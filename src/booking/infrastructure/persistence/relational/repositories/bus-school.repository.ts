@@ -17,11 +17,11 @@ export class BusSchoolRepository {
   findById(id: number): Promise<BusSchoolEntity | null> {
     return this.repo.findOne({ where: { id } });
   }
-
   findByRegion(region: string): Promise<BusSchoolEntity[]> {
-    return this.repo.find({
-      where: { region: region.toLowerCase() },
-      order: { name: 'ASC' },
-    });
+    return this.repo
+      .createQueryBuilder('s')
+      .where('LOWER(s.region) = LOWER(:region)', { region })
+      .orderBy('s.name', 'ASC')
+      .getMany();
   }
 }

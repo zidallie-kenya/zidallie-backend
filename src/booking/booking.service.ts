@@ -21,6 +21,7 @@ import { BookingEntity } from './infrastructure/persistence/relational/entities/
 import { BookingDepositEntity } from './infrastructure/persistence/relational/entities/booking-deposit.entity';
 import { ClusterEntity } from './infrastructure/persistence/relational/entities/cluster.entity';
 import { UsersService } from '../users/users.service';
+import { BookingChildEntity } from './infrastructure/persistence/relational/entities/booking-child.entity';
 
 const DEPOSIT_PER_CHILD = 3000;
 const CLUSTER_MIN = 3;
@@ -241,6 +242,60 @@ export class TransportBookingService {
   // STEP 2: SUBMIT CHILD DETAILS
   // ─────────────────────────────────────────────
 
+  // async submitChildren(
+  //   parentId: number,
+  //   bookingId: number,
+  //   dto: SubmitChildrenDto,
+  // ) {
+  //   const booking = await this.bookingRepo.findById(bookingId);
+  //   if (!booking) throw new NotFoundException('Booking not found');
+  //   if (booking.parent.id !== parentId)
+  //     throw new BadRequestException(
+  //       'The provided parent id doesnt match the booking parent',
+  //     );
+
+  //   if (dto.children.length !== booking.children_count) {
+  //     throw new BadRequestException(
+  //       `Expected ${booking.children_count} child(ren), got ${dto.children.length}`,
+  //     );
+  //   }
+
+  //   // Replace children
+  //   booking.children = dto.children.map(
+  //     (c) =>
+  //       ({
+  //         name: c.name,
+  //         grade_class: c.grade_class ?? null,
+  //         pickup_time: c.pickup_time ?? null,
+  //         dropoff_time: c.dropoff_time ?? null,
+  //         emergency_contact: c.emergency_contact,
+  //         emergency_contact_phone: c.emergency_contact_phone,
+  //         emergency_contact_email: c.emergency_contact_email ?? null,
+  //         booking,
+  //       }) as any,
+  //   );
+
+  //   booking.status = 'awaiting_cluster';
+  //   booking.is_waitlisted = true;
+  //   booking.waitlist_started_at = new Date(); // Start the 15-day clock
+
+  //   await this.bookingRepo.save(booking);
+
+  //   const data = {
+  //     booking_id: bookingId,
+  //     service: booking.service_type,
+  //     term_booked: booking.term,
+  //     school: booking.carpool_school || booking.bus_school,
+  //     home_pickup: booking.home_area,
+  //     bus_pickup_station: booking.pickup_station,
+  //     children: booking.children_count,
+  //     deposit_per_child: booking.deposit_amount,
+  //     deposit_total_amount:
+  //       (booking.deposit_amount || 3000) * booking.children_count,
+  //     total_amount: booking.total_price,
+  //   };
+  //   return { message: 'Children details saved', data };
+  // }
   async submitChildren(
     parentId: number,
     bookingId: number,
@@ -248,54 +303,37 @@ export class TransportBookingService {
   ) {
     const booking = await this.bookingRepo.findById(bookingId);
     if (!booking) throw new NotFoundException('Booking not found');
+
     if (booking.parent.id !== parentId)
-      throw new BadRequestException(
-        'The provided parent id doesnt match the booking parent',
-      );
+      throw new BadRequestException('Unauthorized');
 
     if (dto.children.length !== booking.children_count) {
       throw new BadRequestException(
-        `Expected ${booking.children_count} child(ren), got ${dto.children.length}`,
+        `Expected ${booking.children_count} children`,
       );
     }
 
-    // Replace children
-    booking.children = dto.children.map(
-      (c) =>
-        ({
-          name: c.name,
-          grade_class: c.grade_class ?? null,
-          pickup_time: c.pickup_time ?? null,
-          dropoff_time: c.dropoff_time ?? null,
-          emergency_contact: c.emergency_contact,
-          emergency_contact_phone: c.emergency_contact_phone,
-          emergency_contact_email: c.emergency_contact_email ?? null,
-          booking,
-        }) as any,
-    );
+    // Map DTO to Entity objects
+    booking.children = dto.children.map((c) => {
+      const child = new BookingChildEntity();
+      child.name = c.name;
+      child.grade_class = c.grade_class ?? null;
+      child.pickup_time = c.pickup_time ?? null;
+      child.dropoff_time = c.dropoff_time ?? null;
+      child.emergency_contact = c.emergency_contact;
+      child.emergency_contact_phone = c.emergency_contact_phone;
+      // Fix: Convert empty string to null for the database
+      child.emergency_contact_email = c.emergency_contact_email?.trim() || null;
+      return child;
+    });
 
     booking.status = 'awaiting_cluster';
     booking.is_waitlisted = true;
-    booking.waitlist_started_at = new Date(); // Start the 15-day clock
+    booking.waitlist_started_at = new Date();
 
-    await this.bookingRepo.save(booking);
-
-    const data = {
-      booking_id: bookingId,
-      service: booking.service_type,
-      term_booked: booking.term,
-      school: booking.carpool_school || booking.bus_school,
-      home_pickup: booking.home_area,
-      bus_pickup_station: booking.pickup_station,
-      children: booking.children_count,
-      deposit_per_child: booking.deposit_amount,
-      deposit_total_amount:
-        (booking.deposit_amount || 3000) * booking.children_count,
-      total_amount: booking.total_price,
-    };
-    return { message: 'Children details saved', data };
+    // This will now save children IF cascade: true is set in BookingEntity
+    return await this.bookingRepo.save(booking);
   }
-
   // ─────────────────────────────────────────────
   // STEP 3: INITIATE DEPOSIT PAYMENT
   // ─────────────────────────────────────────────
@@ -460,62 +498,115 @@ export class TransportBookingService {
       `Deposit Amount received: ${amount} from phone number: ${mpesaTransactionId} for CheckoutRequestID: ${checkoutId}`,
     );
 
+    // try {
+    //   await this.dataSource.transaction(async (manager) => {
+    //     const depositRepo = manager.getRepository(BookingDepositEntity);
+
+    //     const deposit = await depositRepo.findOne({
+    //       where: { checkout_request_id: checkoutId },
+    //       relations: ['booking', 'booking.parent', 'booking.carpool_school'],
+    //       lock: { mode: 'pessimistic_write' },
+    //     });
+
+    //     if (!deposit) {
+    //       console.log(`No deposit found for checkout: ${checkoutId}`);
+    //       return;
+    //     }
+
+    //     if (deposit.status === 'paid') {
+    //       console.log(`Duplicate callback for: ${checkoutId}`);
+    //       return;
+    //     }
+
+    //     // Mark deposit paid
+    //     deposit.status = 'paid';
+    //     deposit.mpesa_transaction_id = mpesaTransactionId;
+    //     await manager.save(deposit);
+
+    //     // Update booking total_paid
+    //     const bookingRepo = manager.getRepository(BookingEntity);
+    //     const booking = await bookingRepo.findOne({
+    //       where: { id: deposit.booking.id },
+    //       relations: ['cluster', 'carpool_school'],
+    //       lock: { mode: 'pessimistic_write' },
+    //     });
+
+    //     if (!booking) return;
+
+    //     booking.total_paid = Number(booking.total_paid) + Number(amount);
+
+    //     // If fully paid, mark accordingly
+    //     if (booking.total_paid >= Number(booking.total_price)) {
+    //       booking.status = 'completed';
+    //     } else {
+    //       booking.status = 'deposit_paid';
+    //     }
+
+    //     await manager.save(booking);
+    //   });
+
+    //   // Run cluster logic OUTSIDE transaction (reads other bookings)
+    //   const deposit = await this.depositRepo.findByCheckoutId(checkoutId);
+    //   if (deposit) {
+    //     await this.runClusterLogic(deposit.booking.id);
+    //   }
+    // } catch (error: any) {
+    //   console.error('Error handling deposit callback:', error.message);
+    // }
     try {
       await this.dataSource.transaction(async (manager) => {
         const depositRepo = manager.getRepository(BookingDepositEntity);
+        const bookingRepo = manager.getRepository(BookingEntity);
 
-        const deposit = await depositRepo.findOne({
+        // 1. Find the deposit without a lock first to get the ID
+        const initialDeposit = await depositRepo.findOne({
           where: { checkout_request_id: checkoutId },
-          relations: ['booking', 'booking.parent', 'booking.carpool_school'],
+          relations: ['booking'],
+        });
+
+        if (!initialDeposit) return;
+
+        // 2. Now lock the rows specifically by ID (avoiding Join locks)
+        const deposit = await depositRepo.findOne({
+          where: { id: initialDeposit.id },
           lock: { mode: 'pessimistic_write' },
         });
 
-        if (!deposit) {
-          console.log(`No deposit found for checkout: ${checkoutId}`);
-          return;
-        }
+        if (!deposit || deposit.status === 'paid') return;
 
-        if (deposit.status === 'paid') {
-          console.log(`Duplicate callback for: ${checkoutId}`);
-          return;
-        }
-
-        // Mark deposit paid
-        deposit.status = 'paid';
-        deposit.mpesa_transaction_id = mpesaTransactionId;
-        await manager.save(deposit);
-
-        // Update booking total_paid
-        const bookingRepo = manager.getRepository(BookingEntity);
         const booking = await bookingRepo.findOne({
-          where: { id: deposit.booking.id },
-          relations: ['cluster', 'carpool_school'],
+          where: { id: initialDeposit.booking.id },
           lock: { mode: 'pessimistic_write' },
         });
 
         if (!booking) return;
 
-        booking.total_paid = Number(booking.total_paid) + Number(amount);
+        // 3. Update data
+        deposit.status = 'paid';
+        deposit.mpesa_transaction_id = mpesaTransactionId;
+        await manager.save(deposit);
 
-        // If fully paid, mark accordingly
-        if (booking.total_paid >= Number(booking.total_price)) {
-          booking.status = 'completed';
-        } else {
-          booking.status = 'deposit_paid';
-        }
+        booking.total_paid = Number(booking.total_paid || 0) + Number(amount);
+        booking.status =
+          booking.total_paid >= Number(booking.total_price)
+            ? 'completed'
+            : 'deposit_paid';
 
         await manager.save(booking);
       });
 
-      // Run cluster logic OUTSIDE transaction (reads other bookings)
-      const deposit = await this.depositRepo.findByCheckoutId(checkoutId);
-      if (deposit) {
-        await this.runClusterLogic(deposit.booking.id);
+      // 4. Run cluster logic after transaction is committed
+      // Re-fetch to ensure we have all relations needed for clustering
+      const finalDeposit = await this.depositRepo.findByCheckoutId(checkoutId);
+      if (finalDeposit && finalDeposit.booking) {
+        console.log(
+          `Triggering cluster logic for booking: ${finalDeposit.booking.id}`,
+        );
+        await this.runClusterLogic(finalDeposit.booking.id);
       }
     } catch (error: any) {
       console.error('Error handling deposit callback:', error.message);
     }
-
     return { ResultCode: 0, ResultDesc: 'Accepted' };
   }
 
@@ -523,52 +614,94 @@ export class TransportBookingService {
   // CLUSTER LOGIC
   // ─────────────────────────────────────────────
 
+  // private async runClusterLogic(bookingId: number) {
+  //   const booking = await this.bookingRepo.findById(bookingId);
+  //   if (!booking) return;
+
+  //   // Only carpool needs clustering
+  //   if (booking.service_type !== 'carpool') {
+  //     booking.is_waitlisted = false;
+  //     await this.bookingRepo.save(booking);
+  //     return;
+  //   }
+
+  //   const cluster = await this.findOrCreateCluster(booking);
+  //   booking.cluster = cluster;
+  //   await this.bookingRepo.save(booking);
+
+  //   // 3. NOW reload cluster with fresh bookings (after the save above committed)
+  //   const freshCluster = await this.clusterRepo.findById(cluster.id);
+  //   if (!freshCluster) return;
+
+  //   // 4. Count total children across all bookings in this cluster
+  //   const totalStudents = freshCluster.bookings.reduce(
+  //     (sum, b) => sum + Number(b.children_count),
+  //     0,
+  //   );
+
+  //   console.log(`Cluster ${freshCluster.id} total students: ${totalStudents}`);
+
+  //   if (totalStudents >= CLUSTER_MIN) {
+  //     cluster.is_active = true;
+  //     await this.clusterRepo.save(cluster);
+
+  //     // Mark all members confirmed
+  //     for (const b of cluster.bookings) {
+  //       b.is_waitlisted = false;
+  //       await this.bookingRepo.save(b);
+  //     }
+  //   } else {
+  //     booking.is_waitlisted = true;
+  //     await this.clusterRepo.save(cluster);
+
+  //     booking.is_waitlisted = true;
+  //     booking.status = 'awaiting_cluster';
+  //     await this.bookingRepo.save(booking);
+  //     console.log(
+  //       `Cluster ${freshCluster.id} is still pending (${totalStudents}/${CLUSTER_MIN} students)`,
+  //     );
+  //   }
+  // }
   private async runClusterLogic(bookingId: number) {
+    // Fetch booking with relations needed for cluster finding
     const booking = await this.bookingRepo.findById(bookingId);
     if (!booking) return;
 
-    // Only carpool needs clustering
     if (booking.service_type !== 'carpool') {
       booking.is_waitlisted = false;
       await this.bookingRepo.save(booking);
       return;
     }
 
+    // 1. Find or create
     const cluster = await this.findOrCreateCluster(booking);
+
+    // 2. Link and Save - CRITICAL STEP
     booking.cluster = cluster;
     await this.bookingRepo.save(booking);
 
-    // 3. NOW reload cluster with fresh bookings (after the save above committed)
+    // 3. Refresh cluster data to count members
     const freshCluster = await this.clusterRepo.findById(cluster.id);
     if (!freshCluster) return;
 
-    // 4. Count total children across all bookings in this cluster
     const totalStudents = freshCluster.bookings.reduce(
       (sum, b) => sum + Number(b.children_count),
       0,
     );
 
-    console.log(`Cluster ${freshCluster.id} total students: ${totalStudents}`);
-
     if (totalStudents >= CLUSTER_MIN) {
-      cluster.is_active = true;
-      await this.clusterRepo.save(cluster);
+      freshCluster.is_active = true;
+      await this.clusterRepo.save(freshCluster);
 
-      // Mark all members confirmed
-      for (const b of cluster.bookings) {
+      // Update all bookings in this cluster
+      for (const b of freshCluster.bookings) {
         b.is_waitlisted = false;
         await this.bookingRepo.save(b);
       }
     } else {
       booking.is_waitlisted = true;
-      await this.clusterRepo.save(cluster);
-
-      booking.is_waitlisted = true;
       booking.status = 'awaiting_cluster';
       await this.bookingRepo.save(booking);
-      console.log(
-        `Cluster ${freshCluster.id} is still pending (${totalStudents}/${CLUSTER_MIN} students)`,
-      );
     }
   }
 

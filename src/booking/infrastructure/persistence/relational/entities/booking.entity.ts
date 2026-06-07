@@ -111,7 +111,8 @@ export class BookingEntity {
   waitlist_started_at!: Date | null;
 
   @OneToMany(() => BookingChildEntity, (child) => child.booking, {
-    cascade: true,
+    cascade: true, // 👈 THIS IS REQUIRED
+    onDelete: 'CASCADE',
   })
   children!: BookingChildEntity[];
 

@@ -10,21 +10,34 @@ export class BookingRepository {
     this.repo = dataSource.getRepository(BookingEntity);
   }
 
+  // findById(id: number): Promise<BookingEntity | null> {
+  //   return this.repo.findOne({
+  //     where: { id },
+  //     relations: [
+  //       'parent',
+  //       'carpool_school',
+  //       'bus_school',
+  //       'pickup_station',
+  //       'cluster',
+  //       'children',
+  //       'deposits',
+  //     ],
+  //   });
+  // }
   findById(id: number): Promise<BookingEntity | null> {
-    return this.repo.findOne({
-      where: { id },
-      relations: [
-        'parent',
-        'carpool_school',
-        'bus_school',
-        'pickup_station',
-        'cluster',
-        'children',
-        'deposits',
-      ],
-    });
+    return this.repo
+      .createQueryBuilder('booking')
+      .leftJoinAndSelect('booking.parent', 'parent')
+      .leftJoinAndSelect('booking.carpool_school', 'carpool_school')
+      .leftJoinAndSelect('booking.bus_school', 'bus_school')
+      .leftJoinAndSelect('booking.pickup_station', 'pickup_station')
+      .leftJoinAndSelect('booking.cluster', 'cluster')
+      .leftJoinAndSelect('cluster.bookings', 'cluster_bookings') // ← critical
+      .leftJoinAndSelect('booking.children', 'children')
+      .leftJoinAndSelect('booking.deposits', 'deposits')
+      .where('booking.id = :id', { id })
+      .getOne();
   }
-
   findByParentId(parentId: number): Promise<BookingEntity[]> {
     return this.repo.find({
       where: { parent: { id: parentId } },

@@ -14,15 +14,27 @@ export class ClusterRepository {
     return this.repo.find({ relations: ['bookings'] });
   }
 
+  // findById(id: number): Promise<ClusterEntity | null> {
+  //   return this.repo.findOne({ where: { id }, relations: ['bookings'] });
+  // }
+
   findById(id: number): Promise<ClusterEntity | null> {
-    return this.repo.findOne({ where: { id }, relations: ['bookings'] });
+    return this.repo
+      .createQueryBuilder('cluster')
+      .leftJoinAndSelect('cluster.bookings', 'booking')
+      .leftJoinAndSelect('booking.carpool_school', 'carpool_school')
+      .where('cluster.id = :id', { id })
+      .getOne();
   }
 
   findByTerm(term: string): Promise<ClusterEntity[]> {
-    return this.repo.find({
-      where: { term },
-      relations: ['bookings'],
-    });
+    return this.repo
+      .createQueryBuilder('cluster')
+      .leftJoinAndSelect('cluster.bookings', 'booking')
+      .leftJoinAndSelect('booking.carpool_school', 'carpool_school')
+      .where('cluster.term = :term', { term })
+      .andWhere('cluster.is_active = false') // only look at non-full clusters
+      .getMany();
   }
 
   async create(data: Partial<ClusterEntity>): Promise<ClusterEntity> {

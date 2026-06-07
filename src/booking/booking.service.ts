@@ -538,17 +538,17 @@ export class TransportBookingService {
     booking.cluster = cluster;
     await this.bookingRepo.save(booking);
 
-    // REFRESH cluster to get all current bookings
-    const updatedCluster = await this.clusterRepo.findById(cluster.id);
+    // 3. NOW reload cluster with fresh bookings (after the save above committed)
+    const freshCluster = await this.clusterRepo.findById(cluster.id);
+    if (!freshCluster) return;
 
-    // MATCH Calculate total children in the cluster
-    let totalStudents = 0;
-    if (updatedCluster !== null) {
-      totalStudents = updatedCluster.bookings.reduce(
-        (sum, b) => sum + Number(b.children_count),
-        0,
-      );
-    }
+    // 4. Count total children across all bookings in this cluster
+    const totalStudents = freshCluster.bookings.reduce(
+      (sum, b) => sum + Number(b.children_count),
+      0,
+    );
+
+    console.log(`Cluster ${freshCluster.id} total students: ${totalStudents}`);
 
     if (totalStudents >= CLUSTER_MIN) {
       cluster.is_active = true;
@@ -566,13 +566,22 @@ export class TransportBookingService {
       booking.is_waitlisted = true;
       booking.status = 'awaiting_cluster';
       await this.bookingRepo.save(booking);
+      console.log(
+        `Cluster ${freshCluster.id} is still pending (${totalStudents}/${CLUSTER_MIN} students)`,
+      );
     }
   }
 
   private async findOrCreateCluster(
     booking: BookingEntity,
   ): Promise<ClusterEntity> {
+    console.log(
+      `Finding cluster for booking ${booking.id}, term: ${booking.term}`,
+    );
+
     if (!booking.home_lat || !booking.home_lon) {
+      console.log('No coords — creating new cluster');
+
       return this.clusterRepo.create({
         term: booking.term,
         zone: booking.region ?? 'General',
@@ -611,6 +620,7 @@ export class TransportBookingService {
     }
 
     // No suitable cluster — create new one
+    console.log('creating new cluster');
     return this.clusterRepo.create({
       term: booking.term,
       zone: booking.region ?? 'General',

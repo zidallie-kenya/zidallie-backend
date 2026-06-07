@@ -15,12 +15,11 @@ export class PricingRepository {
     distanceKm: number,
     serviceType: string,
   ): Promise<number | null> {
-    // Find cheapest tier where max_km >= distance for this region/service
     const pricing = await this.repo
       .createQueryBuilder('p')
       .where('LOWER(p.region) = LOWER(:region)', { region })
       .andWhere('p.service_type = :serviceType', { serviceType })
-      .andWhere('p.max_km >= :distance', { distance: distanceKm })
+      .andWhere('p.max_km >= :distance', { distance: Math.ceil(distanceKm) })
       .orderBy('p.max_km', 'ASC')
       .getOne();
 

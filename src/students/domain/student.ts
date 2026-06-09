@@ -88,6 +88,15 @@ export class Student {
   transport_term_fee: number | null;
 
   @ApiProperty({
+    type: String,
+    example: 'J87834RER43',
+    required: false,
+    nullable: true,
+  })
+  @Expose({ groups: ['me', 'admin'] })
+  rfid_code: string | null;
+
+  @ApiProperty({
     enum: ['school', 'carpool', 'private'],
     required: false,
     nullable: true,

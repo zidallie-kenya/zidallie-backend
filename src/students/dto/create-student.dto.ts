@@ -89,6 +89,12 @@ export class CreateStudentDto {
   @IsNumber()
   daily_fee?: number | null;
 
+  @ApiProperty({ type: String, example: 'HD849123', required: false })
+  @IsOptional()
+  @IsString()
+  rfid_code?: string | null;
+
+
   @ApiProperty({ type: Number, example: 12000, required: false })
   @IsOptional()
   @IsNumber()

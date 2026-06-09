@@ -882,7 +882,6 @@ export class TransportBookingService {
       }
     } else {
       booking.is_waitlisted = true;
-      booking.status = 'awaiting_cluster';
       await this.bookingRepo.save(booking);
     }
   }

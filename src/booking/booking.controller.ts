@@ -7,6 +7,7 @@ import {
   Patch,
   Post,
   Req,
+  SerializeOptions,
   UseGuards,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
@@ -103,6 +104,9 @@ export class TransportBookingController {
   //My students
   @Get('my-students')
   @Roles(RoleEnum.parent)
+  @SerializeOptions({
+    groups: ['me'],
+  })
   getMyStudents(@Req() req: any) {
     return this.service.getMyStudents(req.user.id);
   }

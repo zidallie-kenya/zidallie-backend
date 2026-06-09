@@ -19,46 +19,46 @@ export type ServiceType = 'school' | 'carpool' | 'private';
 @Entity({ name: 'student' })
 export class StudentEntity extends EntityRelationalHelper {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @ManyToOne(() => SchoolEntity, (school) => school.students, {
     nullable: true,
   })
-  school: SchoolEntity | null;
+  school!: SchoolEntity | null;
 
   @ManyToOne(() => UserEntity, (user) => user.students, { nullable: true })
-  parent: UserEntity | null;
+  parent!: UserEntity | null;
 
   @Column({ type: 'text', nullable: false })
-  name: string;
+  name!: string;
 
   @Column({ type: 'text', nullable: true })
-  profile_picture: string | null;
+  profile_picture!: string | null;
 
   @Column({ type: 'varchar', length: 6, enum: Gender, nullable: false })
-  gender: Gender;
+  gender!: Gender;
 
   @Column({ type: 'text', nullable: true })
-  address: string | null;
+  address!: string | null;
 
   @Column({ type: 'text', nullable: true })
-  comments: string | null;
+  comments!: string | null;
 
   @Column({ type: 'jsonb', nullable: true })
   meta: any | null;
 
   // NEW FIELDS FOR PAYMENT INTEGRATION
   @Column({ type: 'text', nullable: true })
-  account_number: string | null;
+  account_number!: string | null;
 
   @Column({ type: 'float', nullable: true })
-  daily_fee: number | null;
+  daily_fee!: number | null;
 
   @Column({ type: 'varchar', nullable: true })
   rfid_code: string | null;
 
   @Column({ type: 'float', nullable: true })
-  transport_term_fee: number | null;
+  transport_term_fee!: number | null;
 
   @Column({
     type: 'varchar',
@@ -66,13 +66,13 @@ export class StudentEntity extends EntityRelationalHelper {
     enum: ['school', 'carpool', 'private'],
     nullable: true,
   })
-  service_type: ServiceType | null;
+  service_type!: ServiceType | null;
 
   @CreateDateColumn()
-  created_at: Date;
+  created_at!: Date;
 
   @OneToMany(() => RideEntity, (ride) => ride.student)
-  rides: RideEntity[];
+  rides!: RideEntity[];
 
   @OneToMany(() => SubscriptionEntity, (subscription) => subscription.student)
   subscriptions?: SubscriptionEntity[];

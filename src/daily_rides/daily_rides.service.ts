@@ -33,7 +33,6 @@ import { DailyRideEntity } from './infrastructure/persistence/relational/entitie
 import { LocationsService } from '../location/location.service';
 import { Location } from '../location/domain/location';
 import * as pako from 'pako';
-import { DailyRideMapper } from './infrastructure/persistence/relational/mappers/daily_rides.mapper';
 import { SubscriptionRepository } from '../subscriptions/infrastructure/persistence/relational/repositories/subscription.repository';
 
 @Injectable()
@@ -156,6 +155,10 @@ export class DailyRidesService {
       disembark_longitude: createDailyRideDto.disembark_longitude ?? null,
       route_data: createDailyRideDto.route_data ?? null,
       earnings_processed: createDailyRideDto.earnings_processed ?? false,
+      snapshot_subscription_id:
+        createDailyRideDto.snapshot_subscription_id ?? null,
+      had_active_subscription:
+        createDailyRideDto.had_active_subscription ?? false,
     });
 
     return dailyRide;
@@ -699,6 +702,8 @@ export class DailyRidesService {
       disembark_longitude: updateDailyRideDto.disembark_longitude,
       route_data: updateDailyRideDto.route_data,
       earnings_processed: updateDailyRideDto.earnings_processed,
+      had_active_subscription: updateDailyRideDto.had_active_subscription,
+      snapshot_subscription_id: updateDailyRideDto.snapshot_subscription_id,
     });
   }
 
@@ -771,145 +776,324 @@ export class DailyRidesService {
     });
   }
 
+  // async batchUpdateStatus(
+  //   ids: number[],
+  //   status: DailyRideStatus,
+  // ): Promise<DailyRide[]> {
+  //   // We use the dataSource to start a transaction
+  //   return await this.dataSource.transaction(
+  //     async (transactionalEntityManager) => {
+  //       // 1. Fetch rides using the transactional manager to ensure consistency
+  //       const rides = await transactionalEntityManager.find(DailyRideEntity, {
+  //         where: { id: In(ids) },
+  //         relations: ['driver', 'ride', 'ride.parent', 'ride.student'],
+  //       });
+
+  //       if (rides.length === 0) {
+  //         throw new NotFoundException(`No rides found for given IDs`);
+  //       }
+
+  //       const currentTime = new Date();
+  //       const mostRecentMonday = this.getMostRecentMonday();
+  //       const driversProcessedInThisBatch = new Set<number>();
+
+  //       for (const ride of rides) {
+  //         ride.status = status;
+
+  //         if (status === DailyRideStatus.Active) {
+  //           ride.embark_time = currentTime;
+
+  //           if (ride.ride?.student?.id) {
+  //             const activeSub =
+  //               await this.subscriptionRepository.checkActiveStatusByDate(
+  //                 ride.ride.student.id,
+  //                 currentTime,
+  //               );
+
+  //             console.log(
+  //               `Checked active subscription for student ${ride.ride.student.id} on ride ${ride.id}:`,
+  //               activeSub,
+  //             );
+
+  //             // Permanent record for reporting: Did they have a valid sub on this date?
+  //             ride.had_active_subscription = !!activeSub;
+  //             ride.snapshot_subscription_id = activeSub ? activeSub.id : null;
+  //           }
+
+  //           const latestLocation =
+  //             await this.locationsService.findLatestByDriverId(
+  //               ride.driver?.id ?? 0,
+  //             );
+  //           ride.embark_latitude = latestLocation?.latitude ?? null;
+  //           ride.embark_longitude = latestLocation?.longitude ?? null;
+  //         }
+
+  //         if (status === DailyRideStatus.Finished) {
+  //           ride.disembark_time = currentTime;
+
+  //           // Capture Disembark Location
+  //           const latestLocation =
+  //             await this.locationsService.findLatestByDriverId(
+  //               ride.driver?.id ?? 0,
+  //             );
+  //           ride.disembark_latitude = latestLocation?.latitude ?? null;
+  //           ride.disembark_longitude = latestLocation?.longitude ?? null;
+
+  //           // ------------- WEEKLY EARNINGS RESET (LAZY LOGIC) -------------------
+  //           if (
+  //             ride.driver &&
+  //             !driversProcessedInThisBatch.has(ride.driver.id)
+  //           ) {
+  //             const lastReset = ride.driver.last_earnings_reset_at;
+
+  //             // If they have never been reset, or the last reset was BEFORE this week's Monday
+  //             if (!lastReset || new Date(lastReset) < mostRecentMonday) {
+  //               console.log(
+  //                 `Weekly Reset: Wiping earnings for driver ${ride.driver.id}. Last reset: ${lastReset}`,
+  //               );
+
+  //               await transactionalEntityManager.update(
+  //                 UserEntity,
+  //                 ride.driver.id,
+  //                 {
+  //                   pending_earnings: 0,
+  //                   last_earnings_reset_at: currentTime,
+  //                 },
+  //               );
+
+  //               // Update the local object so the increment below starts from 0
+  //               ride.driver.pending_earnings = 0;
+  //             }
+  //             driversProcessedInThisBatch.add(ride.driver.id);
+  //           }
+  //           // ----------------------------------------------------------------------
+
+  //           // 2. Process Route Data (Compress)
+  //           const locations = await this.locationsService.findByDailyRideId(
+  //             ride.id,
+  //           );
+  //           const routeSnapshot = locations.map((loc) => ({
+  //             lat: loc.latitude,
+  //             lng: loc.longitude,
+  //             ts: loc.timestamp,
+  //           }));
+
+  //           ride.route_data = Buffer.from(
+  //             pako.gzip(JSON.stringify(routeSnapshot)),
+  //           ).toString('base64');
+
+  //           // 3. DELETE RAW LOCATIONS (Inside Transaction)
+  //           // We use the manager directly to ensure it's part of this transaction
+  //           await transactionalEntityManager.delete(LocationEntity, {
+  //             daily_ride: { id: ride.id },
+  //           });
+
+  //           // 4. PAY DRIVER (Inside Transaction)
+  //           if (ride.driver?.payout && !ride.earnings_processed) {
+  //             const salary = Number(ride.driver.payout.agreed_salary);
+
+  //             // Check if salary is a valid number and model exists
+  //             if (
+  //               !isNaN(salary) &&
+  //               salary > 0 &&
+  //               ride.driver.payout.payment_model
+  //             ) {
+  //               const amountToEarn = this.EarningsHelper.calculatePerRide(
+  //                 ride.driver.payout.payment_model,
+  //                 salary,
+  //               );
+
+  //               // Final safety check before DB operation
+  //               if (!isNaN(amountToEarn) && isFinite(amountToEarn)) {
+  //                 console.log(
+  //                   `Crediting driver ${ride.driver.id} with amount ${amountToEarn} for ride ${ride.id}`,
+  //                 );
+  //                 await transactionalEntityManager.increment(
+  //                   UserEntity,
+  //                   { id: ride.driver.id },
+  //                   'pending_earnings',
+  //                   amountToEarn,
+  //                 );
+  //                 ride.earnings_processed = true;
+  //               } else {
+  //                 console.error(
+  //                   `Invalid earnings calculated for driver ${ride.driver.id}: ${amountToEarn}`,
+  //                 );
+  //               }
+  //             } else {
+  //               console.warn(
+  //                 `Driver ${ride.driver.id} has invalid payout configuration. Salary: ${ride.driver?.payout.agreed_salary}`,
+  //               );
+  //             }
+  //           }
+  //         }
+  //       }
+
+  //       // 5. SAVE ALL RIDES AT ONCE
+  //       const savedEntities = await transactionalEntityManager.save(
+  //         DailyRideEntity,
+  //         rides,
+  //       );
+
+  //       // 6. MAP BACK TO DOMAIN
+  //       const savedRides = savedEntities.map((entity) =>
+  //         DailyRideMapper.toDomain(entity),
+  //       );
+
+  //       // Side Effects (Notifications) - Run these after the transaction is committed
+  //       this.sendBatchNotifications(savedRides, status);
+
+  //       return savedRides;
+  //     },
+  //   );
+  // }
+
   async batchUpdateStatus(
     ids: number[],
     status: DailyRideStatus,
   ): Promise<DailyRide[]> {
-    // We use the dataSource to start a transaction
-    return await this.dataSource.transaction(
-      async (transactionalEntityManager) => {
-        // 1. Fetch rides using the transactional manager to ensure consistency
-        const rides = await transactionalEntityManager.find(DailyRideEntity, {
-          where: { id: In(ids) },
-          relations: ['driver', 'ride', 'ride.parent', 'ride.student'],
-        });
+    // 1. FETCH DATA
+    const rides = await this.dailyRideRepository.findByIds(ids);
+    if (rides.length === 0) {
+      throw new NotFoundException(`No rides found for given IDs`);
+    }
 
-        if (rides.length === 0) {
-          throw new NotFoundException(`No rides found for given IDs`);
-        }
+    const currentTime = new Date();
+    const mostRecentMonday = this.getMostRecentMonday();
 
-        const currentTime = new Date();
+    // We will store "work" to be done in the transaction here
+    const ridesToSave: DailyRide[] = [];
+    const driversToReset = new Set<number>();
+    const earningsToIncrement: Map<number, number> = new Map();
 
-        for (const ride of rides) {
-          ride.status = status;
+    // 2. PROCESS (Heavy lifting & CPU work happens here, NOT in transaction)
+    for (const ride of rides) {
+      ride.status = status;
 
-          if (status === DailyRideStatus.Active) {
-            ride.embark_time = currentTime;
+      if (status === DailyRideStatus.Active) {
+        ride.embark_time = currentTime;
 
-            if (ride.ride?.student?.id) {
-              const activeSub =
-                await this.subscriptionRepository.checkActiveStatusByDate(
-                  ride.ride.student.id,
-                  currentTime,
-                );
-
-              console.log(
-                `Checked active subscription for student ${ride.ride.student.id} on ride ${ride.id}:`,
-                activeSub,
-              );
-
-              // Permanent record for reporting: Did they have a valid sub on this date?
-              ride.had_active_subscription = !!activeSub;
-              ride.snapshot_subscription_id = activeSub ? activeSub.id : null;
-            }
-
-            const latestLocation =
-              await this.locationsService.findLatestByDriverId(
-                ride.driver?.id ?? 0,
-              );
-            ride.embark_latitude = latestLocation?.latitude ?? null;
-            ride.embark_longitude = latestLocation?.longitude ?? null;
-          }
-
-          if (status === DailyRideStatus.Finished) {
-            ride.disembark_time = currentTime;
-
-            // Capture Disembark Location
-            const latestLocation =
-              await this.locationsService.findLatestByDriverId(
-                ride.driver?.id ?? 0,
-              );
-            ride.disembark_latitude = latestLocation?.latitude ?? null;
-            ride.disembark_longitude = latestLocation?.longitude ?? null;
-
-            // 2. Process Route Data (Compress)
-            const locations = await this.locationsService.findByDailyRideId(
-              ride.id,
+        if (ride.ride?.student?.id) {
+          const activeSub =
+            await this.subscriptionRepository.checkActiveStatusByDate(
+              ride.ride.student.id,
+              currentTime,
             );
-            const routeSnapshot = locations.map((loc) => ({
-              lat: loc.latitude,
-              lng: loc.longitude,
-              ts: loc.timestamp,
-            }));
+          console.log(
+            `Checked active subscription for student ${ride.ride.student.id} on ride ${ride.id}:`,
+            activeSub,
+          );
 
-            ride.route_data = Buffer.from(
-              pako.gzip(JSON.stringify(routeSnapshot)),
-            ).toString('base64');
+          // Permanent record for reporting: Did they have a valid sub on this date?
 
-            // 3. DELETE RAW LOCATIONS (Inside Transaction)
-            // We use the manager directly to ensure it's part of this transaction
-            await transactionalEntityManager.delete(LocationEntity, {
-              daily_ride: { id: ride.id },
-            });
-
-            // 4. PAY DRIVER (Inside Transaction)
-            if (ride.driver?.payout && !ride.earnings_processed) {
-              const salary = Number(ride.driver.payout.agreed_salary);
-
-              // Check if salary is a valid number and model exists
-              if (
-                !isNaN(salary) &&
-                salary > 0 &&
-                ride.driver.payout.payment_model
-              ) {
-                const amountToEarn = this.EarningsHelper.calculatePerRide(
-                  ride.driver.payout.payment_model,
-                  salary,
-                );
-
-                // Final safety check before DB operation
-                if (!isNaN(amountToEarn) && isFinite(amountToEarn)) {
-                  console.log(
-                    `Crediting driver ${ride.driver.id} with amount ${amountToEarn} for ride ${ride.id}`,
-                  );
-                  await transactionalEntityManager.increment(
-                    UserEntity,
-                    { id: ride.driver.id },
-                    'pending_earnings',
-                    amountToEarn,
-                  );
-                  ride.earnings_processed = true;
-                } else {
-                  console.error(
-                    `Invalid earnings calculated for driver ${ride.driver.id}: ${amountToEarn}`,
-                  );
-                }
-              } else {
-                console.warn(
-                  `Driver ${ride.driver.id} has invalid payout configuration. Salary: ${ride.driver.payout.agreed_salary}`,
-                );
-              }
-            }
-          }
+          ride.had_active_subscription = !!activeSub;
+          ride.snapshot_subscription_id = activeSub ? activeSub.id : null;
         }
 
-        // 5. SAVE ALL RIDES AT ONCE
-        const savedEntities = await transactionalEntityManager.save(
-          DailyRideEntity,
-          rides,
+        const latestLocation = await this.locationsService.findLatestByDriverId(
+          ride.driver?.id ?? 0,
         );
+        ride.embark_latitude = latestLocation?.latitude ?? null;
+        ride.embark_longitude = latestLocation?.longitude ?? null;
+      }
 
-        // 6. MAP BACK TO DOMAIN
-        const savedRides = savedEntities.map((entity) =>
-          DailyRideMapper.toDomain(entity),
+      if (status === DailyRideStatus.Finished) {
+        ride.disembark_time = currentTime;
+
+        const latestLocation = await this.locationsService.findLatestByDriverId(
+          ride.driver?.id ?? 0,
         );
+        ride.disembark_latitude = latestLocation?.latitude ?? null;
+        ride.disembark_longitude = latestLocation?.longitude ?? null;
 
-        // Side Effects (Notifications) - Run these after the transaction is committed
-        this.sendBatchNotifications(savedRides, status);
+        // COMPRESSION (CPU Intensive - Safe here because we aren't in a transaction yet)
+        // const locations = await this.locationsService.findByDailyRideId(
+        //   ride.id,
+        // );
+        const locations: any = [];
+        const routeSnapshot = locations.map((loc) => ({
+          lat: loc.latitude,
+          lng: loc.longitude,
+          ts: loc.timestamp,
+        }));
 
-        return savedRides;
-      },
-    );
+        ride.route_data = Buffer.from(
+          pako.gzip(JSON.stringify(routeSnapshot)),
+        ).toString('base64');
+
+        // Calculate Earnings
+        if (ride.driver?.payout && !ride.earnings_processed) {
+          const salary = Number(ride.driver.payout.agreed_salary);
+
+          const amount = this.EarningsHelper.calculatePerRide(
+            ride.driver.payout.payment_model,
+            salary,
+          );
+
+          earningsToIncrement.set(
+            ride.driver.id,
+            (earningsToIncrement.get(ride.driver.id) || 0) + amount,
+          );
+          ride.earnings_processed = true;
+        }
+
+        // Weekly Reset logic
+        if (ride.driver) {
+          const lastReset = ride.driver.last_earnings_reset_at;
+          if (!lastReset || new Date(lastReset) < mostRecentMonday) {
+            driversToReset.add(ride.driver.id);
+          }
+        }
+      }
+      ridesToSave.push(ride);
+    }
+
+    // 3. ATOMIC WRITE (Fast transaction)
+    return await this.dataSource.transaction(async (manager) => {
+      // Perform resets
+      for (const driverId of driversToReset) {
+        await manager.update(UserEntity, driverId, {
+          pending_earnings: 0,
+          last_earnings_reset_at: currentTime,
+        });
+      }
+
+      // Perform increments
+      for (const [driverId, amount] of earningsToIncrement) {
+        await manager.increment(
+          UserEntity,
+          { id: driverId },
+          'pending_earnings',
+          amount,
+        );
+      }
+
+      // Save rides and delete raw locations
+      // const entities = ridesToSave.map((r) => DailyRideMapper.toPersistence(r));
+      // const savedEntities = await manager.save(DailyRideEntity, entities);
+      for (const ride of ridesToSave) {
+        await manager.update(DailyRideEntity, ride.id, {
+          status: ride.status,
+          embark_time: ride.embark_time,
+          disembark_time: ride.disembark_time,
+          embark_latitude: ride.embark_latitude,
+          embark_longitude: ride.embark_longitude,
+          disembark_latitude: ride.disembark_latitude,
+          disembark_longitude: ride.disembark_longitude,
+          route_data: ride.route_data,
+          earnings_processed: ride.earnings_processed,
+          had_active_subscription: ride.had_active_subscription,
+          snapshot_subscription_id: ride.snapshot_subscription_id,
+        });
+      }
+
+      if (status === DailyRideStatus.Finished) {
+        await manager.delete(LocationEntity, { daily_ride: { id: In(ids) } });
+      }
+
+      this.sendBatchNotifications(ridesToSave, status);
+      return ridesToSave;
+    });
   }
 
   // Helper method to keep the transaction block clean
@@ -1004,4 +1188,16 @@ export class DailyRidesService {
       }
     },
   };
+
+  private getMostRecentMonday(): Date {
+    const now = new Date();
+    const day = now.getDay(); // 0 is Sunday, 1 is Monday...
+
+    // Calculate difference: If Sunday(0), go back 6 days. Otherwise, go back to day 1.
+    const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+
+    const monday = new Date(now.setDate(diff));
+    monday.setHours(0, 0, 0, 0);
+    return monday;
+  }
 }

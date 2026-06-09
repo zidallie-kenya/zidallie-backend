@@ -31,6 +31,9 @@ export class UserMapper {
     domainEntity.payout = raw.payout;
     domainEntity.sasapay_account_number = raw.sasapay_account_number;
     domainEntity.ID_number = raw.ID_number;
+    domainEntity.last_earnings_reset_at = raw.last_earnings_reset_at;
+    domainEntity.emailOtp = raw.emailOtp;
+    domainEntity.emailOtpExpires = raw.emailOtpExpires;
     return domainEntity;
   }
 
@@ -50,6 +53,7 @@ export class UserMapper {
     if (domainEntity.status !== undefined && domainEntity.status !== null) {
       const status = new StatusEntity();
       status.id = Number(domainEntity.status.id);
+      persistence.status = status; // ← add this line
     }
 
     if (domainEntity.email !== undefined)
@@ -84,6 +88,12 @@ export class UserMapper {
       persistence.sasapay_account_number = domainEntity.sasapay_account_number;
     if (domainEntity.ID_number !== undefined)
       persistence.ID_number = domainEntity.ID_number;
+    if (domainEntity.last_earnings_reset_at !== undefined)
+      persistence.last_earnings_reset_at = domainEntity.last_earnings_reset_at;
+    if (domainEntity.emailOtp !== undefined)
+      persistence.emailOtp = domainEntity.emailOtp;
+    if (domainEntity.emailOtpExpires !== undefined)
+      persistence.emailOtpExpires = domainEntity.emailOtpExpires;
     if (domainEntity.meta !== undefined && domainEntity.meta !== null) {
       persistence.meta = {
         county: domainEntity.meta.county ?? null,

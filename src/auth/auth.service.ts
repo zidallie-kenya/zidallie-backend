@@ -85,6 +85,30 @@ export class AuthService {
       });
     }
 
+    if (user.status?.id?.toString() !== StatusEnum.active.toString()) {
+      // Generate and save a fresh OTP
+      if (user.email) {
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const otpExpires = Date.now() + 10 * 60 * 1000;
+
+        await this.usersService.update(user.id, {
+          emailOtp: otp,
+          emailOtpExpires: otpExpires,
+        });
+
+        await this.brevoService.userSignUp({
+          to: user.email,
+          data: { otp },
+        });
+      }
+      throw new UnprocessableEntityException({
+        status: HttpStatus.UNPROCESSABLE_ENTITY,
+        errors: {
+          email: 'Please verify your email before logging in',
+        },
+      });
+    }
+
     const hash = crypto
       .createHash('sha256')
       .update(randomStringGenerator())
@@ -158,6 +182,11 @@ export class AuthService {
         wallet_balance: 0,
         is_kyc_verified: false,
         payout: null,
+        last_earnings_reset_at: null,
+        sasapay_account_number: null,
+        ID_number: null,
+        emailOtp: null,
+        emailOtpExpires: null,
       });
 
       user = await this.usersService.findById(user.id);
@@ -214,6 +243,37 @@ export class AuthService {
         id: RoleEnum.admin,
       };
     }
+
+    const existingUser = await this.usersService.findByEmail(dto.email);
+
+    if (existingUser) {
+      // If already active, reject completely
+      if (
+        existingUser.status?.id?.toString() === StatusEnum.active.toString()
+      ) {
+        throw new UnprocessableEntityException({
+          status: HttpStatus.UNPROCESSABLE_ENTITY,
+          errors: { email: 'An account with this email already exists' },
+        });
+      }
+
+      // If inactive (registered but never verified), just resend OTP
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const otpExpires = Date.now() + 10 * 60 * 1000;
+
+      await this.usersService.update(existingUser.id, {
+        emailOtp: otp,
+        emailOtpExpires: otpExpires,
+      });
+
+      await this.brevoService.userSignUp({
+        to: dto.email,
+        data: { otp },
+      });
+
+      return;
+    }
+
     const user = await this.usersService.create({
       email: dto.email,
       password: dto.password,
@@ -228,76 +288,178 @@ export class AuthService {
       role: current_role,
       status: { id: StatusEnum.inactive },
       payout: null,
+      last_earnings_reset_at: null,
+      sasapay_account_number: null,
+      ID_number: null,
+      emailOtp: null,
+      emailOtpExpires: null,
     });
 
-    const hash = await this.jwtService.signAsync(
-      {
-        confirmEmailUserId: user.id,
-      },
-      {
-        secret: this.configService.getOrThrow('auth.confirmEmailSecret', {
-          infer: true,
-        }),
-        expiresIn: this.configService.getOrThrow('auth.confirmEmailExpires', {
-          infer: true,
-        }),
-      },
-    );
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpires = Date.now() + 10 * 60 * 1000; // 10 mins
+
+    await this.usersService.update(user.id, {
+      emailOtp: otp,
+      emailOtpExpires: otpExpires,
+    });
 
     await this.brevoService.userSignUp({
       to: dto.email,
-      data: {
-        hash,
-      },
+      data: { otp },
+    });
+
+    // const hash = await this.jwtService.signAsync(
+    //   {
+    //     confirmEmailUserId: user.id,
+    //   },
+    //   {
+    //     secret: this.configService.getOrThrow('auth.confirmEmailSecret', {
+    //       infer: true,
+    //     }),
+    //     expiresIn: this.configService.getOrThrow('auth.confirmEmailExpires', {
+    //       infer: true,
+    //     }),
+    //   },
+    // );
+
+    // await this.brevoService.userSignUp({
+    //   to: dto.email,
+    //   data: {
+    //     hash,
+    //   },
+    // });
+  }
+
+  async confirmEmailByOtp(email: string, otp: string): Promise<void> {
+    const user = await this.usersService.findByEmail(email);
+
+    console.log('=== confirmEmailByOtp ===');
+    console.log('email received:', email);
+    console.log('otp received:', otp);
+    console.log('user found:', user?.id);
+    console.log('user status:', user?.status);
+    console.log('user.emailOtp:', user?.emailOtp);
+    console.log('user.emailOtpExpires:', user?.emailOtpExpires);
+    console.log('Date.now():', Date.now());
+    console.log('otp match:', user?.emailOtp === otp);
+    console.log('expired:', Date.now() > Number(user?.emailOtpExpires));
+
+    if (!user) {
+      throw new NotFoundException({
+        status: HttpStatus.NOT_FOUND,
+        error: 'User not found',
+      });
+    }
+
+    const statusId = user?.status?.id?.toString();
+    const isInactive =
+      statusId === StatusEnum.inactive.toString() || statusId == null;
+
+    if (!isInactive) {
+      throw new UnprocessableEntityException({
+        status: HttpStatus.UNPROCESSABLE_ENTITY,
+        errors: { email: 'User already verified' },
+      });
+    }
+
+    if (user.emailOtp !== otp) {
+      throw new UnprocessableEntityException({
+        status: HttpStatus.UNPROCESSABLE_ENTITY,
+        errors: { otp: 'Invalid OTP code' },
+      });
+    }
+
+    if (!user.emailOtpExpires || Date.now() > Number(user.emailOtpExpires)) {
+      throw new UnprocessableEntityException({
+        status: HttpStatus.UNPROCESSABLE_ENTITY,
+        errors: { otp: 'OTP has expired, please request a new one' },
+      });
+    }
+
+    await this.usersService.update(user.id, {
+      status: { id: StatusEnum.active },
+      emailOtp: null,
+      emailOtpExpires: null,
     });
   }
 
-  async confirmEmail(hash: string): Promise<void> {
-    let userId: User['id'];
+  async resendOtp(email: string): Promise<void> {
+    const user = await this.usersService.findByEmail(email);
 
-    try {
-      const jwtData = await this.jwtService.verifyAsync<{
-        confirmEmailUserId: User['id'];
-      }>(hash, {
-        secret: this.configService.getOrThrow('auth.confirmEmailSecret', {
-          infer: true,
-        }),
-      });
-
-      userId = jwtData.confirmEmailUserId;
-    } catch {
-      throw new UnprocessableEntityException({
-        status: HttpStatus.UNPROCESSABLE_ENTITY,
-        errors: {
-          hash: `The hash provided is invalid`,
-        },
-      });
-    }
-
-    const user = await this.usersService.findById(userId);
-
-    if (
-      !user ||
-      user?.status?.id?.toString() !== StatusEnum.inactive.toString()
-    ) {
+    if (!user) {
       throw new NotFoundException({
         status: HttpStatus.NOT_FOUND,
-        error: `The user was not found`,
+        error: 'User not found',
       });
     }
 
-    user.status = {
-      id: StatusEnum.active,
-    };
+    if (user.status?.id?.toString() === StatusEnum.active.toString()) {
+      throw new UnprocessableEntityException({
+        status: HttpStatus.UNPROCESSABLE_ENTITY,
+        errors: { email: 'This email is already verified' },
+      });
+    }
 
-    await this.usersService.update(user.id, user);
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpires = Date.now() + 10 * 60 * 1000; // 10 mins
+
+    await this.usersService.update(user.id, {
+      emailOtp: otp,
+      emailOtpExpires: otpExpires,
+    });
+
+    await this.brevoService.userSignUp({
+      to: email,
+      data: { otp },
+    });
   }
 
-  async confirmEmailByQuery(hash: string): Promise<{ success: boolean }> {
-    console.log('confirmEmailByQuery', hash);
-    await this.confirmEmail(hash);
-    return { success: true };
-  }
+  // async confirmEmail(hash: string): Promise<void> {
+  //   let userId: User['id'];
+
+  //   try {
+  //     const jwtData = await this.jwtService.verifyAsync<{
+  //       confirmEmailUserId: User['id'];
+  //     }>(hash, {
+  //       secret: this.configService.getOrThrow('auth.confirmEmailSecret', {
+  //         infer: true,
+  //       }),
+  //     });
+
+  //     userId = jwtData.confirmEmailUserId;
+  //   } catch {
+  //     throw new UnprocessableEntityException({
+  //       status: HttpStatus.UNPROCESSABLE_ENTITY,
+  //       errors: {
+  //         hash: `The hash provided is invalid`,
+  //       },
+  //     });
+  //   }
+
+  //   const user = await this.usersService.findById(userId);
+
+  //   if (
+  //     !user ||
+  //     user?.status?.id?.toString() !== StatusEnum.inactive.toString()
+  //   ) {
+  //     throw new NotFoundException({
+  //       status: HttpStatus.NOT_FOUND,
+  //       error: `The user was not found`,
+  //     });
+  //   }
+
+  //   user.status = {
+  //     id: StatusEnum.active,
+  //   };
+
+  //   await this.usersService.update(user.id, user);
+  // }
+
+  // async confirmEmailByQuery(hash: string): Promise<{ success: boolean }> {
+  //   console.log('confirmEmailByQuery', hash);
+  //   await this.confirmEmail(hash);
+  //   return { success: true };
+  // }
 
   async confirmNewEmail(hash: string): Promise<void> {
     let userId: User['id'];

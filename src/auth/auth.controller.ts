@@ -10,8 +10,6 @@ import {
   Patch,
   Delete,
   SerializeOptions,
-  Query,
-  Redirect,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
@@ -26,6 +24,7 @@ import { LoginResponseDto } from './dto/login-response.dto';
 import { NullableType } from '../utils/types/nullable.type';
 import { User } from '../users/domain/user';
 import { RefreshResponseDto } from './dto/refresh-response.dto';
+import { AuthConfirmOtpDto } from './dto/auth-confirm-otp.dto';
 
 @ApiTags('Auth')
 @Controller({
@@ -53,26 +52,31 @@ export class AuthController {
     return this.service.register(createUserDto);
   }
 
-  @Post('email/confirm')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  async confirmEmail(
-    @Body() confirmEmailDto: AuthConfirmEmailDto,
-  ): Promise<void> {
-    return this.service.confirmEmail(confirmEmailDto.hash);
+  @Post('email/confirm-otp')
+  confirmOtp(@Body() dto: AuthConfirmOtpDto) {
+    return this.service.confirmEmailByOtp(dto.email, dto.otp);
   }
 
-  @Get('email/confirm')
-  @Redirect()
-  @HttpCode(HttpStatus.NO_CONTENT)
-  async confirmEmailByQuery(
-    @Query() confirmEmailDto: AuthConfirmEmailDto,
-  ): Promise<{ url: string; statusCode: number }> {
-    await this.service.confirmEmailByQuery(confirmEmailDto.hash);
-    return {
-      url: 'https://www.zidallie.co.ke/email-confirmation',
-      statusCode: HttpStatus.FOUND, // 302 redirect
-    };
-  }
+  // @Post('email/confirm')
+  // @HttpCode(HttpStatus.NO_CONTENT)
+  // async confirmEmail(
+  //   @Body() confirmEmailDto: AuthConfirmEmailDto,
+  // ): Promise<void> {
+  //   return this.service.confirmEmail(confirmEmailDto.hash);
+  // }
+
+  // @Get('email/confirm')
+  // @Redirect()
+  // @HttpCode(HttpStatus.NO_CONTENT)
+  // async confirmEmailByQuery(
+  //   @Query() confirmEmailDto: AuthConfirmEmailDto,
+  // ): Promise<{ url: string; statusCode: number }> {
+  //   await this.service.confirmEmailByQuery(confirmEmailDto.hash);
+  //   return {
+  //     url: 'https://www.zidallie.co.ke/email-confirmation',
+  //     statusCode: HttpStatus.FOUND, // 302 redirect
+  //   };
+  // }
 
   @Post('email/confirm/new')
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -97,6 +101,13 @@ export class AuthController {
       resetPasswordDto.hash,
       resetPasswordDto.password,
     );
+  }
+
+  @Post('email/resend-otp')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async resendOtp(@Body() dto: AuthForgotPasswordDto): Promise<void> {
+    // Reuses AuthForgotPasswordDto since it only needs { email }
+    return this.service.resendOtp(dto.email);
   }
 
   @ApiBearerAuth()

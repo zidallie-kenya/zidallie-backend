@@ -253,8 +253,14 @@ export class PaymentsController {
       );
 
       const account_status = profile_result.data?.profile?.account_status;
+      console.log(
+        `User ${profile_result.data?.profile?.display_name} wallet status: ${account_status}`,
+      );
 
-      if (account_status === 'REJECTED') {
+      if (
+        account_status === 'AWAITING_KYC_UPLOAD' ||
+        account_status === 'REJECTED'
+      ) {
         await this.usersService.update(user.id, {
           meta: { ...user.meta, kyc_submitted: false },
         });
@@ -345,6 +351,26 @@ export class PaymentsController {
         process.env.SASAPAY_MERCHANT_CODE!,
         user.sasapay_account_number,
       );
+      const account_status = result.data?.profile?.account_status;
+      console.log(
+        `User ${result.data?.profile?.display_name} wallet status: ${account_status}`,
+      );
+      if (
+        account_status === 'AWAITING_KYC_UPLOAD' ||
+        account_status === 'REJECTED'
+      ) {
+        await this.usersService.update(user.id, {
+          meta: { ...user.meta, kyc_submitted: false },
+        });
+        console.log(
+          `User ${user.id} has rejected KYC. Prompting re-upload of documents.`,
+        );
+        return {
+          message:
+            'Your wallet KYC was rejected. Please re-upload your documents for verification.',
+          rejected: true,
+        };
+      }
 
       const wallets = result.data?.CustomerWallets || [];
       const wallet = wallets.find(

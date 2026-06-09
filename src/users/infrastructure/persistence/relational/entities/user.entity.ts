@@ -128,6 +128,15 @@ export class UserEntity extends EntityRelationalHelper {
   @Column({ type: 'varchar', nullable: true })
   ID_number!: string | null;
 
+  @Column({ type: 'timestamptz', nullable: true })
+  last_earnings_reset_at!: Date | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  emailOtp!: string | null;
+
+  @Column({ type: 'bigint', nullable: true })
+  emailOtpExpires!: number | null;
+
   @CreateDateColumn()
   created_at!: Date;
 

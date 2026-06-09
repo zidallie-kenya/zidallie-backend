@@ -377,17 +377,54 @@ export class DailyRidesRelationalRepository implements DailyRideRepository {
   }
 
   // In your Repository
-  findActiveRideByDriverId(driverId: number): Promise<DailyRide | null> {
-    return this.dailyRidesRepository
-      .createQueryBuilder('daily_ride')
-      .leftJoinAndSelect('daily_ride.ride', 'ride')
-      .leftJoinAndSelect('daily_ride.vehicle', 'vehicle')
-      .leftJoinAndSelect('daily_ride.driver', 'driver')
-      .where('daily_ride.driverId = :driverId', { driverId })
-      .andWhere('daily_ride.status = :status', {
-        status: DailyRideStatus.Active,
-      })
-      .getOne();
+  // findActiveRideByDriverId(driverId: number): Promise<DailyRide | null> {
+  //   return this.dailyRidesRepository
+  //     .createQueryBuilder('daily_ride')
+  //     .leftJoinAndSelect('daily_ride.ride', 'ride')
+  //     .leftJoinAndSelect('daily_ride.vehicle', 'vehicle')
+  //     .leftJoinAndSelect('daily_ride.driver', 'driver')
+  //     .where('daily_ride.driverId = :driverId', { driverId })
+  //     .andWhere('daily_ride.status = :status', {
+  //       status: DailyRideStatus.Active,
+  //     })
+  //     .getOne();
+  // }
+  async findActiveRideByDriverId(driverId: number): Promise<DailyRide | null> {
+    return (
+      this.dailyRidesRepository
+        .createQueryBuilder('daily_ride')
+        // 1. Join without selecting everything automatically
+        .leftJoin('daily_ride.ride', 'ride')
+        .leftJoin('daily_ride.vehicle', 'vehicle')
+        .leftJoin('daily_ride.driver', 'driver')
+
+        // 2. Select only the necessary fields
+        .select([
+          'daily_ride.id',
+          'daily_ride.status',
+          'daily_ride.kind',
+          'daily_ride.date',
+          'daily_ride.embark_time',
+          // DO NOT select daily_ride.route_data here
+
+          'ride.id',
+          'ride.status',
+
+          'vehicle.id',
+          'vehicle.registration_number',
+          'vehicle.vehicle_name',
+
+          'driver.id',
+          'driver.firstName',
+          'driver.lastName',
+        ])
+        .where('daily_ride.driverId = :driverId', { driverId })
+        // CRITICAL: Check your enum value below
+        .andWhere('daily_ride.status = :status', {
+          status: DailyRideStatus.Active,
+        })
+        .getOne()
+    );
   }
 
   async saveAll(rides: DailyRide[]): Promise<DailyRide[]> {

@@ -20,48 +20,48 @@ import { DailyRideEntity } from '../../../../../daily_rides/infrastructure/persi
 @Entity({ name: 'ride' })
 export class RideEntity extends EntityRelationalHelper {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @ManyToOne(() => VehicleEntity, (vehicle) => vehicle.rides, {
     nullable: true,
   })
-  vehicle: VehicleEntity | null;
+  vehicle!: VehicleEntity | null;
 
   @ManyToOne(() => UserEntity, (user) => user.driver_rides, { nullable: true })
-  driver: UserEntity | null;
+  driver!: UserEntity | null;
 
   @ManyToOne(() => SchoolEntity, (school) => school.rides, { nullable: true })
-  school: SchoolEntity | null;
+  school!: SchoolEntity | null;
 
   @ManyToOne(() => StudentEntity, (student) => student.rides, {
     nullable: true,
   })
-  student: StudentEntity | null;
+  student!: StudentEntity | null;
 
   @ManyToOne(() => UserEntity, (user) => user.parent_rides, { nullable: true })
-  parent: UserEntity | null;
+  parent!: UserEntity | null;
 
   @Column({ type: 'jsonb', nullable: true })
-  schedule: RideSchedule | null;
+  schedule!: RideSchedule | null;
 
   @Column({ type: 'text', nullable: true })
-  comments: string | null;
+  comments!: string | null;
 
   @Column({ type: 'text', nullable: true })
-  admin_comments: string | null;
+  admin_comments!: string | null;
 
   @Column({ type: 'jsonb', nullable: true })
   meta: any | null;
 
   @CreateDateColumn()
-  created_at: Date;
+  created_at!: Date;
 
   @UpdateDateColumn()
-  updated_at: Date;
+  updated_at!: Date;
 
   @Column({ type: 'varchar', length: 20, enum: RideStatus, nullable: false })
-  status: RideStatus;
+  status!: RideStatus;
 
   @OneToMany(() => DailyRideEntity, (daily_ride) => daily_ride.ride)
-  daily_rides: DailyRideEntity[];
+  daily_rides!: DailyRideEntity[];
 }

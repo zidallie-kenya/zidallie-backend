@@ -184,4 +184,11 @@ export class UsersRelationalRepository implements UserRepository {
 
     return entity ? UserMapper.toDomain(entity) : null;
   }
+
+  async findByPushToken(pushToken: string): Promise<User | null> {
+    const entity = await this.usersRepository.findOne({
+      where: { push_token: pushToken },
+    });
+    return entity ? UserMapper.toDomain(entity) : null;
+  }
 }

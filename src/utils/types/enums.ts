@@ -46,6 +46,7 @@ export enum TransactionType {
 }
 
 export enum NotificationKind {
+  Push = 'push',
   Personal = 'Personal',
   System = 'System',
 }

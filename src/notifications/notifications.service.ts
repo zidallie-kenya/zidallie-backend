@@ -82,6 +82,14 @@ export class NotificationsService {
     });
   }
 
+  findByUserIdRaw(userId: number): Promise<MyNotificationResponseDto[]> {
+    return this.notificationsRepository
+      .findByUserId(userId)
+      .then((notifications) =>
+        notifications.map((n) => this.formatNotificationResponse(n)),
+      );
+  }
+
   async findManyWithPagination({
     filterOptions,
     sortOptions,

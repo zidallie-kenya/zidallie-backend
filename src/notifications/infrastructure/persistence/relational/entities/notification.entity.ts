@@ -16,30 +16,30 @@ import {
 @Entity({ name: 'notification' })
 export class NotificationEntity extends EntityRelationalHelper {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @ManyToOne(() => UserEntity, (user) => user.notifications, {
     nullable: false,
   })
-  user: UserEntity;
+  user!: UserEntity;
 
   @Column({ type: 'text', nullable: true })
-  sender: string | null;
+  sender!: string | null;
 
   @Column({ type: 'text', nullable: true })
-  receiver: string | null;
+  receiver!: string | null;
 
   @Column({ type: 'text', nullable: false })
-  title: string;
+  title!: string;
 
   @Column({ type: 'text', nullable: false })
-  message: string;
+  message!: string;
 
   @Column({ type: 'jsonb', nullable: true })
   meta: any | null;
 
   @Column({ type: 'boolean', nullable: false, default: false })
-  is_read: boolean;
+  is_read!: boolean;
 
   @Column({
     type: 'varchar',
@@ -47,7 +47,7 @@ export class NotificationEntity extends EntityRelationalHelper {
     enum: NotificationKind,
     nullable: false,
   })
-  kind: NotificationKind;
+  kind!: NotificationKind;
 
   @Column({
     type: 'varchar',
@@ -55,8 +55,8 @@ export class NotificationEntity extends EntityRelationalHelper {
     enum: NotificationSection,
     nullable: false,
   })
-  section: NotificationSection;
+  section!: NotificationSection;
 
   @CreateDateColumn()
-  created_at: Date;
+  created_at!: Date;
 }

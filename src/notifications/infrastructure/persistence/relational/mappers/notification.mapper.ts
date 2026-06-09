@@ -4,6 +4,7 @@ import { UserMapper } from '../../../../../users/infrastructure/persistence/rela
 import { DeepPartial } from '../../../../../utils/types/deep-partial.type';
 import { mapRelation } from '../../../../../utils/relation.mapper';
 import { UserEntity } from '../../../../../users/infrastructure/persistence/relational/entities/user.entity';
+import { User } from '../../../../../users/domain/user';
 
 export class NotificationMapper {
   static toDomain(raw: NotificationEntity): Notification {
@@ -63,10 +64,11 @@ export class NotificationMapper {
     }
 
     if (domainEntity.user !== undefined) {
-      persistence.user =
-        (mapRelation(domainEntity.user, UserMapper) as UserEntity) || undefined;
+      persistence.user = mapRelation(
+        domainEntity.user as Partial<User>,
+        UserMapper,
+      ) as UserEntity;
     }
-
     return persistence;
   }
 }

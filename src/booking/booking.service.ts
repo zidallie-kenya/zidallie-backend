@@ -22,12 +22,34 @@ import { BookingDepositEntity } from './infrastructure/persistence/relational/en
 import { ClusterEntity } from './infrastructure/persistence/relational/entities/cluster.entity';
 import { UsersService } from '../users/users.service';
 import { BookingChildEntity } from './infrastructure/persistence/relational/entities/booking-child.entity';
+import { StudentsService } from '../students/students.service';
+import { RidesService } from '../rides/rides.service';
+import { BookingReceiptRepository } from './infrastructure/persistence/relational/repositories/booking-receipt.repository';
+import { ReceiptPaymentType } from './infrastructure/persistence/relational/entities/booking-receipt.entity';
+import { NotificationsService } from '../notifications/notifications.service';
+import { UserMeta } from '../users/infrastructure/persistence/relational/entities/user.entity';
+import { UpdateNotificationSettingsDto } from '../users/dto/update-notification-settings.dto';
 
 const DEPOSIT_PER_CHILD = 3000;
 const CLUSTER_MIN = 3;
 const CLUSTER_RADIUS_KM = 2.0;
 const SCHOOL_DIRECTION_KM = 5.0;
 const WAITLIST_DAYS = 15;
+
+interface BookingPaymentSnapshot {
+  id: number;
+  totalPaidBefore: number;
+  totalPaidAfter: number;
+  depositAmount: number;
+  totalPrice: number;
+  status: string;
+  serviceType: string;
+  term: string;
+  schoolName: string | null;
+  homeArea: string | null;
+  childrenCount: number;
+  parentId: number;
+}
 
 @Injectable()
 export class TransportBookingService {
@@ -45,7 +67,141 @@ export class TransportBookingService {
     private readonly clusterRepo: ClusterRepository,
     private readonly dataSource: DataSource,
     private usersService: UsersService,
+    private readonly studentsService: StudentsService,
+    private readonly ridesService: RidesService,
+    private readonly receiptRepo: BookingReceiptRepository,
+    private readonly notificationsService: NotificationsService,
   ) {}
+
+  private resolveReceiptName(
+    totalPaidBefore: number,
+    amountPaid: number,
+    depositAmount: number,
+    totalPrice: number,
+  ): string {
+    const totalAfter = totalPaidBefore + amountPaid;
+
+    if (totalAfter >= totalPrice) return 'Full Transport Payment';
+    if (totalPaidBefore === 0 && totalAfter < depositAmount)
+      return 'Partial Deposit';
+    if (totalPaidBefore === 0 && totalAfter >= depositAmount) return 'Deposit';
+    if (totalPaidBefore < depositAmount && totalAfter >= depositAmount)
+      return 'Deposit Completion';
+    if (totalPaidBefore >= depositAmount) return 'Balance Payment';
+    return 'Partial Deposit';
+  }
+
+  private resolvePaymentType(
+    totalPaidBefore: number,
+    amountPaid: number,
+    depositAmount: number,
+    totalPrice: number,
+  ): ReceiptPaymentType {
+    const totalAfter = totalPaidBefore + amountPaid;
+    if (totalAfter >= totalPrice) return 'full_payment';
+    if (totalAfter >= depositAmount && totalPaidBefore < depositAmount)
+      return 'deposit';
+    if (totalAfter < depositAmount) return 'partial_deposit';
+    return 'balance';
+  }
+
+  //get all parents notifications
+  async getMyNotifications(parentId: number) {
+    return this.notificationsService.findByUserIdRaw(parentId);
+  }
+  async updateNotificationSettings(
+    parentId: number,
+    dto: UpdateNotificationSettingsDto,
+  ): Promise<{ notifications: UserMeta['notifications'] }> {
+    const user = await this.usersService.findById(parentId);
+    if (!user) throw new NotFoundException('User not found');
+
+    const existingMeta = user.meta ?? {};
+    const existingNotifications = (existingMeta.notifications ?? {
+      when_bus_leaves: true,
+      when_bus_makes_home_drop_off: true,
+      when_bus_make_home_pickup: true,
+      when_bus_arrives: true,
+      when_bus_is_1km_away: true,
+      when_bus_is_0_5km_away: true,
+    }) as UserMeta['notifications'];
+
+    const updatedNotifications: UserMeta['notifications'] = {
+      when_bus_leaves:
+        dto.when_bus_leaves ?? existingNotifications.when_bus_leaves,
+      when_bus_makes_home_drop_off:
+        dto.when_bus_makes_home_drop_off ??
+        existingNotifications.when_bus_makes_home_drop_off,
+      when_bus_make_home_pickup:
+        dto.when_bus_make_home_pickup ??
+        existingNotifications.when_bus_make_home_pickup,
+      when_bus_arrives:
+        dto.when_bus_arrives ?? existingNotifications.when_bus_arrives,
+      when_bus_is_1km_away:
+        dto.when_bus_is_1km_away ?? existingNotifications.when_bus_is_1km_away,
+      when_bus_is_0_5km_away:
+        dto.when_bus_is_0_5km_away ??
+        existingNotifications.when_bus_is_0_5km_away,
+    };
+
+    await this.usersService.update(parentId, {
+      meta: {
+        ...existingMeta,
+        notifications: updatedNotifications,
+      } as any,
+    });
+
+    return { notifications: updatedNotifications };
+  }
+
+  async getNotificationSettings(
+    parentId: number,
+  ): Promise<{ notifications: UserMeta['notifications'] | null }> {
+    const user = await this.usersService.findById(parentId);
+    if (!user) throw new NotFoundException('User not found');
+
+    return {
+      notifications: (user.meta?.notifications ?? null) as
+        | UserMeta['notifications']
+        | null,
+    };
+  }
+
+  // Get Parent's students
+  async getMyStudents(parentId: number) {
+    return this.studentsService.findByParentId(parentId);
+  }
+
+  // Get all previous home addresses
+  async getSavedAddresses(
+    parentId: number,
+  ): Promise<{ location: string; latitude: number; longitude: number }[]> {
+    const rides = await this.ridesService.findByParentId(parentId);
+
+    const seen = new Set<string>();
+    const addresses: {
+      location: string;
+      latitude: number;
+      longitude: number;
+    }[] = [];
+
+    for (const ride of rides) {
+      const pickup = ride.schedule?.pickup;
+      if (!pickup?.location) continue;
+
+      // Deduplicate by location string
+      if (!seen.has(pickup.location)) {
+        seen.add(pickup.location);
+        addresses.push({
+          location: pickup.location,
+          latitude: pickup.latitude,
+          longitude: pickup.longitude,
+        });
+      }
+    }
+
+    return addresses;
+  }
 
   // ─────────────────────────────────────────────
   // REFERENCE DATA ENDPOINTS
@@ -469,7 +625,6 @@ export class TransportBookingService {
   // ─────────────────────────────────────────────
   // STEP 4: M-PESA CALLBACK → CLUSTER LOGIC
   // ─────────────────────────────────────────────
-
   async handleDepositCallback(receivedData: any) {
     const stkCallback = receivedData?.Body?.stkCallback;
     if (!stkCallback) {
@@ -479,7 +634,6 @@ export class TransportBookingService {
 
     if (stkCallback.ResultCode !== 0) {
       console.log(`Deposit payment failed: ${stkCallback.ResultDesc}`);
-      // Mark deposit as failed
       const checkoutId = stkCallback.CheckoutRequestID;
       const deposit = await this.depositRepo.findByCheckoutId(checkoutId);
       if (deposit) {
@@ -494,122 +648,143 @@ export class TransportBookingService {
     const checkoutId = stkCallback.CheckoutRequestID;
     const mpesaTransactionId = metadata[1]?.Value;
 
+    const snapshotHolder: { data: BookingPaymentSnapshot | null } = {
+      data: null,
+    };
+
     console.log(
       `Deposit Amount received: ${amount} from phone number: ${mpesaTransactionId} for CheckoutRequestID: ${checkoutId}`,
     );
 
-    // try {
-    //   await this.dataSource.transaction(async (manager) => {
-    //     const depositRepo = manager.getRepository(BookingDepositEntity);
-
-    //     const deposit = await depositRepo.findOne({
-    //       where: { checkout_request_id: checkoutId },
-    //       relations: ['booking', 'booking.parent', 'booking.carpool_school'],
-    //       lock: { mode: 'pessimistic_write' },
-    //     });
-
-    //     if (!deposit) {
-    //       console.log(`No deposit found for checkout: ${checkoutId}`);
-    //       return;
-    //     }
-
-    //     if (deposit.status === 'paid') {
-    //       console.log(`Duplicate callback for: ${checkoutId}`);
-    //       return;
-    //     }
-
-    //     // Mark deposit paid
-    //     deposit.status = 'paid';
-    //     deposit.mpesa_transaction_id = mpesaTransactionId;
-    //     await manager.save(deposit);
-
-    //     // Update booking total_paid
-    //     const bookingRepo = manager.getRepository(BookingEntity);
-    //     const booking = await bookingRepo.findOne({
-    //       where: { id: deposit.booking.id },
-    //       relations: ['cluster', 'carpool_school'],
-    //       lock: { mode: 'pessimistic_write' },
-    //     });
-
-    //     if (!booking) return;
-
-    //     booking.total_paid = Number(booking.total_paid) + Number(amount);
-
-    //     // If fully paid, mark accordingly
-    //     if (booking.total_paid >= Number(booking.total_price)) {
-    //       booking.status = 'completed';
-    //     } else {
-    //       booking.status = 'deposit_paid';
-    //     }
-
-    //     await manager.save(booking);
-    //   });
-
-    //   // Run cluster logic OUTSIDE transaction (reads other bookings)
-    //   const deposit = await this.depositRepo.findByCheckoutId(checkoutId);
-    //   if (deposit) {
-    //     await this.runClusterLogic(deposit.booking.id);
-    //   }
-    // } catch (error: any) {
-    //   console.error('Error handling deposit callback:', error.message);
-    // }
     try {
+      // ── TRANSACTION: update deposit + booking ──────────────────────────
       await this.dataSource.transaction(async (manager) => {
         const depositRepo = manager.getRepository(BookingDepositEntity);
         const bookingRepo = manager.getRepository(BookingEntity);
 
-        // 1. Find the deposit without a lock first to get the ID
         const initialDeposit = await depositRepo.findOne({
           where: { checkout_request_id: checkoutId },
           relations: ['booking'],
         });
-
         if (!initialDeposit) return;
 
-        // 2. Now lock the rows specifically by ID (avoiding Join locks)
         const deposit = await depositRepo.findOne({
           where: { id: initialDeposit.id },
           lock: { mode: 'pessimistic_write' },
         });
-
         if (!deposit || deposit.status === 'paid') return;
 
         const booking = await bookingRepo.findOne({
           where: { id: initialDeposit.booking.id },
+          relations: [
+            'carpool_school',
+            'bus_school',
+            'pickup_station',
+            'parent',
+          ],
           lock: { mode: 'pessimistic_write' },
         });
-
         if (!booking) return;
 
-        // 3. Update data
+        const totalPaidBefore = Number(booking.total_paid || 0);
+        const depositAmount = Number(booking.deposit_amount || 0);
+        const totalPrice = Number(booking.total_price || 0);
+
         deposit.status = 'paid';
         deposit.mpesa_transaction_id = mpesaTransactionId;
         await manager.save(deposit);
 
-        booking.total_paid = Number(booking.total_paid || 0) + Number(amount);
-        booking.status =
-          booking.total_paid >= Number(booking.total_price)
-            ? 'completed'
-            : 'deposit_paid';
+        booking.total_paid = totalPaidBefore + Number(amount);
+
+        if (booking.total_paid >= totalPrice) {
+          booking.status = 'completed';
+        } else if (booking.total_paid >= depositAmount) {
+          booking.status = 'deposit_paid';
+        } else {
+          booking.status = 'deposit_pending';
+        }
 
         await manager.save(booking);
-      });
 
-      // 4. Run cluster logic after transaction is committed
-      // Re-fetch to ensure we have all relations needed for clustering
-      const finalDeposit = await this.depositRepo.findByCheckoutId(checkoutId);
-      if (finalDeposit && finalDeposit.booking) {
-        console.log(
-          `Triggering cluster logic for booking: ${finalDeposit.booking.id}`,
+        // Capture snapshot for use after transaction commits
+        snapshotHolder.data = {
+          id: booking.id,
+          totalPaidBefore,
+          totalPaidAfter: booking.total_paid,
+          depositAmount,
+          totalPrice,
+          status: booking.status,
+          serviceType: booking.service_type,
+          term: booking.term,
+          schoolName:
+            booking.carpool_school?.name ?? booking.bus_school?.name ?? null,
+          homeArea: booking.home_area ?? null,
+          childrenCount: booking.children_count,
+          parentId: booking.parent.id,
+        };
+      }); // ← transaction closes here
+
+      // ── POST-TRANSACTION: generate receipt + cluster logic ─────────────
+      if (snapshotHolder.data) {
+        const snap = snapshotHolder.data;
+        const balanceRemaining = Math.max(
+          0,
+          snap.totalPrice - snap.totalPaidAfter,
         );
-        await this.runClusterLogic(finalDeposit.booking.id);
+
+        const receiptName = this.resolveReceiptName(
+          snap.totalPaidBefore,
+          Number(amount),
+          snap.depositAmount,
+          snap.totalPrice,
+        );
+
+        const paymentType = this.resolvePaymentType(
+          snap.totalPaidBefore,
+          Number(amount),
+          snap.depositAmount,
+          snap.totalPrice,
+        );
+
+        let reference = this.receiptRepo.generateReference();
+        const existing = await this.receiptRepo.findByReference(reference);
+        if (existing) reference = this.receiptRepo.generateReference();
+
+        await this.receiptRepo.create({
+          reference,
+          parent: { id: snap.parentId } as any,
+          booking: { id: snap.id } as any,
+          name: receiptName,
+          term: snap.term,
+          amount: Number(amount),
+          balance_remaining: balanceRemaining,
+          payment_type: paymentType,
+          service_type: snap.serviceType as any,
+          school_name: snap.schoolName,
+          home_location: snap.homeArea,
+          children_count: snap.childrenCount,
+          payment_method: 'M-Pesa',
+          mpesa_transaction_id: mpesaTransactionId ?? null,
+        });
+
+        console.log(`Receipt ${reference} created for booking ${snap.id}`);
+
+        if (snap.serviceType === 'carpool') {
+          await this.runClusterLogic(snap.id);
+        } else {
+          const booking = await this.bookingRepo.findById(snap.id);
+          if (booking) {
+            booking.is_waitlisted = false;
+            await this.bookingRepo.save(booking);
+          }
+        }
       }
     } catch (error: any) {
       console.error('Error handling deposit callback:', error.message);
     }
+
     return { ResultCode: 0, ResultDesc: 'Accepted' };
   }
-
   // ─────────────────────────────────────────────
   // CLUSTER LOGIC
   // ─────────────────────────────────────────────
@@ -828,6 +1003,92 @@ export class TransportBookingService {
         cluster_count: b.cluster?.bookings?.length ?? null,
         children: b.children,
         created_at: b.created_at,
+      };
+    });
+  }
+
+  async getMyReceipts(parentId: number) {
+    const receipts = await this.receiptRepo.findByParentId(parentId);
+
+    return receipts.map((r) => ({
+      id: r.id,
+      reference: r.reference,
+      name: r.name,
+      term: r.term,
+      amount: Number(r.amount),
+      balance_remaining:
+        r.balance_remaining !== null ? Number(r.balance_remaining) : null,
+      payment_type: r.payment_type,
+      service_type: r.service_type,
+      school_name: r.school_name,
+      home_location: r.home_location,
+      children_count: r.children_count,
+      payment_method: r.payment_method,
+      mpesa_transaction_id: r.mpesa_transaction_id,
+      paid_at: r.paid_at,
+      booking_id: r.booking?.id ?? null,
+    }));
+  }
+
+  async getReceiptByReference(parentId: number, reference: string) {
+    const receipt = await this.receiptRepo.findByReference(reference);
+
+    if (!receipt) throw new NotFoundException('Receipt not found');
+    if (receipt.parent.id !== parentId)
+      throw new BadRequestException('Unauthorized');
+
+    const booking = receipt.booking;
+
+    return {
+      id: receipt.id,
+      reference: receipt.reference,
+      name: receipt.name,
+      term: receipt.term,
+      amount: Number(receipt.amount),
+      balance_remaining:
+        receipt.balance_remaining !== null
+          ? Number(receipt.balance_remaining)
+          : null,
+      payment_type: receipt.payment_type,
+      service_type: receipt.service_type,
+      school_name: receipt.school_name,
+      home_location: receipt.home_location,
+      children_count: receipt.children_count,
+      payment_method: receipt.payment_method,
+      mpesa_transaction_id: receipt.mpesa_transaction_id,
+      paid_at: receipt.paid_at,
+      booking: {
+        id: booking?.id ?? null,
+        status: booking?.status ?? null,
+        total_price: booking ? Number(booking.total_price) : null,
+        total_paid: booking ? Number(booking.total_paid) : null,
+      },
+    };
+  }
+
+  async getPaymentHistory(parentId: number) {
+    const [receipts, bookings] = await Promise.all([
+      this.receiptRepo.findByParentId(parentId),
+      this.bookingRepo.findByParentId(parentId),
+    ]);
+
+    // Build a map of booking totals for quick lookup
+    const bookingMap = new Map(bookings.map((b) => [b.id, b]));
+
+    return receipts.map((r) => {
+      const booking = bookingMap.get(r.booking?.id);
+      return {
+        reference: r.reference,
+        name: r.name,
+        term: r.term,
+        amount: Number(r.amount),
+        balance_remaining:
+          r.balance_remaining !== null ? Number(r.balance_remaining) : null,
+        payment_type: r.payment_type,
+        service_type: r.service_type,
+        school_name: r.school_name,
+        paid_at: r.paid_at,
+        booking_status: booking?.status ?? null,
       };
     });
   }

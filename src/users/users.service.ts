@@ -330,4 +330,8 @@ export class UsersService {
   ): Promise<NullableType<User>> {
     return this.usersRepository.findBySasapayAccountNumber(accountNumber);
   }
+
+  async findByPushToken(pushToken: string): Promise<User | null> {
+    return this.usersRepository.findByPushToken(pushToken);
+  }
 }

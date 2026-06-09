@@ -9,18 +9,32 @@ import { RelationalDailyRidePersistenceModule } from './infrastructure/persisten
 import { ExpoPushService } from './expopush.service';
 import { LocationModule } from '../location/location.module';
 import { SubscriptionModule } from '../subscriptions/subscription.module';
+import { NotificationRepository } from '../notifications/infrastructure/persistence/notification.repository';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { NotificationEntity } from '../notifications/infrastructure/persistence/relational/entities/notification.entity';
+import { NotificationsRelationalRepository } from '../notifications/infrastructure/persistence/relational/repositories/notification.repository';
 
 @Module({
   imports: [
+    TypeOrmModule.forFeature([NotificationEntity]),
     RelationalDailyRidePersistenceModule,
     RidesModule,
     VehicleModule,
     UsersModule,
     SubscriptionModule,
     forwardRef(() => LocationModule),
+    UsersModule,
   ],
   controllers: [DailyRidesController],
-  providers: [DailyRidesService, ExpoPushService],
+  providers: [
+    DailyRidesService,
+    ExpoPushService,
+    {
+      provide: NotificationRepository,
+      useClass: NotificationsRelationalRepository,
+    },
+    ExpoPushService,
+  ],
   exports: [DailyRidesService],
 })
 export class DailyRidesModule {}

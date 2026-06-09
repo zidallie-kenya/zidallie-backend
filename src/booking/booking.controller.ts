@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
   Req,
   UseGuards,
@@ -18,6 +19,7 @@ import { CreateBookingDto } from './dto/create-booking.dto';
 import { SubmitChildrenDto } from './dto/submit-children.dto';
 import { InitiateDepositDto } from './dto/initiate-deposit.dto';
 import { TransportBookingService } from './booking.service';
+import { UpdateNotificationSettingsDto } from '../users/dto/update-notification-settings.dto';
 
 @ApiTags('Transport Bookings')
 @UseGuards(JwtAuthGuard)
@@ -96,5 +98,61 @@ export class TransportBookingController {
   @Public()
   depositCallback(@Req() req: Request) {
     return this.service.handleDepositCallback(req.body);
+  }
+
+  //My students
+  @Get('my-students')
+  @Roles(RoleEnum.parent)
+  getMyStudents(@Req() req: any) {
+    return this.service.getMyStudents(req.user.id);
+  }
+
+  //all previous addresses
+  @Get('my-addresses')
+  @Roles(RoleEnum.parent)
+  getSavedAddresses(@Req() req: any) {
+    return this.service.getSavedAddresses(req.user.id);
+  }
+
+  @Get('my-receipts')
+  @Roles(RoleEnum.parent)
+  getMyReceipts(@Req() req: any) {
+    return this.service.getMyReceipts(req.user.id);
+  }
+
+  @Get('my-receipts/:reference')
+  @Roles(RoleEnum.parent)
+  getReceiptByReference(
+    @Req() req: any,
+    @Param('reference') reference: string,
+  ) {
+    return this.service.getReceiptByReference(req.user.id, reference);
+  }
+
+  @Get('my-payment-history')
+  @Roles(RoleEnum.parent)
+  getPaymentHistory(@Req() req: any) {
+    return this.service.getPaymentHistory(req.user.id);
+  }
+
+  @Get('my-notifications')
+  @Roles(RoleEnum.parent)
+  getMyNotifications(@Req() req: any) {
+    return this.service.getMyNotifications(req.user.id);
+  }
+
+  @Get('my-notification-settings')
+  @Roles(RoleEnum.parent)
+  getNotificationSettings(@Req() req: any) {
+    return this.service.getNotificationSettings(req.user.id);
+  }
+
+  @Patch('my-notification-settings')
+  @Roles(RoleEnum.parent)
+  updateNotificationSettings(
+    @Req() req: any,
+    @Body() dto: UpdateNotificationSettingsDto,
+  ) {
+    return this.service.updateNotificationSettings(req.user.id, dto);
   }
 }

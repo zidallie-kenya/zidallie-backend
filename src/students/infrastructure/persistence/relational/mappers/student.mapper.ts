@@ -39,7 +39,7 @@ export class StudentMapper {
     domainEntity.daily_fee = raw.daily_fee;
     domainEntity.transport_term_fee = raw.transport_term_fee;
     domainEntity.service_type = raw.service_type;
-    domainEntity.rfid_code = raw.rfid_code
+    domainEntity.rfid_code = raw.rfid_code;
 
     if (raw.rides) {
       domainEntity.rides = raw.rides.map((ride) => RideMapper.toDomain(ride));
@@ -84,7 +84,7 @@ export class StudentMapper {
     if (domainEntity.service_type !== undefined)
       persistence.service_type = domainEntity.service_type;
     if (domainEntity.rfid_code !== undefined)
-      persistence.rfid_code = domainEntity.rfid_code
+      persistence.rfid_code = domainEntity.rfid_code;
 
     if (domainEntity.rides !== undefined)
       persistence.rides = domainEntity.rides.map(

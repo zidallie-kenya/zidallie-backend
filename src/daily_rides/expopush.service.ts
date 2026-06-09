@@ -1,6 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import axios from 'axios';
 import { Expo } from 'expo-server-sdk';
+import { NotificationRepository } from '../notifications/infrastructure/persistence/notification.repository';
+import { UsersService } from '../users/users.service';
+import { NotificationKind, NotificationSection } from '../utils/types/enums';
 
 @Injectable()
 export class ExpoPushService {
@@ -8,7 +11,10 @@ export class ExpoPushService {
   private readonly expo: Expo;
   private readonly EXPO_URL = 'https://exp.host/--/api/v2/push/send';
 
-  constructor() {
+  constructor(
+    private readonly notificationRepository: NotificationRepository,
+    private readonly usersService: UsersService,
+  ) {
     // Create a new Expo SDK client
     // No access token needed for basic push notifications
     this.expo = new Expo({
@@ -21,32 +27,34 @@ export class ExpoPushService {
     title: string,
     body: string,
     data?: Record<string, any>,
+    options?: {
+      userId?: number;
+      kind?: NotificationKind;
+      section?: NotificationSection;
+    },
   ): Promise<void> {
+    // Ensure array
+    const tokens = Array.isArray(pushTokens) ? pushTokens : [pushTokens];
+
+    console.log('=== PUSH NOTIFICATION DEBUG ===');
+    console.log('Received tokens:', tokens);
+
+    // Filter only valid expo push tokens
+    const validTokens = tokens.filter(
+      (t) =>
+        t &&
+        (t.startsWith('ExpoPushToken') || t.startsWith('ExponentPushToken')),
+    );
+
+    if (validTokens.length === 0) {
+      this.logger.warn('No valid Expo push tokens found');
+      console.log('❌ NO VALID TOKENS - stopping here');
+      return;
+    }
+
+    // ── 1. Send push ──────────────────────────────
+
     try {
-      // Ensure array
-      const tokens = Array.isArray(pushTokens) ? pushTokens : [pushTokens];
-
-      console.log('=== PUSH NOTIFICATION DEBUG ===');
-      console.log('Received tokens:', tokens);
-
-      // Filter only valid expo push tokens
-      const validTokens = tokens.filter(
-        (t) =>
-          t &&
-          (t.startsWith('ExpoPushToken') || t.startsWith('ExponentPushToken')),
-      );
-
-      // console.log('Valid tokens after filter:', validTokens);
-      // console.log('Title:', title);
-      // console.log('Body:', body);
-      // console.log('Data:', data);
-
-      if (validTokens.length === 0) {
-        this.logger.warn('No valid Expo push tokens found');
-        // console.log('❌ NO VALID TOKENS - stopping here');
-        return;
-      }
-
       // Build messages payload
       const messages = validTokens.map((token) => ({
         to: token,
@@ -56,8 +64,6 @@ export class ExpoPushService {
         data,
       }));
 
-      // console.log('Messages to send:', JSON.stringify(messages, null, 2));
-
       // Send bulk request to Expo API
       const response = await axios.post(this.EXPO_URL, messages, {
         headers: {
@@ -66,8 +72,6 @@ export class ExpoPushService {
           'Content-Type': 'application/json',
         },
       });
-
-      // console.log('✅ Expo API Response:', response.data);
 
       this.logger.log(
         `Sent ${messages.length} notifications, got response: ${JSON.stringify(
@@ -85,6 +89,60 @@ export class ExpoPushService {
         error.stack,
       );
       throw error;
+    }
+
+    // ── 2. Persist to DB (best-effort, never throws) ──────────────────────────
+    await Promise.allSettled(
+      validTokens.map((token) =>
+        this.persistNotification(token, title, body, data, options),
+      ),
+    );
+  }
+
+  private async persistNotification(
+    pushToken: string,
+    title: string,
+    body: string,
+    data?: Record<string, any>,
+    options?: {
+      userId?: number;
+      kind?: NotificationKind;
+      section?: NotificationSection;
+    },
+  ): Promise<void> {
+    try {
+      // Resolve user — prefer explicit userId, fall back to token lookup
+      let user: any = null;
+
+      if (options?.userId) {
+        user = await this.usersService.findById(options.userId);
+      } else {
+        user = await this.usersService.findByPushToken(pushToken);
+      }
+
+      if (!user) {
+        this.logger.warn(
+          `persistNotification: no user found for token ${pushToken} — skipping`,
+        );
+        return;
+      }
+
+      await this.notificationRepository.create({
+        user,
+        title,
+        message: body,
+        meta: data ?? null,
+        sender: 'system',
+        receiver: pushToken,
+        is_read: false,
+        kind: options?.kind ?? NotificationKind.Push,
+        section: options?.section ?? NotificationSection.Rides,
+      });
+    } catch (error: any) {
+      // Silently log — a DB failure must never affect push delivery
+      this.logger.error(
+        `Failed to persist notification for token ${pushToken}: ${error.message}`,
+      );
     }
   }
 

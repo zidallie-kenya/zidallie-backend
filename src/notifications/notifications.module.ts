@@ -5,8 +5,9 @@ import { UsersModule } from '../users/users.module';
 import { RelationalNotificationPersistenceModule } from './infrastructure/persistence/relational/relational-persistence.module';
 
 @Module({
-  imports: [RelationalNotificationPersistenceModule, UsersModule], // 👈 now will get repo
+  imports: [RelationalNotificationPersistenceModule, UsersModule],
   controllers: [NotificationsController],
   providers: [NotificationsService],
+  exports: [NotificationsService],
 })
 export class NotificationsModule {}

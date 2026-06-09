@@ -46,4 +46,6 @@ export abstract class UserRepository {
   abstract findBySasapayAccountNumber(
     accountNumber: string,
   ): Promise<NullableType<User>>;
+
+  abstract findByPushToken(pushToken: string): Promise<User | null>;
 }

@@ -19,6 +19,10 @@ import { TransportBookingService } from './booking.service';
 import { TransportBookingController } from './booking.controller';
 import { RelationalTransportBookingPersistenceModule } from './infrastructure/persistence/relational/relational-persistence.module';
 import { UsersModule } from '../users/users.module';
+import { StudentsModule } from '../students/students.module';
+import { RidesModule } from '../rides/rides.module';
+import { NotificationsModule } from '../notifications/notifications.module';
+import { BookingReceiptRepository } from './infrastructure/persistence/relational/repositories/booking-receipt.repository';
 
 @Module({
   imports: [
@@ -34,6 +38,9 @@ import { UsersModule } from '../users/users.module';
       RelationalTransportBookingPersistenceModule,
     ]),
     UsersModule,
+    RidesModule,
+    StudentsModule,
+    NotificationsModule,
   ],
   controllers: [TransportBookingController],
   providers: [
@@ -45,7 +52,8 @@ import { UsersModule } from '../users/users.module';
     ClusterRepository,
     BookingRepository,
     BookingDepositRepository,
+    BookingReceiptRepository,
   ],
-  exports: [TransportBookingService],
+  exports: [TransportBookingService, BookingReceiptRepository],
 })
 export class TransportBookingModule {}

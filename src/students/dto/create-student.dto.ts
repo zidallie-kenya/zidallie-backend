@@ -94,7 +94,6 @@ export class CreateStudentDto {
   @IsString()
   rfid_code?: string | null;
 
-
   @ApiProperty({ type: Number, example: 12000, required: false })
   @IsOptional()
   @IsNumber()

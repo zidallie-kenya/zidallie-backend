@@ -55,7 +55,7 @@ export class StudentEntity extends EntityRelationalHelper {
   daily_fee!: number | null;
 
   @Column({ type: 'varchar', nullable: true })
-  rfid_code: string | null;
+  rfid_code!: string | null;
 
   @Column({ type: 'float', nullable: true })
   transport_term_fee!: number | null;

@@ -672,56 +672,63 @@ export class TransportBookingService {
           where: { id: initialDeposit.id },
           lock: { mode: 'pessimistic_write' },
         });
-        if (!deposit || deposit.status === 'paid') return;
 
-        const booking = await bookingRepo.findOne({
+        const bookingToUpdate = await bookingRepo.findOne({
           where: { id: initialDeposit.booking.id },
+          lock: { mode: 'pessimistic_write' },
+        });
+
+        if (!deposit || deposit.status === 'paid' || !bookingToUpdate) return;
+
+        const totalPaidBefore = Number(bookingToUpdate.total_paid || 0);
+        const depositAmount = Number(bookingToUpdate.deposit_amount || 0);
+        const totalPrice = Number(bookingToUpdate.total_price || 0);
+
+        deposit.status = 'paid';
+        deposit.mpesa_transaction_id = mpesaTransactionId;
+        await manager.save(deposit);
+
+        bookingToUpdate.total_paid = totalPaidBefore + Number(amount);
+
+        if (bookingToUpdate.total_paid >= totalPrice) {
+          bookingToUpdate.status = 'completed';
+        } else if (bookingToUpdate.total_paid >= depositAmount) {
+          bookingToUpdate.status = 'deposit_paid';
+        } else {
+          bookingToUpdate.status = 'deposit_pending';
+        }
+
+        await manager.save(bookingToUpdate);
+
+        const bookingWithData = await bookingRepo.findOne({
+          where: { id: bookingToUpdate.id },
           relations: [
             'carpool_school',
             'bus_school',
             'pickup_station',
             'parent',
           ],
-          lock: { mode: 'pessimistic_write' },
         });
-        if (!booking) return;
 
-        const totalPaidBefore = Number(booking.total_paid || 0);
-        const depositAmount = Number(booking.deposit_amount || 0);
-        const totalPrice = Number(booking.total_price || 0);
-
-        deposit.status = 'paid';
-        deposit.mpesa_transaction_id = mpesaTransactionId;
-        await manager.save(deposit);
-
-        booking.total_paid = totalPaidBefore + Number(amount);
-
-        if (booking.total_paid >= totalPrice) {
-          booking.status = 'completed';
-        } else if (booking.total_paid >= depositAmount) {
-          booking.status = 'deposit_paid';
-        } else {
-          booking.status = 'deposit_pending';
+        if (bookingWithData) {
+          snapshotHolder.data = {
+            id: bookingWithData.id,
+            totalPaidBefore,
+            totalPaidAfter: bookingWithData.total_paid,
+            depositAmount,
+            totalPrice,
+            status: bookingWithData.status,
+            serviceType: bookingWithData.service_type,
+            term: bookingWithData.term,
+            schoolName:
+              bookingWithData.carpool_school?.name ??
+              bookingWithData.bus_school?.name ??
+              null,
+            homeArea: bookingWithData.home_area ?? null,
+            childrenCount: bookingWithData.children_count,
+            parentId: bookingWithData.parent.id,
+          };
         }
-
-        await manager.save(booking);
-
-        // Capture snapshot for use after transaction commits
-        snapshotHolder.data = {
-          id: booking.id,
-          totalPaidBefore,
-          totalPaidAfter: booking.total_paid,
-          depositAmount,
-          totalPrice,
-          status: booking.status,
-          serviceType: booking.service_type,
-          term: booking.term,
-          schoolName:
-            booking.carpool_school?.name ?? booking.bus_school?.name ?? null,
-          homeArea: booking.home_area ?? null,
-          childrenCount: booking.children_count,
-          parentId: booking.parent.id,
-        };
       }); // ← transaction closes here
 
       // ── POST-TRANSACTION: generate receipt + cluster logic ─────────────

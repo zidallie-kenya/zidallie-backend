@@ -14,6 +14,7 @@ export class PendingPaymentMapper {
       paymentType: entity.paymentType,
       paymentModel: entity.paymentModel,
       schoolId: entity.schoolId,
+      dailyRideId: entity.dailyRideId,
       createdAt: entity.created_at,
       updatedAt: entity.updated_at,
     });
@@ -31,6 +32,7 @@ export class PendingPaymentMapper {
     entity.paymentType = domain.paymentType ?? null;
     entity.paymentModel = domain.paymentModel ?? null;
     entity.schoolId = domain.schoolId ?? null;
+    entity.dailyRideId = domain.dailyRideId ?? null;
     entity.created_at = domain.createdAt ?? new Date();
     entity.updated_at = domain.updatedAt ?? new Date();
     return entity;

@@ -6,7 +6,7 @@ import { Gender } from '../../utils/types/enums';
 import { Ride } from '../../rides/domain/rides';
 import { Subscription } from '../../subscriptions/domain/subscription';
 
-export type ServiceType = 'school' | 'carpool' | 'private';
+export type ServiceType = 'school' | 'carpool' | 'private' | 'instant_payment';
 
 export class Student {
   @ApiProperty({ type: Number })
@@ -97,7 +97,16 @@ export class Student {
   rfid_code!: string | null;
 
   @ApiProperty({
-    enum: ['school', 'carpool', 'private'],
+    type: String,
+    example: '254754321234',
+    required: false,
+    nullable: true,
+  })
+  @Expose({ groups: ['me', 'admin'] })
+  phone_number!: string | null;
+
+  @ApiProperty({
+    enum: ['school', 'carpool', 'private', 'instant_payment'],
     required: false,
     nullable: true,
   })

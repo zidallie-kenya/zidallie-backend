@@ -10,14 +10,16 @@ import {
 import { StudentEntity } from '../../../../../students/infrastructure/persistence/relational/entities/student.entity';
 import { PaymentTermEntity } from './payment_term.entity';
 
-export type PaymentModel = 'daily' | 'term' | 'zidallie';
+export type PaymentModel = 'daily' | 'term' | 'zidallie' | 'instant_payment';
 export type PaymentType =
   | 'initial'
   | 'installment'
   | 'daily'
   | 'weekly'
   | 'monthly'
-  | 'termly';
+  | 'termly'
+  | 'instant_payment'
+
 
 @Entity('pending_payments')
 export class PendingPaymentEntity {
@@ -45,7 +47,7 @@ export class PendingPaymentEntity {
   @Column({
     type: 'varchar',
     length: 20,
-    enum: ['initial', 'installment', 'daily', 'weekly', 'monthly', 'termly'],
+    enum: ['initial', 'installment', 'daily', 'weekly', 'monthly', 'termly', 'instant_payment'],
     nullable: true,
   })
   paymentType: PaymentType | null;
@@ -53,13 +55,16 @@ export class PendingPaymentEntity {
   @Column({
     type: 'varchar',
     length: 20,
-    enum: ['daily', 'term', 'zidallie'],
+    enum: ['daily', 'term', 'zidallie', 'instant_payment'],
     nullable: true,
   })
   paymentModel: PaymentModel | null;
 
   @Column({ type: 'int', nullable: true })
   schoolId: number | null;
+
+  @Column({ type: 'int', nullable: true })
+  dailyRideId: number | null;
 
   @CreateDateColumn({ type: 'timestamp' })
   created_at: Date;

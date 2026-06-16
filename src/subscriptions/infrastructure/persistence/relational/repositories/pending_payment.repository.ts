@@ -17,15 +17,17 @@ export class PendingPaymentRepository extends Repository<PendingPaymentEntity> {
     checkoutId: string;
     phoneNumber?: string | null;
     paymentType?:
-      | 'initial'
-      | 'installment'
-      | 'daily'
-      | 'weekly'
-      | 'monthly'
-      | 'termly'
-      | null;
-    paymentModel?: 'daily' | 'term' | 'zidallie' | null;
+    | 'initial'
+    | 'installment'
+    | 'daily'
+    | 'weekly'
+    | 'monthly'
+    | 'termly'
+    | 'instant_payment'
+    | null;
+    paymentModel?: 'daily' | 'term' | 'zidallie' | 'instant_payment' | null;
     schoolId?: number | null;
+    dailyRideId?: number | null;
   }): Promise<PendingPayment> {
     const entity = this.create({
       studentId: data.studentId,
@@ -36,6 +38,7 @@ export class PendingPaymentRepository extends Repository<PendingPaymentEntity> {
       paymentType: data.paymentType ?? null,
       paymentModel: data.paymentModel ?? null,
       schoolId: data.schoolId ?? null,
+      dailyRideId: data.dailyRideId ?? null,
     });
 
     const saved = await this.save(entity);

@@ -12,7 +12,7 @@ import {
 import { Type } from 'class-transformer';
 import { SchoolMetaDto } from './school-meta.dto';
 
-export type ServiceType = 'school' | 'carpool' | 'private';
+export type ServiceType = 'school' | 'carpool' | 'private' | 'instant_payment';
 
 export class CreateSchoolDto {
   @ApiProperty({
@@ -183,11 +183,11 @@ export class CreateSchoolDto {
   paybill?: string | null;
 
   @ApiProperty({
-    enum: ['school', 'carpool', 'private'],
+    enum: ['school', 'carpool', 'private', 'instant_payment'],
     required: false,
     nullable: true,
   })
-  @IsEnum(['school', 'carpool', 'private'])
+  @IsEnum(['school', 'carpool', 'private', 'instant_payment'])
   @IsOptional()
   service_type?: ServiceType | null;
 

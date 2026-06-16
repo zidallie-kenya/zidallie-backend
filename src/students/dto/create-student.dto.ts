@@ -94,17 +94,22 @@ export class CreateStudentDto {
   @IsString()
   rfid_code?: string | null;
 
+  @ApiProperty({ type: String, example: '254754321234', required: false })
+  @IsOptional()
+  @IsString()
+  phone_number?: string | null;
+
   @ApiProperty({ type: Number, example: 12000, required: false })
   @IsOptional()
   @IsNumber()
   transport_term_fee?: number | null;
 
   @ApiProperty({
-    enum: ['school', 'carpool', 'private'],
+    enum: ['school', 'carpool', 'private', 'instant_payment'],
     example: 'school',
     required: false,
   })
   @IsOptional()
   @IsString()
-  service_type?: 'school' | 'carpool' | 'private' | null;
+  service_type?: 'school' | 'carpool' | 'private' | 'instant_payment' | null;
 }

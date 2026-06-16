@@ -12,7 +12,7 @@ import { RideEntity } from '../../../../../rides/infrastructure/persistence/rela
 import { OnboardingFormEntity } from '../../../../../onboarding/infrastructure/persistence/relational/entities/onboarding.entity';
 import { SubscriptionPlanEntity } from '../../../../../subscriptions/infrastructure/persistence/relational/entities/subscription_plans.entity';
 
-export type ServiceType = 'school' | 'carpool' | 'private';
+export type ServiceType = 'school' | 'carpool' | 'private' | 'instant_payment';
 
 @Entity({ name: 'school' })
 export class SchoolEntity extends EntityRelationalHelper {
@@ -80,7 +80,7 @@ export class SchoolEntity extends EntityRelationalHelper {
   @Column({
     type: 'varchar',
     length: 10,
-    enum: ['school', 'carpool', 'private'],
+    enum: ['school', 'carpool', 'private', 'instant_payment'],
     nullable: true,
   })
   service_type: ServiceType | null;

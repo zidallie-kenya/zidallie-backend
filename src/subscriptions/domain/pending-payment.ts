@@ -13,9 +13,11 @@ export class PendingPayment {
     | 'weekly'
     | 'monthly'
     | 'termly'
+    | 'instant_payment'
     | null;
-  paymentModel?: 'daily' | 'term' | 'zidallie' | null;
+  paymentModel?: 'daily' | 'term' | 'zidallie' | 'instant_payment' | null;
   schoolId?: number | null;
+  dailyRideId: number | null;
   createdAt?: Date;
   updatedAt?: Date;
 
@@ -28,15 +30,17 @@ export class PendingPayment {
     checkoutId: string;
     phoneNumber?: string | null;
     paymentType?:
-      | 'initial'
-      | 'installment'
-      | 'daily'
-      | 'weekly'
-      | 'monthly'
-      | 'termly'
-      | null;
-    paymentModel?: 'daily' | 'term' | 'zidallie' | null;
+    | 'initial'
+    | 'installment'
+    | 'daily'
+    | 'weekly'
+    | 'monthly'
+    | 'termly'
+    | 'instant_payment'
+    | null;
+    paymentModel?: 'daily' | 'term' | 'zidallie' | 'instant_payment' | null;
     schoolId?: number | null;
+    dailyRideId?: number | null;
     createdAt?: Date;
     updatedAt?: Date;
   }) {
@@ -50,6 +54,7 @@ export class PendingPayment {
     this.paymentType = params.paymentType ?? null;
     this.paymentModel = params.paymentModel ?? null;
     this.schoolId = params.schoolId ?? null;
+    this.dailyRideId = params.dailyRideId ?? null;
     this.createdAt = params.createdAt;
     this.updatedAt = params.updatedAt;
   }

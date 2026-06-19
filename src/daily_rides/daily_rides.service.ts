@@ -892,8 +892,8 @@ export class DailyRidesService {
             const dto = new CreateSubscriptionDto();
             dto.student_id = student.id;
             dto.amount = student.daily_fee ?? 0;
-            dto.isInstantPayment = true;
-            dto.daily_ride_id = ride.id;
+            // dto.isInstantPayment = true;
+            // dto.daily_ride_id = ride.id;
 
             dto.phone_number = (student as any).phone_number ?? '';
 

@@ -3,17 +3,17 @@ import { IsBoolean, IsNumber, IsPhoneNumber } from 'class-validator';
 
 export class CreateSubscriptionDto {
   @IsNumber()
-  student_id: number;
+  student_id!: number;
 
   @IsNumber()
-  amount: number;
+  amount!: number;
 
   @IsPhoneNumber('KE')
-  phone_number: string;
+  phone_number!: string;
 
-  @IsBoolean()
-  isInstantPayment: boolean;
+  // @IsBoolean()
+  // isInstantPayment!: boolean;
 
-  @IsNumber()
-  daily_ride_id: number | null;
+  // @IsNumber()
+  // daily_ride_id!: number | null;
 }

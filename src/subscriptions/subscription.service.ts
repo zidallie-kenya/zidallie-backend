@@ -99,7 +99,7 @@ export class SubscriptionService {
         dto.phone_number,
         dto.amount,
         accessToken,
-        dto.daily_ride_id,
+        // dto.daily_ride_id,
       );
     } else {
       throw new BadRequestException('Invalid service type');
@@ -373,7 +373,7 @@ export class SubscriptionService {
     phoneNumber: string,
     amount: number,
     accessToken,
-    dailyRideId: any,
+    // dailyRideId: any,
   ) {
     const timestamp = this.getTimestamp();
 
@@ -425,7 +425,7 @@ export class SubscriptionService {
           paymentType: 'instant_payment',
           paymentModel: 'instant_payment',
           schoolId: null,
-          dailyRideId: dailyRideId,
+          // dailyRideId: dailyRideId,
           termId: null,
         },
       );

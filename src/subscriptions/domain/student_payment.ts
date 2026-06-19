@@ -6,7 +6,8 @@ export type PaymentType =
   | 'installment'
   | 'daily'
   | 'weekly'
-  | 'monthly';
+  | 'monthly'
+  | 'instant_payment';
 
 export class StudentPayment {
   id: number;

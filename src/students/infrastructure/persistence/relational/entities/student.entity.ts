@@ -14,7 +14,7 @@ import { Gender } from '../../../../../utils/types/enums';
 import { RideEntity } from '../../../../../rides/infrastructure/persistence/relational/entities/ride.entity';
 import { SubscriptionEntity } from '../../../../../subscriptions/infrastructure/persistence/relational/entities/subscription.entity';
 
-export type ServiceType = 'school' | 'carpool' | 'private';
+export type ServiceType = 'school' | 'carpool' | 'private' | 'instant_payment';
 
 @Entity({ name: 'student' })
 export class StudentEntity extends EntityRelationalHelper {
@@ -57,13 +57,16 @@ export class StudentEntity extends EntityRelationalHelper {
   @Column({ type: 'varchar', nullable: true })
   rfid_code!: string | null;
 
+  @Column({ type: 'varchar', nullable: true })
+  phone_number!: string | null;
+
   @Column({ type: 'float', nullable: true })
   transport_term_fee!: number | null;
 
   @Column({
     type: 'varchar',
     length: 10,
-    enum: ['school', 'carpool', 'private'],
+    enum: ['school', 'carpool', 'private', 'instant_payment'],
     nullable: true,
   })
   service_type!: ServiceType | null;

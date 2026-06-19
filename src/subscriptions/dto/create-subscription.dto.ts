@@ -1,5 +1,5 @@
 // src/subscriptions/dto/create-subscription.dto.ts
-import { IsNumber, IsPhoneNumber } from 'class-validator';
+import { IsBoolean, IsNumber, IsPhoneNumber } from 'class-validator';
 
 export class CreateSubscriptionDto {
   @IsNumber()
@@ -10,4 +10,10 @@ export class CreateSubscriptionDto {
 
   @IsPhoneNumber('KE')
   phone_number: string;
+
+  @IsBoolean()
+  isInstantPayment: boolean
+
+  @IsNumber()
+  daily_ride_id: number | null;
 }

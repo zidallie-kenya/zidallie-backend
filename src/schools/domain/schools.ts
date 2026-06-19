@@ -7,7 +7,7 @@ import { Onboarding } from '../../onboarding/domain/onboarding';
 import { IsOptional } from 'class-validator';
 import { SubscriptionPlan } from '../../subscriptions/domain/subscription-plan';
 
-export type ServiceType = 'school' | 'carpool' | 'private';
+export type ServiceType = 'school' | 'carpool' | 'private' | 'instant_payment';
 
 export class School {
   @ApiProperty({ type: Number })
@@ -171,7 +171,7 @@ export class School {
   paybill: string | null;
 
   @ApiProperty({
-    enum: ['school', 'carpool', 'private'],
+    enum: ['school', 'carpool', 'private', 'instant_payment'],
     required: false,
     nullable: true,
   })

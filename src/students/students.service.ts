@@ -23,7 +23,7 @@ export class StudentsService {
     private readonly studentsRepository: StudentRepository,
     private readonly usersService: UserRepository,
     private readonly schoolsService: SchoolsService,
-  ) {}
+  ) { }
 
   async create(createStudentDto: CreateStudentDto): Promise<Student> {
     // Validate school reference
@@ -84,6 +84,7 @@ export class StudentsService {
         account_number: createStudentDto.account_number ?? null,
         daily_fee: createStudentDto.daily_fee ?? null,
         rfid_code: createStudentDto.rfid_code ?? null,
+        phone_number: createStudentDto.phone_number ?? null,
         transport_term_fee: createStudentDto.transport_term_fee ?? null,
         service_type: createStudentDto.service_type ?? null,
         rides: [],
@@ -214,6 +215,10 @@ export class StudentsService {
 
     if (updateStudentDto.rfid_code !== undefined) {
       updateData.rfid_code = updateStudentDto.rfid_code;
+    }
+
+    if (updateStudentDto.phone_number !== undefined) {
+      updateData.phone_number = updateStudentDto.phone_number;
     }
 
     if (updateStudentDto.service_type !== undefined) {

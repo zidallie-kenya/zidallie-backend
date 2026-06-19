@@ -34,6 +34,8 @@ import { LocationsService } from '../location/location.service';
 import { Location } from '../location/domain/location';
 import * as pako from 'pako';
 import { SubscriptionRepository } from '../subscriptions/infrastructure/persistence/relational/repositories/subscription.repository';
+import { SubscriptionService } from '../subscriptions/subscription.service';
+import { CreateSubscriptionDto } from '../subscriptions/dto/create-subscription.dto';
 
 @Injectable()
 export class DailyRidesService {
@@ -44,10 +46,11 @@ export class DailyRidesService {
     private readonly usersService: UsersService,
     private readonly expoPushService: ExpoPushService,
     private readonly subscriptionRepository: SubscriptionRepository,
+    private readonly subscriptionService: SubscriptionService,
     private readonly dataSource: DataSource,
     @Inject(forwardRef(() => LocationsService))
     private readonly locationsService: LocationsService,
-  ) {}
+  ) { }
 
   // Helper method to format date
   private formatDateToString(date: Date): string {
@@ -776,97 +779,6 @@ export class DailyRidesService {
     });
   }
 
-  // async batchUpdateStatus(
-  //   ids: number[],
-  //   status: DailyRideStatus,
-  // ): Promise<DailyRide[]> {
-  //   // We use the dataSource to start a transaction
-  //   return await this.dataSource.transaction(
-  //     async (transactionalEntityManager) => {
-  //       // 1. Fetch rides using the transactional manager to ensure consistency
-  //       const rides = await transactionalEntityManager.find(DailyRideEntity, {
-  //         where: { id: In(ids) },
-  //         relations: ['driver', 'ride', 'ride.parent', 'ride.student'],
-  //       });
-
-  //       if (rides.length === 0) {
-  //         throw new NotFoundException(`No rides found for given IDs`);
-  //       }
-
-  //       const currentTime = new Date();
-  //       const mostRecentMonday = this.getMostRecentMonday();
-  //       const driversProcessedInThisBatch = new Set<number>();
-
-  //       for (const ride of rides) {
-  //         ride.status = status;
-
-  //         if (status === DailyRideStatus.Active) {
-  //           ride.embark_time = currentTime;
-
-  //           if (ride.ride?.student?.id) {
-  //             const activeSub =
-  //               await this.subscriptionRepository.checkActiveStatusByDate(
-  //                 ride.ride.student.id,
-  //                 currentTime,
-  //               );
-
-  //             console.log(
-  //               `Checked active subscription for student ${ride.ride.student.id} on ride ${ride.id}:`,
-  //               activeSub,
-  //             );
-
-  //             // Permanent record for reporting: Did they have a valid sub on this date?
-  //             ride.had_active_subscription = !!activeSub;
-  //             ride.snapshot_subscription_id = activeSub ? activeSub.id : null;
-  //           }
-
-  //           const latestLocation =
-  //             await this.locationsService.findLatestByDriverId(
-  //               ride.driver?.id ?? 0,
-  //             );
-  //           ride.embark_latitude = latestLocation?.latitude ?? null;
-  //           ride.embark_longitude = latestLocation?.longitude ?? null;
-  //         }
-
-  //         if (status === DailyRideStatus.Finished) {
-  //           ride.disembark_time = currentTime;
-
-  //           // Capture Disembark Location
-  //           const latestLocation =
-  //             await this.locationsService.findLatestByDriverId(
-  //               ride.driver?.id ?? 0,
-  //             );
-  //           ride.disembark_latitude = latestLocation?.latitude ?? null;
-  //           ride.disembark_longitude = latestLocation?.longitude ?? null;
-
-  //           // ------------- WEEKLY EARNINGS RESET (LAZY LOGIC) -------------------
-  //           if (
-  //             ride.driver &&
-  //             !driversProcessedInThisBatch.has(ride.driver.id)
-  //           ) {
-  //             const lastReset = ride.driver.last_earnings_reset_at;
-
-  //             // If they have never been reset, or the last reset was BEFORE this week's Monday
-  //             if (!lastReset || new Date(lastReset) < mostRecentMonday) {
-  //               console.log(
-  //                 `Weekly Reset: Wiping earnings for driver ${ride.driver.id}. Last reset: ${lastReset}`,
-  //               );
-
-  //               await transactionalEntityManager.update(
-  //                 UserEntity,
-  //                 ride.driver.id,
-  //                 {
-  //                   pending_earnings: 0,
-  //                   last_earnings_reset_at: currentTime,
-  //                 },
-  //               );
-
-  //               // Update the local object so the increment below starts from 0
-  //               ride.driver.pending_earnings = 0;
-  //             }
-  //             driversProcessedInThisBatch.add(ride.driver.id);
-  //           }
-  //           // ----------------------------------------------------------------------
 
   //           // 2. Process Route Data (Compress)
   //           const locations = await this.locationsService.findByDailyRideId(
@@ -974,20 +886,39 @@ export class DailyRidesService {
         ride.embark_time = currentTime;
 
         if (ride.ride?.student?.id) {
-          const activeSub =
-            await this.subscriptionRepository.checkActiveStatusByDate(
+          const student = ride.ride.student;
+          console.log('Student service type:', student.service_type);
+          // Handle instant payment service type
+          if (student.service_type === 'instant_payment') {
+            const dto = new CreateSubscriptionDto();
+            dto.student_id = student.id;
+            dto.amount = student.daily_fee ?? 0;
+            dto.isInstantPayment = true;
+            dto.daily_ride_id = ride.id;
+
+            dto.phone_number = (student as any).phone_number ?? '';
+
+            try {
+              console.log(
+                'Initiating payment for student', student.id,
+              );
+              await this.subscriptionService.initiatePayment(dto);
+            } catch (e) {
+              console.error('Instant payment failed for student', student.id, e);
+            }
+          } else {
+            const activeSub = await this.subscriptionRepository.checkActiveStatusByDate(
               ride.ride.student.id,
               currentTime,
             );
-          console.log(
-            `Checked active subscription for student ${ride.ride.student.id} on ride ${ride.id}:`,
-            activeSub,
-          );
-
-          // Permanent record for reporting: Did they have a valid sub on this date?
-
-          ride.had_active_subscription = !!activeSub;
-          ride.snapshot_subscription_id = activeSub ? activeSub.id : null;
+            console.log(
+              `Checked active subscription for student ${ride.ride.student.id} on ride ${ride.id}:`,
+              activeSub,
+            );
+            // Permanent record for reporting: Did they have a valid sub on this date?
+            ride.had_active_subscription = !!activeSub;
+            ride.snapshot_subscription_id = activeSub ? activeSub.id : null;
+          }
         }
 
         const latestLocation = await this.locationsService.findLatestByDriverId(
@@ -1072,6 +1003,10 @@ export class DailyRidesService {
       // const entities = ridesToSave.map((r) => DailyRideMapper.toPersistence(r));
       // const savedEntities = await manager.save(DailyRideEntity, entities);
       for (const ride of ridesToSave) {
+        //skip for instant payment and active status
+        if (ride.ride?.student?.service_type === 'instant_payment' && status === DailyRideStatus.Active) {
+          continue;
+        }
         await manager.update(DailyRideEntity, ride.id, {
           status: ride.status,
           embark_time: ride.embark_time,
@@ -1098,6 +1033,10 @@ export class DailyRidesService {
 
   // Helper method to keep the transaction block clean
   private sendBatchNotifications(rides: DailyRide[], status: DailyRideStatus) {
+    //skip for instant payment and active status
+    if (rides.every((ride) => ride.ride?.student?.service_type === 'instant_payment' && status === DailyRideStatus.Active)) {
+      return;
+    }
     const pushTokens = rides
       .map((r) => r.ride?.parent?.push_token)
       .filter((token): token is string => !!token && token.startsWith('Expo'));

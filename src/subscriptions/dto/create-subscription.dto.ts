@@ -12,7 +12,7 @@ export class CreateSubscriptionDto {
   phone_number: string;
 
   @IsBoolean()
-  isInstantPayment: boolean
+  isInstantPayment: boolean;
 
   @IsNumber()
   daily_ride_id: number | null;

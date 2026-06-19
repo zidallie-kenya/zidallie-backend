@@ -23,7 +23,7 @@ export class StudentsService {
     private readonly studentsRepository: StudentRepository,
     private readonly usersService: UserRepository,
     private readonly schoolsService: SchoolsService,
-  ) { }
+  ) {}
 
   async create(createStudentDto: CreateStudentDto): Promise<Student> {
     // Validate school reference

@@ -14,6 +14,14 @@ export class PickupStation {
   @Expose()
   region!: string | null;
 
+  @ApiProperty({ type: Number, nullable: true })
+  @Expose()
+  latitude!: number | null;
+
+  @ApiProperty({ type: Number, nullable: true })
+  @Expose()
+  longitude!: number | null;
+
   @ApiProperty({ type: Date })
   @Expose()
   created_at!: Date;

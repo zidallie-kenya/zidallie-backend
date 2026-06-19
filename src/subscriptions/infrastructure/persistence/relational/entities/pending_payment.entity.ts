@@ -18,8 +18,7 @@ export type PaymentType =
   | 'weekly'
   | 'monthly'
   | 'termly'
-  | 'instant_payment'
-
+  | 'instant_payment';
 
 @Entity('pending_payments')
 export class PendingPaymentEntity {
@@ -47,7 +46,15 @@ export class PendingPaymentEntity {
   @Column({
     type: 'varchar',
     length: 20,
-    enum: ['initial', 'installment', 'daily', 'weekly', 'monthly', 'termly', 'instant_payment'],
+    enum: [
+      'initial',
+      'installment',
+      'daily',
+      'weekly',
+      'monthly',
+      'termly',
+      'instant_payment',
+    ],
     nullable: true,
   })
   paymentType: PaymentType | null;

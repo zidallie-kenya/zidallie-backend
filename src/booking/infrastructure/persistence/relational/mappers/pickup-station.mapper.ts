@@ -9,6 +9,8 @@ export class PickupStationMapper {
     domain.region = entity.region;
     domain.created_at = entity.created_at;
     domain.updated_at = entity.updated_at;
+    domain.latitude = entity.latitude;
+    domain.longitude = entity.longitude;
     return domain;
   }
 
@@ -17,6 +19,8 @@ export class PickupStationMapper {
     entity.id = domain.id;
     entity.name = domain.name;
     entity.region = domain.region;
+    entity.latitude = domain.latitude;
+    entity.longitude = domain.longitude;
     return entity;
   }
 }

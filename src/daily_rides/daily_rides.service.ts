@@ -50,7 +50,7 @@ export class DailyRidesService {
     private readonly dataSource: DataSource,
     @Inject(forwardRef(() => LocationsService))
     private readonly locationsService: LocationsService,
-  ) { }
+  ) {}
 
   // Helper method to format date
   private formatDateToString(date: Date): string {
@@ -779,7 +779,6 @@ export class DailyRidesService {
     });
   }
 
-
   //           // 2. Process Route Data (Compress)
   //           const locations = await this.locationsService.findByDailyRideId(
   //             ride.id,
@@ -899,18 +898,21 @@ export class DailyRidesService {
             dto.phone_number = (student as any).phone_number ?? '';
 
             try {
-              console.log(
-                'Initiating payment for student', student.id,
-              );
+              console.log('Initiating payment for student', student.id);
               await this.subscriptionService.initiatePayment(dto);
             } catch (e) {
-              console.error('Instant payment failed for student', student.id, e);
+              console.error(
+                'Instant payment failed for student',
+                student.id,
+                e,
+              );
             }
           } else {
-            const activeSub = await this.subscriptionRepository.checkActiveStatusByDate(
-              ride.ride.student.id,
-              currentTime,
-            );
+            const activeSub =
+              await this.subscriptionRepository.checkActiveStatusByDate(
+                ride.ride.student.id,
+                currentTime,
+              );
             console.log(
               `Checked active subscription for student ${ride.ride.student.id} on ride ${ride.id}:`,
               activeSub,
@@ -1004,7 +1006,10 @@ export class DailyRidesService {
       // const savedEntities = await manager.save(DailyRideEntity, entities);
       for (const ride of ridesToSave) {
         //skip for instant payment and active status
-        if (ride.ride?.student?.service_type === 'instant_payment' && status === DailyRideStatus.Active) {
+        if (
+          ride.ride?.student?.service_type === 'instant_payment' &&
+          status === DailyRideStatus.Active
+        ) {
           continue;
         }
         await manager.update(DailyRideEntity, ride.id, {
@@ -1034,7 +1039,13 @@ export class DailyRidesService {
   // Helper method to keep the transaction block clean
   private sendBatchNotifications(rides: DailyRide[], status: DailyRideStatus) {
     //skip for instant payment and active status
-    if (rides.every((ride) => ride.ride?.student?.service_type === 'instant_payment' && status === DailyRideStatus.Active)) {
+    if (
+      rides.every(
+        (ride) =>
+          ride.ride?.student?.service_type === 'instant_payment' &&
+          status === DailyRideStatus.Active,
+      )
+    ) {
       return;
     }
     const pushTokens = rides

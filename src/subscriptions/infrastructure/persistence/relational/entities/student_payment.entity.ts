@@ -17,8 +17,7 @@ export type PaymentType =
   | 'daily'
   | 'weekly'
   | 'monthly'
-  | 'instant_payment'
-  ;
+  | 'instant_payment';
 
 @Entity({ name: 'student_payments' })
 export class StudentPaymentEntity extends EntityRelationalHelper {
@@ -45,7 +44,14 @@ export class StudentPaymentEntity extends EntityRelationalHelper {
   @Column({
     type: 'varchar',
     length: 20,
-    enum: ['initial', 'installment', 'daily', 'weekly', 'monthly', 'instant_payment'],
+    enum: [
+      'initial',
+      'installment',
+      'daily',
+      'weekly',
+      'monthly',
+      'instant_payment',
+    ],
     nullable: false,
   })
   payment_type: PaymentType;

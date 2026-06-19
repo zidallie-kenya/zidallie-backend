@@ -40,7 +40,7 @@ export class StudentMapper {
     domainEntity.transport_term_fee = raw.transport_term_fee;
     domainEntity.service_type = raw.service_type;
     domainEntity.rfid_code = raw.rfid_code;
-    domainEntity.phone_number = raw.phone_number
+    domainEntity.phone_number = raw.phone_number;
 
     if (raw.rides) {
       domainEntity.rides = raw.rides.map((ride) => RideMapper.toDomain(ride));

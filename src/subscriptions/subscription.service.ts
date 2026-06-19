@@ -23,7 +23,6 @@ import { StudentRepository } from '../students/infrastructure/persistence/studen
 import { DailyRideEntity } from '../daily_rides/infrastructure/persistence/relational/entities/daily_ride.entity';
 import { DailyRideStatus } from '../utils/types/enums';
 
-
 interface DisbursementData {
   school: any;
   disbursementRecord: SchoolDisbursementEntity;
@@ -48,7 +47,7 @@ export class SubscriptionService {
     private readonly studentsService: StudentsService,
     private readonly schoolsService: SchoolsService,
     private readonly dataSource: DataSource,
-  ) { }
+  ) {}
 
   // -------------------------------
   // INITIATE PAYMENT
@@ -275,7 +274,6 @@ export class SubscriptionService {
     amount,
     accessToken,
   ) {
-
     const subscription =
       await this.subscriptionsRepository.findActiveByStudentId(student.id);
 
@@ -418,8 +416,8 @@ export class SubscriptionService {
         );
       }
 
-      const pending =
-        await this.pendingPaymentsRepository.createPendingPayment({
+      const pending = await this.pendingPaymentsRepository.createPendingPayment(
+        {
           studentId: student.id,
           amount,
           checkoutId: data.CheckoutRequestID,
@@ -429,7 +427,8 @@ export class SubscriptionService {
           schoolId: null,
           dailyRideId: dailyRideId,
           termId: null,
-        });
+        },
+      );
 
       return {
         message: 'Instant ride payment initiated',
@@ -437,14 +436,11 @@ export class SubscriptionService {
         checkoutRequestId: data.CheckoutRequestID,
       };
     } catch (error: any) {
-      logger.error(
-        `Instant payment failed for student ${student.id}`,
-        error,
-      );
+      logger.error(`Instant payment failed for student ${student.id}`, error);
 
       throw new BadRequestException(
         error.response?.data?.errorMessage ||
-        'Failed to initiate instant payment',
+          'Failed to initiate instant payment',
       );
     }
   }
@@ -815,7 +811,7 @@ export class SubscriptionService {
       console.log('Creating disbursement record inside transaction');
       logger.info(
         'Creating disbursement record inside transaction for school: ' +
-        school.name,
+          school.name,
       );
 
       const disbursementRecord = manager.create(SchoolDisbursementEntity, {
@@ -883,9 +879,9 @@ export class SubscriptionService {
       console.log('📍 Processing term payment (in transaction)');
       logger.info(
         'Processing term payment for student: ' +
-        student.id +
-        ' at school: ' +
-        school.name,
+          student.id +
+          ' at school: ' +
+          school.name,
       );
 
       console.log('Amount received:(school bus term payment):', amount);
@@ -903,7 +899,7 @@ export class SubscriptionService {
       console.log('Transaction started for term payment');
       logger.info(
         'Transaction started for term payment with Transaction ID: ' +
-        transactionId,
+          transactionId,
       );
 
       // Fetch the active subscription entity
@@ -944,7 +940,7 @@ export class SubscriptionService {
         console.log('Subscription expired, resetting term_total_paid');
         logger.info(
           'Subscription expired, resetting term_total_paid for student: ' +
-          student.id,
+            student.id,
         );
         subscriptionEntity.term_total_paid = 0;
         subscriptionEntity.balance = student.transport_term_fee;
@@ -991,12 +987,12 @@ export class SubscriptionService {
 
           console.log(
             `Commission fully paid. Remaining commission (${remainingCommission}) deducted. ` +
-            `Disbursing ${amountToDisburse} to school.`,
+              `Disbursing ${amountToDisburse} to school.`,
           );
 
           logger.info(
             `Commission fully paid for student: ${student.id}. Remaining commission (${remainingCommission}) deducted. ` +
-            `Disbursing ${amountToDisburse} to school ${school.name}.`,
+              `Disbursing ${amountToDisburse} to school ${school.name}.`,
           );
         } else {
           // Payment is less than remaining commission
@@ -1005,13 +1001,13 @@ export class SubscriptionService {
 
           console.log(
             `Partial commission payment of ${amt}. ` +
-            `Total commission paid so far: ${subscriptionEntity.commission_paid_amount}/${school.commission_amount}. ` +
-            `No disbursement to school yet.`,
+              `Total commission paid so far: ${subscriptionEntity.commission_paid_amount}/${school.commission_amount}. ` +
+              `No disbursement to school yet.`,
           );
           logger.info(
             `Partial commission payment of ${amt} for student: ${student.id}. ` +
-            `Total commission paid so far: ${subscriptionEntity.commission_paid_amount}/${school.commission_amount}. ` +
-            `No disbursement to school ${school.name} yet.`,
+              `Total commission paid so far: ${subscriptionEntity.commission_paid_amount}/${school.commission_amount}. ` +
+              `No disbursement to school ${school.name} yet.`,
           );
         }
       } else {
@@ -1020,9 +1016,9 @@ export class SubscriptionService {
         console.log('Commission already paid, full amount goes to school');
         logger.info(
           'Commission already paid for student: ' +
-          student.id +
-          ', full amount goes to school ' +
-          school.name,
+            student.id +
+            ', full amount goes to school ' +
+            school.name,
         );
       }
 
@@ -1041,9 +1037,9 @@ export class SubscriptionService {
         console.log('Full payment received, expiry set to:', newExpiryDate);
         logger.info(
           'Full payment received for student: ' +
-          student.id +
-          ', expiry set to: ' +
-          newExpiryDate.toISOString(),
+            student.id +
+            ', expiry set to: ' +
+            newExpiryDate.toISOString(),
         );
       } else {
         subscriptionEntity.status = 'partially_paid';
@@ -1077,7 +1073,7 @@ export class SubscriptionService {
         console.log('Creating disbursement record inside transaction');
         logger.info(
           'Creating disbursement record inside transaction for school: ' +
-          school.name,
+            school.name,
         );
 
         disbursementRecord = manager.create(SchoolDisbursementEntity, {
@@ -1155,7 +1151,7 @@ export class SubscriptionService {
       console.log('Transaction started for carpool/private payment');
       logger.info(
         'Transaction started for carpool/private payment with Transaction ID: ' +
-        transactionId,
+          transactionId,
       );
 
       console.log(
@@ -1189,8 +1185,8 @@ export class SubscriptionService {
         console.log('Subscription expired, resetting for new term cycle');
         logger.info(
           'Subscription expired for student: ' +
-          student.id +
-          ', resetting for new term cycle',
+            student.id +
+            ', resetting for new term cycle',
         );
         subscriptionEntity.term_total_paid = 0;
         subscriptionEntity.balance = student.transport_term_fee;
@@ -1268,7 +1264,6 @@ export class SubscriptionService {
       );
     }
   }
-
 
   private async processInstantPaymentInTransaction(
     manager: any,
@@ -1481,7 +1476,7 @@ export class SubscriptionService {
     console.log('Received M-Pesa B2C/B2B callback');
     logger.info(
       'Received M-Pesa B2C/B2B callback with data: ' +
-      JSON.stringify(receivedData),
+        JSON.stringify(receivedData),
     );
 
     try {
@@ -1634,7 +1629,7 @@ export class SubscriptionService {
       console.error('B2C error:', error.response?.data || error.message);
       logger.error(
         'Error during B2C disbursement: ' +
-        (error.response?.data || error.message),
+          (error.response?.data || error.message),
       );
       throw new Error('Failed to disburse funds');
     }
@@ -1696,7 +1691,7 @@ export class SubscriptionService {
     } catch (error: any) {
       logger.error(
         'Error during B2B disbursement: ' +
-        (error.response?.data || error.message),
+          (error.response?.data || error.message),
       );
       console.error('B2B error:', error.response?.data || error.message);
       throw new Error('Failed to disburse funds');
@@ -1731,7 +1726,7 @@ export class SubscriptionService {
     } catch (error: any) {
       logger.error(
         'Error getting M-Pesa access token: ' +
-        (error.response?.data || error.message),
+          (error.response?.data || error.message),
       );
       console.error(
         'Access token error:',

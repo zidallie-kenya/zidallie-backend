@@ -30,14 +30,14 @@ export class PendingPayment {
     checkoutId: string;
     phoneNumber?: string | null;
     paymentType?:
-    | 'initial'
-    | 'installment'
-    | 'daily'
-    | 'weekly'
-    | 'monthly'
-    | 'termly'
-    | 'instant_payment'
-    | null;
+      | 'initial'
+      | 'installment'
+      | 'daily'
+      | 'weekly'
+      | 'monthly'
+      | 'termly'
+      | 'instant_payment'
+      | null;
     paymentModel?: 'daily' | 'term' | 'zidallie' | 'instant_payment' | null;
     schoolId?: number | null;
     dailyRideId?: number | null;

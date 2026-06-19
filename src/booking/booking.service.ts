@@ -36,6 +36,13 @@ const CLUSTER_RADIUS_KM = 2.0;
 const SCHOOL_DIRECTION_KM = 5.0;
 const WAITLIST_DAYS = 15;
 
+const LIVE_BOOKING_STATUSES = [
+  'awaiting_cluster',
+  'deposit_pending',
+  'deposit_paid',
+  'completed',
+];
+
 interface BookingPaymentSnapshot {
   id: number;
   totalPaidBefore: number;
@@ -105,6 +112,31 @@ export class TransportBookingService {
     return 'balance';
   }
 
+  private async recalculateClusterActivation(clusterId: number): Promise<void> {
+    const cluster = await this.clusterRepo.findById(clusterId);
+    if (!cluster) return;
+
+    const liveBookings = (cluster.bookings ?? []).filter((b) =>
+      LIVE_BOOKING_STATUSES.includes(b.status),
+    );
+
+    const totalChildren = liveBookings.reduce(
+      (sum, b) => sum + Number(b.children_count),
+      0,
+    );
+
+    cluster.seat_capacity = totalChildren;
+    cluster.is_active = totalChildren >= CLUSTER_MIN;
+    await this.clusterRepo.save(cluster);
+
+    for (const b of liveBookings) {
+      const shouldBeWaitlisted = !cluster.is_active;
+      if (b.is_waitlisted !== shouldBeWaitlisted) {
+        b.is_waitlisted = shouldBeWaitlisted;
+        await this.bookingRepo.save(b);
+      }
+    }
+  }
   //get all parents notifications
   async getMyNotifications(parentId: number) {
     return this.notificationsService.findByUserIdRaw(parentId);
@@ -532,9 +564,14 @@ export class TransportBookingService {
       expiryDate.setDate(expiryDate.getDate() + WAITLIST_LIMIT_DAYS);
 
       if (new Date() > expiryDate) {
-        // Auto-cancel if they try to pay after the window
+        const clusterId = booking.cluster?.id ?? null;
         booking.status = 'cancelled';
         await this.bookingRepo.save(booking);
+
+        if (clusterId) {
+          await this.recalculateClusterActivation(clusterId);
+        }
+
         throw new BadRequestException(
           'The 15-day waitlist period has expired. This booking is now cancelled.',
         );
@@ -662,11 +699,21 @@ export class TransportBookingService {
         const depositRepo = manager.getRepository(BookingDepositEntity);
         const bookingRepo = manager.getRepository(BookingEntity);
 
+        console.log('depositRepo and bookingRepo called');
+
         const initialDeposit = await depositRepo.findOne({
           where: { checkout_request_id: checkoutId },
           relations: ['booking'],
         });
-        if (!initialDeposit) return;
+
+        console.log(
+          'initialDeposit==============================================>',
+          initialDeposit,
+        );
+        if (!initialDeposit) {
+          console.log('initialDeposit is null');
+          return;
+        }
 
         const deposit = await depositRepo.findOne({
           where: { id: initialDeposit.id },
@@ -677,6 +724,11 @@ export class TransportBookingService {
           where: { id: initialDeposit.booking.id },
           lock: { mode: 'pessimistic_write' },
         });
+
+        console.log(
+          'deposit==============================================>',
+          deposit,
+        );
 
         if (!deposit || deposit.status === 'paid' || !bookingToUpdate) return;
 
@@ -698,6 +750,10 @@ export class TransportBookingService {
           bookingToUpdate.status = 'deposit_pending';
         }
 
+        console.log(
+          'bookingToUpdate==============================================>',
+          bookingToUpdate,
+        );
         await manager.save(bookingToUpdate);
 
         const bookingWithData = await bookingRepo.findOne({
@@ -709,6 +765,11 @@ export class TransportBookingService {
             'parent',
           ],
         });
+
+        console.log(
+          'BookingWithData==============================================>',
+          bookingWithData,
+        );
 
         if (bookingWithData) {
           snapshotHolder.data = {
@@ -732,6 +793,10 @@ export class TransportBookingService {
       }); // ← transaction closes here
 
       // ── POST-TRANSACTION: generate receipt + cluster logic ─────────────
+      console.log(
+        'snapshotholder.data==============================================>',
+        snapshotHolder.data,
+      );
       if (snapshotHolder.data) {
         const snap = snapshotHolder.data;
         const balanceRemaining = Math.max(
@@ -796,56 +861,7 @@ export class TransportBookingService {
   // CLUSTER LOGIC
   // ─────────────────────────────────────────────
 
-  // private async runClusterLogic(bookingId: number) {
-  //   const booking = await this.bookingRepo.findById(bookingId);
-  //   if (!booking) return;
-
-  //   // Only carpool needs clustering
-  //   if (booking.service_type !== 'carpool') {
-  //     booking.is_waitlisted = false;
-  //     await this.bookingRepo.save(booking);
-  //     return;
-  //   }
-
-  //   const cluster = await this.findOrCreateCluster(booking);
-  //   booking.cluster = cluster;
-  //   await this.bookingRepo.save(booking);
-
-  //   // 3. NOW reload cluster with fresh bookings (after the save above committed)
-  //   const freshCluster = await this.clusterRepo.findById(cluster.id);
-  //   if (!freshCluster) return;
-
-  //   // 4. Count total children across all bookings in this cluster
-  //   const totalStudents = freshCluster.bookings.reduce(
-  //     (sum, b) => sum + Number(b.children_count),
-  //     0,
-  //   );
-
-  //   console.log(`Cluster ${freshCluster.id} total students: ${totalStudents}`);
-
-  //   if (totalStudents >= CLUSTER_MIN) {
-  //     cluster.is_active = true;
-  //     await this.clusterRepo.save(cluster);
-
-  //     // Mark all members confirmed
-  //     for (const b of cluster.bookings) {
-  //       b.is_waitlisted = false;
-  //       await this.bookingRepo.save(b);
-  //     }
-  //   } else {
-  //     booking.is_waitlisted = true;
-  //     await this.clusterRepo.save(cluster);
-
-  //     booking.is_waitlisted = true;
-  //     booking.status = 'awaiting_cluster';
-  //     await this.bookingRepo.save(booking);
-  //     console.log(
-  //       `Cluster ${freshCluster.id} is still pending (${totalStudents}/${CLUSTER_MIN} students)`,
-  //     );
-  //   }
-  // }
   private async runClusterLogic(bookingId: number) {
-    // Fetch booking with relations needed for cluster finding
     const booking = await this.bookingRepo.findById(bookingId);
     if (!booking) return;
 
@@ -855,35 +871,11 @@ export class TransportBookingService {
       return;
     }
 
-    // 1. Find or create
     const cluster = await this.findOrCreateCluster(booking);
-
-    // 2. Link and Save - CRITICAL STEP
     booking.cluster = cluster;
     await this.bookingRepo.save(booking);
 
-    // 3. Refresh cluster data to count members
-    const freshCluster = await this.clusterRepo.findById(cluster.id);
-    if (!freshCluster) return;
-
-    const totalStudents = freshCluster.bookings.reduce(
-      (sum, b) => sum + Number(b.children_count),
-      0,
-    );
-
-    if (totalStudents >= CLUSTER_MIN) {
-      freshCluster.is_active = true;
-      await this.clusterRepo.save(freshCluster);
-
-      // Update all bookings in this cluster
-      for (const b of freshCluster.bookings) {
-        b.is_waitlisted = false;
-        await this.bookingRepo.save(b);
-      }
-    } else {
-      booking.is_waitlisted = true;
-      await this.bookingRepo.save(booking);
-    }
+    await this.recalculateClusterActivation(cluster.id);
   }
 
   private async findOrCreateCluster(
@@ -894,8 +886,6 @@ export class TransportBookingService {
     );
 
     if (!booking.home_lat || !booking.home_lon) {
-      console.log('No coords — creating new cluster');
-
       return this.clusterRepo.create({
         term: booking.term,
         zone: booking.region ?? 'General',
@@ -907,13 +897,23 @@ export class TransportBookingService {
       lon: Number(booking.home_lon),
     };
 
-    // 1. Search existing clusters for this term
     const clusters = await this.clusterRepo.findByTerm(booking.term);
 
     for (const cluster of clusters) {
-      if ((cluster.bookings?.length ?? 0) >= cluster.max_capacity) continue;
+      const liveBookings = (cluster.bookings ?? []).filter((b) =>
+        LIVE_BOOKING_STATUSES.includes(b.status),
+      );
+      const liveChildren = liveBookings.reduce(
+        (sum, b) => sum + Number(b.children_count),
+        0,
+      );
 
-      const anchor = cluster.bookings?.[0];
+      // Would adding this booking push the cluster over its seat capacity?
+      if (liveChildren + booking.children_count > cluster.max_capacity) {
+        continue;
+      }
+
+      const anchor = liveBookings[0];
       if (!anchor) continue;
 
       const anchorCoords = {
@@ -921,26 +921,76 @@ export class TransportBookingService {
         lon: Number(anchor.home_lon),
       };
 
-      // haversine_distance <= 2.0
       const proximityOk =
         this.haversineDistance(newCoords, anchorCoords) <= CLUSTER_RADIUS_KM;
       if (!proximityOk) continue;
 
-      // Check school direction (only if carpool schools differ)
       const sameDirectionOk = await this.isInSameDirection(booking, anchor);
-      if (sameDirectionOk) {
-        return cluster;
-      }
+      if (sameDirectionOk) return cluster;
     }
 
-    // No suitable cluster — create new one
-    console.log('creating new cluster');
     return this.clusterRepo.create({
       term: booking.term,
       zone: booking.region ?? 'General',
       is_active: false,
     });
   }
+
+  // private async findOrCreateCluster(
+  //   booking: BookingEntity,
+  // ): Promise<ClusterEntity> {
+  //   console.log(
+  //     `Finding cluster for booking ${booking.id}, term: ${booking.term}`,
+  //   );
+
+  //   if (!booking.home_lat || !booking.home_lon) {
+  //     console.log('No coords — creating new cluster');
+
+  //     return this.clusterRepo.create({
+  //       term: booking.term,
+  //       zone: booking.region ?? 'General',
+  //     });
+  //   }
+
+  //   const newCoords = {
+  //     lat: Number(booking.home_lat),
+  //     lon: Number(booking.home_lon),
+  //   };
+
+  //   // 1. Search existing clusters for this term
+  //   const clusters = await this.clusterRepo.findByTerm(booking.term);
+
+  //   for (const cluster of clusters) {
+  //     if ((cluster.bookings?.length ?? 0) >= cluster.max_capacity) continue;
+
+  //     const anchor = cluster.bookings?.[0];
+  //     if (!anchor) continue;
+
+  //     const anchorCoords = {
+  //       lat: Number(anchor.home_lat),
+  //       lon: Number(anchor.home_lon),
+  //     };
+
+  //     // haversine_distance <= 2.0
+  //     const proximityOk =
+  //       this.haversineDistance(newCoords, anchorCoords) <= CLUSTER_RADIUS_KM;
+  //     if (!proximityOk) continue;
+
+  //     // Check school direction (only if carpool schools differ)
+  //     const sameDirectionOk = await this.isInSameDirection(booking, anchor);
+  //     if (sameDirectionOk) {
+  //       return cluster;
+  //     }
+  //   }
+
+  //   // No suitable cluster — create new one
+  //   console.log('creating new cluster');
+  //   return this.clusterRepo.create({
+  //     term: booking.term,
+  //     zone: booking.region ?? 'General',
+  //     is_active: false,
+  //   });
+  // }
 
   private async isInSameDirection(
     newBooking: BookingEntity,

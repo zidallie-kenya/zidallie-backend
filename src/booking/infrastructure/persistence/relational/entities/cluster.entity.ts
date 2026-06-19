@@ -25,6 +25,9 @@ export class ClusterEntity {
   @Column({ type: 'boolean', default: false })
   is_active!: boolean;
 
+  @Column({ type: 'int', default: 0 })
+  seat_capacity!: number;
+
   // Which term this cluster belongs to
   @Column({ type: 'varchar', length: 20, nullable: true })
   term!: string | null; // 'dec-jan-2026' | 'apr-may-2026' | 'aug-sept-2026'

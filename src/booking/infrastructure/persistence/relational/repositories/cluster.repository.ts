@@ -33,7 +33,6 @@ export class ClusterRepository {
       .leftJoinAndSelect('cluster.bookings', 'booking')
       .leftJoinAndSelect('booking.carpool_school', 'carpool_school')
       .where('cluster.term = :term', { term })
-      .andWhere('cluster.is_active = false') // only look at non-full clusters
       .getMany();
   }
 

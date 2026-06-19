@@ -12,6 +12,7 @@ export class ClusterMapper {
       term: entity.term,
       created_at: entity.created_at,
       updated_at: entity.updated_at,
+      seat_capacity: entity.seat_capacity,
     });
   }
 
@@ -23,6 +24,7 @@ export class ClusterMapper {
     entity.max_capacity = domain.max_capacity;
     entity.is_active = domain.is_active;
     entity.term = domain.term;
+    entity.seat_capacity = domain.seat_capacity;
     return entity;
   }
 }

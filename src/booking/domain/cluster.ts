@@ -18,6 +18,10 @@ export class Cluster {
   @Expose()
   max_capacity!: number;
 
+  @ApiProperty({ type: Number })
+  @Expose()
+  seat_capacity!: number;
+
   @ApiProperty({ type: Boolean })
   @Expose()
   is_active!: boolean;

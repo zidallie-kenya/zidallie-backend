@@ -11,9 +11,9 @@ export class CreateSubscriptionDto {
   @IsPhoneNumber('KE')
   phone_number!: string;
 
-  @IsBoolean()
-  isInstantPayment!: boolean;
+  // @IsBoolean()
+  // isInstantPayment!: boolean;
 
-  @IsNumber()
-  daily_ride_id!: number | null;
+  // @IsNumber()
+  // daily_ride_id!: number | null;
 }

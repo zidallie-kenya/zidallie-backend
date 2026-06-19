@@ -93,16 +93,13 @@ export class SubscriptionService {
         dto.amount,
         accessToken,
       );
-    } else if (
-      student.service_type === 'instant_payment' ||
-      student.service_type === 'school'
-    ) {
+    } else if (student.service_type === 'instant_payment') {
       return this.handleInstantPayment(
         student,
         dto.phone_number,
         dto.amount,
         accessToken,
-        // dto.daily_ride_id,
+        dto.daily_ride_id,
       );
     } else {
       throw new BadRequestException('Invalid service type');
@@ -376,7 +373,7 @@ export class SubscriptionService {
     phoneNumber: string,
     amount: number,
     accessToken,
-    // dailyRideId: any,
+    dailyRideId: any,
   ) {
     const timestamp = this.getTimestamp();
 
@@ -428,7 +425,7 @@ export class SubscriptionService {
           paymentType: 'instant_payment',
           paymentModel: 'instant_payment',
           schoolId: null,
-          // dailyRideId: dailyRideId,
+          dailyRideId: dailyRideId,
           termId: null,
         },
       );

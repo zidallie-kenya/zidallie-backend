@@ -93,7 +93,10 @@ export class SubscriptionService {
         dto.amount,
         accessToken,
       );
-    } else if (student.service_type === 'instant_payment') {
+    } else if (
+      student.service_type === 'instant_payment' ||
+      student.service_type === 'school'
+    ) {
       return this.handleInstantPayment(
         student,
         dto.phone_number,

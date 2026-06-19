@@ -1,5 +1,5 @@
 // src/subscriptions/dto/create-subscription.dto.ts
-import { IsBoolean, IsNumber, IsPhoneNumber } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsString, Matches } from 'class-validator';
 
 export class CreateSubscriptionDto {
   @IsNumber()
@@ -8,7 +8,13 @@ export class CreateSubscriptionDto {
   @IsNumber()
   amount!: number;
 
-  @IsPhoneNumber('KE')
+  @IsString()
+  @IsNotEmpty()
+  // This Regex allows +254 followed by 7 or 1, and then 8 digits
+  @Matches(/^\+254[17]\d{8}$/, {
+    message:
+      'phone_number must be a valid Kenyan phone number (e.g. +2547... or +2541...)',
+  })
   phone_number!: string;
 
   // @IsBoolean()

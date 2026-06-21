@@ -301,12 +301,14 @@ export class TransportBookingService {
       region = school.region;
 
       // Get school coordinates via Google Maps
-      const schoolCoords = await this.getCoordinates(
-        school.name + ', Nairobi, Kenya',
-      );
+
+      const searchQuery = `${school.name}, ${region}, Nairobi, Kenya`;
+
+      const schoolCoords = await this.getCoordinates(searchQuery);
+
       if (!schoolCoords) {
         throw new BadRequestException(
-          'Could not locate the school. Please try again.',
+          `Could not locate ${school.name} in ${region}. Please verify the school details.`,
         );
       }
 
@@ -349,18 +351,32 @@ export class TransportBookingService {
 
       region = busSchool.region;
 
-      const [pickupCoords, schoolCoords] = await Promise.all([
-        this.getCoordinates(pickupStation.name + ', Nairobi, Kenya'),
-        this.getCoordinates(busSchool.name + ', Nairobi, Kenya'),
-      ]);
+      // 1. Get school coordinates using Name + Region for accuracy
+      const schoolSearchQuery = `${busSchool.name}, ${region}, Nairobi, Kenya`;
+      const schoolCoords = await this.getCoordinates(schoolSearchQuery);
 
-      if (!pickupCoords || !schoolCoords) {
+      if (!schoolCoords) {
         throw new BadRequestException(
-          'Could not calculate distance. Please try again.',
+          `Could not locate school ${busSchool.name} in ${region}.`,
         );
       }
 
-      distanceKm = this.haversineDistance(pickupCoords, schoolCoords);
+      // 2. Use the Pickup Station coordinates directly from the database
+      // Ensuring we have valid numbers from the entity
+      if (pickupStation.latitude == null || pickupStation.longitude == null) {
+        throw new BadRequestException(
+          'The selected pickup station does not have valid coordinates assigned.',
+        );
+      }
+
+      const stationCoords = {
+        lat: Number(pickupStation.latitude),
+        lon: Number(pickupStation.longitude),
+      };
+
+      // 3. Calculate distance between the Database Station and Geocoded School
+      distanceKm = this.haversineDistance(stationCoords, schoolCoords);
+
       pricePerChild = await this.pricingRepo.getPrice(
         region,
         distanceKm,

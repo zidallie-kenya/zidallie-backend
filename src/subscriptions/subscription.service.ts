@@ -87,11 +87,21 @@ export class SubscriptionService {
       student.service_type === 'carpool' ||
       student.service_type === 'private'
     ) {
+      if (!student.school)
+        throw new BadRequestException(
+          'Student is not associated with a school',
+        );
+
+      const school = student.school;
+      console.log(`Initiating carpool payment for student: ${student.id}`);
+      console.log(`Amount: ${dto.amount}, Phone Number: ${dto.phone_number}`);
+
       return this.handleCarpoolPrivatePayment(
         student,
         dto.phone_number,
         dto.amount,
         accessToken,
+        school,
       );
     } else if (student.service_type === 'instant_payment') {
       return this.handleInstantPayment(
@@ -99,7 +109,7 @@ export class SubscriptionService {
         dto.phone_number,
         dto.amount,
         accessToken,
-        // dto.daily_ride_id,
+        dto.daily_ride_id,
       );
     } else {
       throw new BadRequestException('Invalid service type');
@@ -273,7 +283,9 @@ export class SubscriptionService {
     phoneNumber,
     amount,
     accessToken,
+    school,
   ) {
+    console.log(school);
     const subscription =
       await this.subscriptionsRepository.findActiveByStudentId(student.id);
 
@@ -373,7 +385,7 @@ export class SubscriptionService {
     phoneNumber: string,
     amount: number,
     accessToken,
-    // dailyRideId: any,
+    dailyRideId: any,
   ) {
     const timestamp = this.getTimestamp();
 
@@ -425,7 +437,7 @@ export class SubscriptionService {
           paymentType: 'instant_payment',
           paymentModel: 'instant_payment',
           schoolId: null,
-          // dailyRideId: dailyRideId,
+          dailyRideId: dailyRideId,
           termId: null,
         },
       );

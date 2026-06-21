@@ -546,44 +546,53 @@ export class SubscriptionService {
           return;
         }
 
-        // 4. PROCESS BUSINESS LOGIC INSIDE THE TRANSACTION
-        if (!student.school) {
-          if (pending_payment.paymentType === 'instant_payment') {
-            // Instant Payment - no disbursement needed
-            await this.processInstantPaymentInTransaction(
-              manager,
-              pending_payment,
-              checkoutRequestID,
-              phoneNumber,
-              amount,
-              student,
+        if (student.service_type === 'instant_payment') {
+          // Instant Payment - no disbursement needed
+          await this.processInstantPaymentInTransaction(
+            manager,
+            pending_payment,
+            checkoutRequestID,
+            phoneNumber,
+            amount,
+            student,
+          );
+        } else if (
+          student.service_type === 'carpool' ||
+          student.service_type === 'private'
+        ) {
+          // Carpool/Private - no disbursement needed, even if a school is attached
+          await this.processCarpoolPrivatePaymentInTransaction(
+            manager,
+            pending_payment,
+            checkoutRequestID,
+            phoneNumber,
+            amount,
+            student,
+          );
+        } else if (student.service_type === 'school') {
+          if (!student.school) {
+            console.error(
+              `❌ Student ${student.id} has service_type 'school' but no school assigned`,
             );
-          } else {
-            // Carpool/Private - no disbursement needed
-            await this.processCarpoolPrivatePaymentInTransaction(
-              manager,
-              pending_payment,
-              checkoutRequestID,
-              phoneNumber,
-              amount,
-              student,
+            logger.error(
+              `Student ${student.id} has service_type 'school' but no school assigned for checkout ${checkoutRequestID}`,
             );
+            return;
           }
-        } else {
+
           const school = await this.schoolsService.findById(student.school.id);
 
           if (!school) {
             console.log(`❌ School not found for student: ${student.id}`);
-            logger.error(`School not found for student: ${student.id}`);
             return;
           }
 
-          logger.info(
+          console.log(
             `Processing payment for school: ${school.name} (ID: ${school.id})`,
           );
 
           if (!school.has_commission) {
-            logger.info(
+            console.log(
               `Processing daily payment for student ${student.id} at school ${school.name} with no commission`,
             );
 
@@ -598,7 +607,6 @@ export class SubscriptionService {
               school,
             );
 
-            // Store disbursement data to execute AFTER transaction commits
             if (
               result.shouldDisburse &&
               result.disbursementRecord !== undefined
@@ -621,7 +629,6 @@ export class SubscriptionService {
               school,
             );
 
-            // Store disbursement data to execute AFTER transaction commits
             if (result.shouldDisburse && result.disbursementRecord) {
               disbursementData = {
                 school,
@@ -630,6 +637,13 @@ export class SubscriptionService {
               };
             }
           }
+        } else {
+          console.error(
+            `❌ Unrecognized service_type "${student.service_type}" for student ${student.id}`,
+          );
+          logger.error(
+            `Unrecognized service_type "${student.service_type}" for student ${student.id}, checkout ${checkoutRequestID}`,
+          );
         }
 
         logger.info(

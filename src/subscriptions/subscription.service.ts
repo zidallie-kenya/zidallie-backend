@@ -473,9 +473,18 @@ export class SubscriptionService {
       return { ResultCode: 0, ResultDesc: 'Accepted' };
     }
 
+    const checkoutRequestID = stkCallback.CheckoutRequestID;
+
+    const alreadyProcessed =
+      await this.pendingPaymentsRepository.findByCheckoutId(checkoutRequestID);
+
+    if (!alreadyProcessed) {
+      // Pending payment gone = already processed or never existed
+      console.log(`Skipping already-processed callback: ${checkoutRequestID}`);
+      return { ResultCode: 0, ResultDesc: 'Accepted' };
+    }
     const metadata = stkCallback.CallbackMetadata?.Item || [];
     const amount = metadata[0]?.Value;
-    const checkoutRequestID = stkCallback.CheckoutRequestID;
     const phoneNumber = metadata[1]?.Value;
 
     console.log(

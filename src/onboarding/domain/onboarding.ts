@@ -5,11 +5,11 @@ import { School } from '../../schools/domain/schools';
 
 export class Onboarding {
   @ApiProperty({ type: Number })
-  id: number;
+  id?: number;
 
   @ApiProperty({ type: String, example: 'John Doe' })
   @Expose({ groups: ['me', 'admin'] })
-  parent_name: string;
+  parent_name?: string;
 
   @ApiProperty({
     type: String,
@@ -18,7 +18,7 @@ export class Onboarding {
     nullable: true,
   })
   @Expose({ groups: ['me', 'admin'] })
-  parent_email: string | null;
+  parent_email?: string | null;
 
   @ApiProperty({
     type: String,
@@ -27,7 +27,7 @@ export class Onboarding {
     nullable: true,
   })
   @Expose({ groups: ['me', 'admin'] })
-  parent_phone: string | null;
+  parent_phone?: string | null;
 
   @ApiProperty({
     type: String,
@@ -36,23 +36,27 @@ export class Onboarding {
     nullable: true,
   })
   @Expose({ groups: ['me', 'admin'] })
-  address: string | null;
+  address?: string | null;
 
-  @ApiProperty({ type: String, example: 'Jane Doe' })
+  @ApiProperty({ type: String, example: 'Jane Doe', nullable: true })
   @Expose({ groups: ['me', 'admin'] })
-  student_name: string;
+  student_name?: string | null; // was string
 
-  @ApiProperty({ enum: Gender, example: Gender.Female })
+  @ApiProperty({ enum: Gender, example: Gender.Female, nullable: true })
   @Expose({ groups: ['me', 'admin'] })
-  student_gender: Gender;
+  student_gender?: Gender | null; // was Gender
 
-  @ApiProperty({ type: () => School })
+  @ApiProperty({ type: () => School, nullable: true })
   @Expose({ groups: ['me', 'admin'] })
-  school: School;
+  school?: School | null; // was School
 
-  @ApiProperty({ enum: RideType, example: RideType.PickupAndDropoff })
+  @ApiProperty({
+    enum: RideType,
+    example: RideType.PickupAndDropoff,
+    nullable: true,
+  })
   @Expose({ groups: ['me', 'admin'] })
-  ride_type: RideType;
+  ride_type?: RideType | null; // add | null
 
   @ApiProperty({
     type: String,
@@ -61,7 +65,7 @@ export class Onboarding {
     nullable: true,
   })
   @Expose({ groups: ['me', 'admin'] })
-  pickup: string | null;
+  pickup?: string | null;
 
   @ApiProperty({
     type: String,
@@ -70,21 +74,21 @@ export class Onboarding {
     nullable: true,
   })
   @Expose({ groups: ['me', 'admin'] })
-  dropoff: string | null;
+  dropoff?: string | null;
 
   @ApiProperty({ type: Date, required: false, nullable: true })
   @Expose({ groups: ['me', 'admin'] })
-  start_date: Date | null;
+  start_date?: Date | null;
 
   @ApiProperty({ type: Date, required: false, nullable: true })
   @Expose({ groups: ['me', 'admin'] })
-  mid_term: Date | null;
+  mid_term?: Date | null;
 
   @ApiProperty({ type: Date, required: false, nullable: true })
   @Expose({ groups: ['me', 'admin'] })
-  end_date: Date | null;
+  end_date?: Date | null;
 
   @ApiProperty()
   @Expose({ groups: ['me', 'admin'] })
-  created_at: Date;
+  created_at?: Date;
 }

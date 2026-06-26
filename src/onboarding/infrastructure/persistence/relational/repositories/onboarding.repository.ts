@@ -174,6 +174,6 @@ export class OnboardingRelationalRepository implements OnboardingRepository {
   }
 
   async remove(id: Onboarding['id']): Promise<void> {
-    await this.onboardingFormsRepository.delete(id);
+    await this.onboardingFormsRepository.delete(id as number);
   }
 }

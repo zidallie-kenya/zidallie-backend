@@ -1,4 +1,3 @@
-// onboarding/infrastructure/persistence/relational/entities/onboarding-form.entity.ts
 import {
   Column,
   CreateDateColumn,
@@ -7,61 +6,61 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { EntityRelationalHelper } from '../../../../../utils/relational-entity-helper';
-import { SchoolEntity } from '../../../../../schools/infrastructure/persistence/relational/entities/school.entity';
 import { Gender, RideType } from '../../../../../utils/types/enums';
+import { SchoolEntity } from '../../../../../schools/infrastructure/persistence/relational/entities/school.entity';
 
 @Entity({ name: 'onboarding' })
 export class OnboardingFormEntity extends EntityRelationalHelper {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column({ type: 'text', nullable: false })
-  parent_name: string;
+  parent_name!: string;
 
   @Column({ type: 'text', nullable: true })
-  parent_email: string | null;
+  parent_email!: string | null;
 
   @Column({ type: 'text', nullable: true })
-  parent_phone: string | null;
+  parent_phone!: string | null;
 
   @Column({ type: 'text', nullable: true })
-  address: string | null;
+  address!: string | null;
 
-  @Column({ type: 'text', nullable: false })
-  student_name: string;
+  @Column({ type: 'text', nullable: true })
+  student_name!: string | null;
 
-  @Column({ type: 'varchar', length: 6, enum: Gender, nullable: false })
-  student_gender: Gender;
+  @Column({ type: 'varchar', length: 6, enum: Gender, nullable: true })
+  student_gender!: Gender | null;
 
   @ManyToOne(() => SchoolEntity, (school) => school.onboardings, {
-    nullable: false,
+    nullable: true,
   })
-  school: SchoolEntity;
+  school!: SchoolEntity | null;
 
   @Column({
     type: 'varchar',
     length: 20,
     enum: RideType,
-    nullable: false,
+    nullable: true,
     default: RideType.PickupAndDropoff,
   })
-  ride_type: RideType;
+  ride_type!: RideType | null;
 
   @Column({ type: 'text', nullable: true })
-  pickup: string | null;
+  pickup!: string | null;
 
   @Column({ type: 'text', nullable: true })
-  dropoff: string | null;
+  dropoff!: string | null;
 
   @Column({ type: 'date', nullable: true })
-  start_date: Date | null;
+  start_date!: Date | null;
 
   @Column({ type: 'date', nullable: true })
-  mid_term: Date | null;
+  mid_term!: Date | null;
 
   @Column({ type: 'date', nullable: true })
-  end_date: Date | null;
+  end_date!: Date | null;
 
   @CreateDateColumn()
-  created_at: Date;
+  created_at!: Date;
 }

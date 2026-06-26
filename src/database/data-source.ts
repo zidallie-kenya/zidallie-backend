@@ -20,8 +20,15 @@ export const AppDataSource = new DataSource({
   logging: process.env.NODE_ENV !== 'production',
   entities: [__dirname + '/../**/*.entity{.ts,.js}'],
   migrations: [__dirname + '/migrations/**/*{.ts,.js}'],
+  connectTimeoutMS: 5000, // bail early if DB is unreachable
+  poolSize: parseInt(process.env.DATABASE_MAX_CONNECTIONS || '10', 10),
   extra: {
-    max: parseInt(process.env.DATABASE_MAX_CONNECTIONS || '100', 10),
+    max: parseInt(process.env.DATABASE_MAX_CONNECTIONS || '10', 10),
+    min: 2,
+    idleTimeoutMillis: 30000, // close idle connections after 30s
+    connectionTimeoutMillis: 5000,
+    keepAlive: true,
+    keepAliveInitialDelayMillis: 10000,
     ssl:
       process.env.DATABASE_SSL_ENABLED === 'true'
         ? {

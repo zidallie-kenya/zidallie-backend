@@ -14,7 +14,7 @@ export class Student {
 
   @ApiProperty({ type: () => School, required: false, nullable: true })
   @Expose({ groups: ['me', 'admin'] })
-  school!: School | null;
+  school?: School | null;
 
   @ApiProperty({ type: () => User, required: false, nullable: true })
   @Expose({ groups: ['me', 'admin'] })

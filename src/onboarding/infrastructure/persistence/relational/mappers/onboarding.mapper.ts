@@ -1,6 +1,7 @@
 import { SchoolEntity } from '../../../../../schools/infrastructure/persistence/relational/entities/school.entity';
 import { SchoolMapper } from '../../../../../schools/infrastructure/persistence/relational/mappers/schools.mapper';
 import { mapRelation } from '../../../../../utils/relation.mapper';
+import { RideType } from '../../../../../utils/types/enums';
 import { Onboarding } from '../../../../domain/onboarding';
 import { OnboardingFormEntity } from '../entities/onboarding.entity';
 
@@ -14,8 +15,13 @@ export class OnboardingMapper {
     domainEntity.address = raw.address;
     domainEntity.student_name = raw.student_name;
     domainEntity.student_gender = raw.student_gender;
-    domainEntity.school = SchoolMapper.toDomain(raw.school);
-    domainEntity.ride_type = raw.ride_type;
+
+    // Fix 1: school can be null when relation isn't loaded
+    domainEntity.school = raw.school ? SchoolMapper.toDomain(raw.school) : null;
+
+    // Fix 2: ride_type on Onboarding domain is RideType (non-null), but entity allows null
+    domainEntity.ride_type = raw.ride_type ?? RideType.PickupAndDropoff;
+
     domainEntity.pickup = raw.pickup;
     domainEntity.dropoff = raw.dropoff;
     domainEntity.start_date = raw.start_date;

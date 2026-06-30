@@ -1379,9 +1379,6 @@ export class SubscriptionService {
           id: pending_payment.dailyRideId,
         },
         lock: { mode: 'pessimistic_write' },
-        relations: {
-          driver: true,
-        },
       });
 
       if (!ride) {

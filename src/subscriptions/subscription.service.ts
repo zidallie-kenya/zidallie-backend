@@ -114,8 +114,13 @@ export class SubscriptionService {
         school,
       );
     } else if (student.service_type === 'instant_payment') {
+      if (!student.school)
+        throw new BadRequestException(
+          'Student is not associated with a school',
+        );
 
       const school = student?.school;
+
 
       return this.handleInstantPayment(
         student,

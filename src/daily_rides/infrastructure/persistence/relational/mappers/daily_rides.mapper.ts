@@ -39,6 +39,8 @@ export class DailyRideMapper {
     domainEntity.disembark_longitude = raw.disembark_longitude;
     domainEntity.route_data = raw.route_data;
     domainEntity.earnings_processed = raw.earnings_processed;
+    domainEntity.had_active_subscription = raw.had_active_subscription;
+    domainEntity.snapshot_subscription_id = raw.snapshot_subscription_id;
 
     if (raw.locations && raw.locations.length > 0) {
       domainEntity.locations = raw.locations.map((location) =>
@@ -87,6 +89,10 @@ export class DailyRideMapper {
       persistence.route_data = domainEntity.route_data;
     if (domainEntity.earnings_processed !== undefined)
       persistence.earnings_processed = domainEntity.earnings_processed;
+    if (domainEntity.had_active_subscription !== undefined)
+      persistence.had_active_subscription = domainEntity.had_active_subscription;
+    if (domainEntity.snapshot_subscription_id !== undefined)
+      persistence.snapshot_subscription_id = domainEntity.snapshot_subscription_id;
 
     //relations
 

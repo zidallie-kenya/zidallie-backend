@@ -67,6 +67,16 @@ export class SubscriptionService {
 
     if (!student) throw new BadRequestException('Student not found');
 
+    if (dto.phone_number) {
+      let phone = dto.phone_number.replace(/\D/g, '');
+      if (phone.startsWith('0')) {
+        phone = '254' + phone.slice(1);
+      } else if (phone.startsWith('7') || phone.startsWith('1')) {
+        phone = '254' + phone;
+      }
+      dto.phone_number = phone;
+    }
+
     if (student.service_type === 'school') {
       if (!student.school)
         throw new BadRequestException(

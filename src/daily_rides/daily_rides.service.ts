@@ -50,7 +50,7 @@ export class DailyRidesService {
     private readonly dataSource: DataSource,
     @Inject(forwardRef(() => LocationsService))
     private readonly locationsService: LocationsService,
-  ) {}
+  ) { }
 
   // Helper method to format date
   private formatDateToString(date: Date): string {
@@ -895,7 +895,7 @@ export class DailyRidesService {
             dto.isInstantPayment = true;
             dto.daily_ride_id = ride.id;
 
-            dto.phone_number = (student as any).phone_number ?? '';
+            dto.phone_number = student.phone_number || ride.ride?.parent?.phone_number || '';
 
             try {
               console.log('Initiating payment for student', student.id);

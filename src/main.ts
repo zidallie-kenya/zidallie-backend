@@ -63,7 +63,7 @@ async function bootstrap() {
 
   const port = configService.getOrThrow('app.port', { infer: true });
   await app.listen(port, '0.0.0.0');
-  console.log(`Server running at http://192.168.100.17:${port}`);
+  console.log(`Server running at http://192.168.1.21:${port}`);
 }
 
 void bootstrap();

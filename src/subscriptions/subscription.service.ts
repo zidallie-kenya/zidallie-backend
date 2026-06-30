@@ -114,12 +114,16 @@ export class SubscriptionService {
         school,
       );
     } else if (student.service_type === 'instant_payment') {
+
+      const school = student?.school;
+
       return this.handleInstantPayment(
         student,
         dto.phone_number,
         dto.amount,
         accessToken,
         dto.daily_ride_id,
+        school
       );
     } else {
       throw new BadRequestException('Invalid service type');
@@ -396,6 +400,7 @@ export class SubscriptionService {
     amount: number,
     accessToken,
     dailyRideId: any,
+    school: any
   ) {
     const timestamp = this.getTimestamp();
 
@@ -446,7 +451,7 @@ export class SubscriptionService {
           phoneNumber,
           paymentType: 'instant_payment',
           paymentModel: 'instant_payment',
-          schoolId: null,
+          schoolId: school.id,
           dailyRideId: dailyRideId,
           termId: null,
         },

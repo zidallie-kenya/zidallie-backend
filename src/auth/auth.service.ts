@@ -244,6 +244,13 @@ export class AuthService {
       };
     }
 
+    if (!dto.email) {
+      throw new UnprocessableEntityException({
+        status: HttpStatus.UNPROCESSABLE_ENTITY,
+        errors: { email: 'Email is required' },
+      });
+    }
+
     const existingUser = await this.usersService.findByEmail(dto.email);
 
     if (existingUser) {
@@ -277,9 +284,9 @@ export class AuthService {
     const user = await this.usersService.create({
       email: dto.email,
       password: dto.password,
-      firstName: dto.firstName,
-      lastName: dto.lastName,
-      kind: dto.kind,
+      firstName: dto.firstName ?? null,
+      lastName: dto.lastName ?? null,
+      kind: dto.kind ?? 'Parent',
       phone_number: dto.phone_number,
       meta: dto.meta ?? null,
       wallet_balance: 0, // default value

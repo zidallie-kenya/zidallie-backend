@@ -15,28 +15,28 @@ export class AuthRegisterLoginDto {
   @Transform(lowerCaseTransformer)
   @IsEmail()
   @IsNotEmpty()
-  email: string;
+  email?: string;
 
   @ApiProperty()
   @MinLength(6)
   @IsNotEmpty()
-  password: string;
+  password?: string;
 
   @ApiProperty({ example: 'John' })
   @IsNotEmpty()
-  firstName: string;
+  firstName?: string;
 
   @ApiProperty({ example: 'Doe' })
   @IsNotEmpty()
-  lastName: string;
+  lastName?: string;
 
   @ApiProperty({ example: 'Parent', enum: ['Parent', 'Driver', 'Admin'] })
   @IsEnum(['Parent', 'Driver', 'Admin'])
   @IsNotEmpty()
-  kind: UserKind;
+  kind?: UserKind;
 
   @ApiProperty({ example: '+254712345678' })
-  @IsNotEmpty()
+  @IsOptional()
   phone_number?: string | null;
 
   @ApiProperty({ type: () => UserMetaDto, required: false })

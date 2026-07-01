@@ -1,5 +1,12 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsArray, ArrayNotEmpty, IsEnum, IsNumber } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  IsArray,
+  ArrayNotEmpty,
+  IsEnum,
+  IsNumber,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 import { DailyRideStatus } from '../../utils/types/enums';
 
 export class BatchUpdateDailyRideDto {
@@ -18,4 +25,22 @@ export class BatchUpdateDailyRideDto {
   })
   @IsEnum(DailyRideStatus)
   status!: DailyRideStatus;
+
+  @ApiPropertyOptional({
+    description: 'Phone number to be used for payment (optional)',
+    nullable: true,
+    example: '254712345678',
+  })
+  @IsOptional()
+  @IsString()
+  payment_phone_number?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Amount to be paid (optional)',
+    nullable: true,
+    example: 500,
+  })
+  @IsOptional()
+  @IsNumber()
+  amount_to_pay?: number | null;
 }

@@ -36,6 +36,8 @@ import * as pako from 'pako';
 import { SubscriptionRepository } from '../subscriptions/infrastructure/persistence/relational/repositories/subscription.repository';
 import { SubscriptionService } from '../subscriptions/subscription.service';
 import { CreateSubscriptionDto } from '../subscriptions/dto/create-subscription.dto';
+import { logger } from 'nestjs-i18n';
+import { isNumber } from 'class-validator';
 
 @Injectable()
 export class DailyRidesService {
@@ -861,6 +863,8 @@ export class DailyRidesService {
 
   async batchUpdateStatus(
     ids: number[],
+    payment_phone_number: any,
+    amount_to_pay: any,
     status: DailyRideStatus,
   ): Promise<DailyRide[]> {
     // 1. FETCH DATA
@@ -886,39 +890,57 @@ export class DailyRidesService {
 
         if (ride.ride?.student?.id) {
           const student = ride.ride.student;
-          console.log('Student service type:', student.service_type);
+
+          const activeSub = await this.subscriptionRepository.checkActiveStatusByDate(ride.ride.student.id, currentTime);
+          const hasActiveSub = isNumber(activeSub?.id)
+
           // Handle instant payment service type
           if (student.service_type === 'instant_payment') {
-            const dto = new CreateSubscriptionDto();
-            dto.student_id = student.id;
-            dto.amount = student.daily_fee ?? 0;
-            dto.isInstantPayment = true;
-            dto.daily_ride_id = ride.id;
+            if (hasActiveSub) {
+              // Permanent record for reporting: Did they have a valid sub on this date?
+              ride.had_active_subscription = hasActiveSub;
+              ride.snapshot_subscription_id = hasActiveSub ? activeSub.id : null;
+            } else {
+              const dto = new CreateSubscriptionDto();
+              const student_daily_amount = student?.daily_fee ?? 0
+              dto.student_id = student.id;
+              if (amount_to_pay < student_daily_amount) {
+                throw new NotFoundException({
+                  status: HttpStatus.UNPROCESSABLE_ENTITY,
+                  errors: { amount: 'Amount cannot be less than the daily amount of ' + student_daily_amount },
+                });
 
-            dto.phone_number = student.phone_number || ride.ride?.parent?.phone_number || '';
+              }
+              if (!payment_phone_number) {
+                throw new NotFoundException({
+                  status: HttpStatus.UNPROCESSABLE_ENTITY,
+                  errors: { phone_number: 'Provide a valid phone Number to proceed' },
+                });
+              }
+              dto.amount = amount_to_pay;
+              dto.isInstantPayment = true;
+              dto.daily_ride_id = ride.id;
+              dto.phone_number = payment_phone_number || '';
 
-            try {
-              console.log('Initiating payment for student', student.id);
-              await this.subscriptionService.initiatePayment(dto);
-            } catch (e) {
-              console.error(
-                'Instant payment failed for student',
-                student.id,
-                e,
-              );
+              try {
+                console.log('Initiating payment for student', student.id);
+                await this.subscriptionService.initiatePayment(dto);
+              } catch (e) {
+                console.error(
+                  'Instant payment failed for student',
+                  student.id,
+                  e,
+                );
+              }
             }
           } else {
-            const activeSub =
-              await this.subscriptionRepository.checkActiveStatusByDate(
-                ride.ride.student.id,
-                currentTime,
-              );
+
             console.log(
               `Checked active subscription for student ${ride.ride.student.id} on ride ${ride.id}:`,
               activeSub,
             );
             // Permanent record for reporting: Did they have a valid sub on this date?
-            ride.had_active_subscription = !!activeSub;
+            ride.had_active_subscription = hasActiveSub;
             ride.snapshot_subscription_id = activeSub ? activeSub.id : null;
           }
         }
@@ -1005,9 +1027,8 @@ export class DailyRidesService {
       // const entities = ridesToSave.map((r) => DailyRideMapper.toPersistence(r));
       // const savedEntities = await manager.save(DailyRideEntity, entities);
       for (const ride of ridesToSave) {
-        //skip for instant payment and active status
-        if (
-          ride.ride?.student?.service_type === 'instant_payment' &&
+        //skip for instant payment and active status and has no active subscription
+        if ((ride.ride?.student?.service_type === 'instant_payment' && !ride.had_active_subscription) &&
           status === DailyRideStatus.Active
         ) {
           continue;

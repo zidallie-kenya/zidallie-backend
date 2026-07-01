@@ -54,7 +54,7 @@ const parseDate = (dateStr: string): Date => {
 @ApiTags('DailyRides')
 @Controller({ path: 'daily-rides', version: '1' })
 export class DailyRidesController {
-  constructor(private readonly dailyRidesService: DailyRidesService) {}
+  constructor(private readonly dailyRidesService: DailyRidesService) { }
 
   //create the daily ride
   @SerializeOptions({
@@ -77,6 +77,8 @@ export class DailyRidesController {
   ): Promise<DailyRide[]> {
     return this.dailyRidesService.batchUpdateStatus(
       batchUpdateDto.ids,
+      batchUpdateDto.payment_phone_number,
+      batchUpdateDto.amount_to_pay,
       batchUpdateDto.status,
     );
   }

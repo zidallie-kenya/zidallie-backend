@@ -48,4 +48,6 @@ export abstract class UserRepository {
   ): Promise<NullableType<User>>;
 
   abstract findByPushToken(pushToken: string): Promise<User | null>;
+
+  abstract clearEmailForDeletedUser(id): Promise<void>;
 }

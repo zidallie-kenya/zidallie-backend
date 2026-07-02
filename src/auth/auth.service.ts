@@ -252,33 +252,33 @@ export class AuthService {
     }
 
     const existingUser = await this.usersService.findByEmail(dto.email);
-
     if (existingUser) {
-      // If already active, reject completely
-      if (
+      if (existingUser.deleted_at) {
+        // Old account is soft-deleted — detach the email from it so the
+        // address is free to use again. The old row and its history stay
+        // exactly as they are, just with no email on them anymore.
+        await this.usersService.clearEmailForDeletedUser(existingUser.id);
+        // fall through — proceed to create a genuinely new user below
+      } else if (
         existingUser.status?.id?.toString() === StatusEnum.active.toString()
       ) {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
           errors: { email: 'An account with this email already exists' },
         });
+      } else {
+        // inactive, never verified — resend OTP, unchanged
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const otpExpires = Date.now() + 10 * 60 * 1000;
+
+        await this.usersService.update(existingUser.id, {
+          emailOtp: otp,
+          emailOtpExpires: otpExpires,
+        });
+
+        await this.brevoService.userSignUp({ to: dto.email, data: { otp } });
+        return;
       }
-
-      // If inactive (registered but never verified), just resend OTP
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      const otpExpires = Date.now() + 10 * 60 * 1000;
-
-      await this.usersService.update(existingUser.id, {
-        emailOtp: otp,
-        emailOtpExpires: otpExpires,
-      });
-
-      await this.brevoService.userSignUp({
-        to: dto.email,
-        data: { otp },
-      });
-
-      return;
     }
 
     const user = await this.usersService.create({

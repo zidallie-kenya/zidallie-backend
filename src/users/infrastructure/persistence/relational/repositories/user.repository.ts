@@ -191,4 +191,13 @@ export class UsersRelationalRepository implements UserRepository {
     });
     return entity ? UserMapper.toDomain(entity) : null;
   }
+
+  async clearEmailForDeletedUser(id: User['id']): Promise<void> {
+    await this.usersRepository
+      .createQueryBuilder('user')
+      .update(UserEntity)
+      .set({ email: null })
+      .where('id = :id', { id })
+      .execute();
+  }
 }

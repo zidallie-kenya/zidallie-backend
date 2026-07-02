@@ -292,6 +292,10 @@ export class UsersService {
     await this.usersRepository.remove(id);
   }
 
+  async clearEmailForDeletedUser(id: User['id']): Promise<void> {
+    await this.usersRepository.clearEmailForDeletedUser(id);
+  }
+
   async incrementPendingEarnings(
     id: User['id'],
     amount: number,

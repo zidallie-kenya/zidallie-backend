@@ -1418,7 +1418,7 @@ export class SubscriptionService {
         `Instant payment completed. Ride ${ride.id} activated successfully.`,
       );
 
-      // ✅ Create disbursement record if student has a school
+      //Create disbursement record if student has a school
       if (school) {
         logger.info(
           `Creating disbursement record for instant payment to school: ${school.name}`,

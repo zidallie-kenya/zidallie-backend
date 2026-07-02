@@ -23,16 +23,6 @@ export class UsersService {
   constructor(private readonly usersRepository: UserRepository) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
-    // Do not remove comment below.
-    // <creating-property />
-
-    let password: string | undefined = undefined;
-
-    if (createUserDto.password) {
-      const salt = await bcrypt.genSalt();
-      password = await bcrypt.hash(createUserDto.password, salt);
-    }
-
     let email: string | null = null;
 
     if (createUserDto.email) {
@@ -49,6 +39,13 @@ export class UsersService {
         });
       }
       email = createUserDto.email;
+    }
+
+    let password: string | undefined = undefined;
+
+    if (createUserDto.password) {
+      const salt = await bcrypt.genSalt();
+      password = await bcrypt.hash(createUserDto.password, salt);
     }
 
     let role: Role | undefined = undefined;

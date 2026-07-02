@@ -1378,6 +1378,9 @@ export class SubscriptionService {
         },
       );
 
+      // Extend the student's subscription
+      await this.extendStudentSubscription(manager, student, amt);
+
       // Fetch ride with lock
       const ride = await manager.getRepository(DailyRideEntity).findOne({
         where: {
@@ -1452,6 +1455,66 @@ export class SubscriptionService {
       );
       throw error;
     }
+  }
+
+  private async extendStudentSubscription(
+    manager: any,
+    student: any,
+    amountPaid: number,
+  ): Promise<void> {
+    const dailyFee = Number(student.daily_fee);
+
+    if (isNaN(dailyFee) || dailyFee <= 0) {
+      throw new Error('Invalid daily fee');
+    }
+
+    const daysPaidFor = Math.floor(amountPaid / dailyFee);
+
+    if (daysPaidFor <= 0) {
+      throw new Error('Payment does not cover any school day');
+    }
+
+    const subscription = await manager
+      .getRepository(SubscriptionEntity)
+      .findOne({
+        where: {
+          student: { id: student.id },
+        },
+        lock: {
+          mode: 'pessimistic_write',
+        },
+      });
+
+    if (!subscription) {
+      throw new Error(
+        `No subscription record found for student ${student.id}`,
+      );
+    }
+
+    const now = new Date();
+
+    let startDate = now;
+
+    if (
+      subscription.expiry_date &&
+      subscription.expiry_date > now
+    ) {
+      startDate = subscription.expiry_date;
+    }
+
+    const expiryDate = this.calculateExpiryDateExcludingWeekends(
+      startDate,
+      daysPaidFor,
+    );
+
+    subscription.total_paid += amountPaid;
+    subscription.term_total_paid += amountPaid;
+    subscription.expiry_date = expiryDate;
+    subscription.last_payment_date = now;
+    subscription.status = 'active';
+    subscription.days_access = daysPaidFor;
+
+    await manager.save(subscription);
   }
 
   // -------------------------------

@@ -251,14 +251,14 @@ export class AuthService {
       });
     }
 
-    const existingUser = await this.usersService.findByEmail(dto.email);
+    const existingUser = await this.usersService.findByEmail(dto.email, {
+      withDeleted: true,
+    });
     if (existingUser) {
       if (existingUser.deleted_at) {
-        // Old account is soft-deleted — detach the email from it so the
-        // address is free to use again. The old row and its history stay
-        // exactly as they are, just with no email on them anymore.
+        // Now this block will trigger correctly!
         await this.usersService.clearEmailForDeletedUser(existingUser.id);
-        // fall through — proceed to create a genuinely new user below
+        // Proceed to create the new user...
       } else if (
         existingUser.status?.id?.toString() === StatusEnum.active.toString()
       ) {

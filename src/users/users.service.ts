@@ -156,13 +156,18 @@ export class UsersService {
   async findByIdOrEmail(identifier: string): Promise<NullableType<User>> {
     const isEmail = identifier.includes('@');
     if (isEmail) {
-      return this.usersRepository.findByEmail(identifier);
+      return this.usersRepository.findByEmail(identifier, {
+        withDeleted: false,
+      });
     }
     return this.usersRepository.findById(Number(identifier));
   }
 
-  findByEmail(email: User['email']): Promise<NullableType<User>> {
-    return this.usersRepository.findByEmail(email);
+  findByEmail(
+    email: User['email'],
+    options?: { withDeleted?: boolean }, // Accept options
+  ): Promise<NullableType<User>> {
+    return this.usersRepository.findByEmail(email, options);
   }
 
   findBySocialIdAndProvider({

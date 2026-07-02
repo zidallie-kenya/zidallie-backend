@@ -32,7 +32,7 @@ export class DailyRidesRelationalRepository implements DailyRideRepository {
   constructor(
     @InjectRepository(DailyRideEntity)
     private readonly dailyRidesRepository: Repository<DailyRideEntity>,
-  ) {}
+  ) { }
 
   async create(data: DailyRide): Promise<DailyRide> {
     const persistenceModel = DailyRideMapper.toPersistence(data);
@@ -177,6 +177,7 @@ export class DailyRidesRelationalRepository implements DailyRideRepository {
       .leftJoinAndSelect('ride.driver', 'ride_driver')
       .leftJoinAndSelect('ride.school', 'ride_school')
       .leftJoinAndSelect('ride.student', 'ride_student')
+      .leftJoinAndSelect('ride_student.subscriptions', 'subscriptions')
       .leftJoinAndSelect('ride.parent', 'ride_parent')
       .leftJoinAndSelect('daily_ride.vehicle', 'vehicle')
       .leftJoinAndSelect('daily_ride.driver', 'driver')

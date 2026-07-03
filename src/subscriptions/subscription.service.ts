@@ -1444,7 +1444,7 @@ export class SubscriptionService {
           `Disbursement record created with ID: ${disbursementRecord.id} for instant payment, student: ${student.id}`,
         );
 
-        this.sendBatchNotifications(ride, ride.status);
+        this.sendBatchNotifications([ride], ride.status);
 
         return {
           shouldDisburse: true,

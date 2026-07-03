@@ -901,6 +901,8 @@ export class DailyRidesService {
               ride.had_active_subscription = hasActiveSub;
               ride.snapshot_subscription_id = hasActiveSub ? activeSub.id : null;
             } else {
+              ride.had_active_subscription = false;
+              ride.snapshot_subscription_id = null;
               const dto = new CreateSubscriptionDto();
               const student_daily_amount = student?.daily_fee ?? 0
               dto.student_id = student.id;

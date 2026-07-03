@@ -4,6 +4,7 @@ import axios from 'axios';
 import { CreateSubscriptionDto } from './dto/create-subscription.dto';
 import { StudentsService } from '../students/students.service';
 import { SchoolsService } from '../schools/schools.service';
+import { DailyRide } from '../daily_rides/domain/daily_rides';
 import { PendingPaymentRepository } from './infrastructure/persistence/relational/repositories/pending_payment.repository';
 import { SubscriptionRepository } from './infrastructure/persistence/relational/repositories/subscription.repository';
 import { B2cMpesaTransactionRepository } from './infrastructure/persistence/relational/repositories/b2c_mpesa_transaction.repository';
@@ -22,6 +23,7 @@ import { subscriptionLogger as logger } from './subscription.logger';
 import { StudentRepository } from '../students/infrastructure/persistence/student.repository';
 import { DailyRideEntity } from '../daily_rides/infrastructure/persistence/relational/entities/daily_ride.entity';
 import { DailyRideStatus } from '../utils/types/enums';
+import { ExpoPushService } from '../daily_rides/expopush.service';
 
 interface DisbursementData {
   school: any;
@@ -38,6 +40,7 @@ export class SubscriptionService {
   constructor(
     private readonly pendingPaymentsRepository: PendingPaymentRepository,
     private readonly subscriptionsRepository: SubscriptionRepository,
+    private readonly expoPushService: ExpoPushService,
     private readonly paymentTermRepository: PaymentTermRepository,
     private readonly termCommissionRepository: TermCommissionRepository,
     private readonly studentPaymentRepository: StudentPaymentRepository,
@@ -1441,6 +1444,8 @@ export class SubscriptionService {
           `Disbursement record created with ID: ${disbursementRecord.id} for instant payment, student: ${student.id}`,
         );
 
+        this.sendBatchNotifications(ride, ride.status);
+
         return {
           shouldDisburse: true,
           disbursementRecord,
@@ -1454,6 +1459,42 @@ export class SubscriptionService {
         `Error processing instant payment for ride ${pending_payment.dailyRideId}: ${error.message}`,
       );
       throw error;
+    }
+  }
+
+  // Helper method to keep the transaction block clean
+  private sendBatchNotifications(rides: DailyRide[], status: DailyRideStatus) {
+    //skip for instant payment and active status
+    if (
+      rides.every(
+        (ride) =>
+          ride.ride?.student?.service_type === 'instant_payment' &&
+          status === DailyRideStatus.Active,
+      )
+    ) {
+      return;
+    }
+    const pushTokens = rides
+      .map((r) => r.ride?.parent?.push_token)
+      .filter((token): token is string => !!token && token.startsWith('Expo'));
+
+    const message =
+      status === DailyRideStatus.Active
+        ? 'Your child has safely boarded and is on their way.'
+        : 'Your child has safely arrived at their destination.';
+
+    if (pushTokens.length > 0) {
+      const promises = pushTokens.map((token) =>
+        this.expoPushService.sendPushNotification(
+          token,
+          'Ride Update',
+          message,
+          { status },
+        ),
+      );
+      Promise.allSettled(promises).catch((e) =>
+        console.error('Notification Error', e),
+      );
     }
   }
 

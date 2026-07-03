@@ -21,9 +21,8 @@ import { NotificationsRelationalRepository } from '../notifications/infrastructu
     RidesModule,
     VehicleModule,
     UsersModule,
-    SubscriptionModule,
+    forwardRef(() => SubscriptionModule),
     forwardRef(() => LocationModule),
-    UsersModule,
   ],
   controllers: [DailyRidesController],
   providers: [
@@ -33,8 +32,10 @@ import { NotificationsRelationalRepository } from '../notifications/infrastructu
       provide: NotificationRepository,
       useClass: NotificationsRelationalRepository,
     },
+  ],
+  exports: [
+    DailyRidesService,
     ExpoPushService,
   ],
-  exports: [DailyRidesService],
 })
-export class DailyRidesModule {}
+export class DailyRidesModule { }

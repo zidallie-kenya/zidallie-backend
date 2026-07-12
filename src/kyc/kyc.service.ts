@@ -76,6 +76,14 @@ export class KycService {
       passport_photo: passportPhoto,
       driving_license: drivingLicense,
       certificate_of_good_conduct: certificateOfGoodConduct,
+      kra_pin_vertificate: createKycDto.kra_pin_vertificate ?? null,
+      kra_pin: createKycDto.kra_pin ?? null,
+      national_id_number: createKycDto.national_id_number ?? null,
+      driving_license_number: createKycDto.driving_license_number ?? null,
+      driving_license_expiry_date:
+        createKycDto.driving_license_expiry_date ?? null,
+      certificate_of_good_conduct_issue_date:
+        createKycDto.certificate_of_good_conduct_issue_date ?? null,
       comments: createKycDto.comments ?? null,
       is_verified: createKycDto.is_verified ?? false,
       user,
@@ -155,8 +163,9 @@ export class KycService {
       });
     }
 
-    const kyc = await this.kycRepository.findById(user.id);
-    if (!kyc || (kyc.user && kyc.user.id)) {
+    // Look up the KYC record by driver/user id, not by KYC's own id
+    const kyc = await this.kycRepository.findByDriverId(user.id);
+    if (!kyc) {
       throw new NotFoundException({
         status: HttpStatus.NOT_FOUND,
         errors: { kyc: 'the kyc does not exist' },
@@ -173,13 +182,32 @@ export class KycService {
     const certificateOfGoodConduct =
       updateKycDto.certificate_of_good_conduct ??
       kyc.certificate_of_good_conduct;
+    const kraPinVertificate =
+      updateKycDto.kra_pin_vertificate ?? kyc.kra_pin_vertificate;
+    const kraPin = updateKycDto.kra_pin ?? kyc.kra_pin;
+    const nationalIdNumber =
+      updateKycDto.national_id_number ?? kyc.national_id_number;
+    const drivingLicenseNumber =
+      updateKycDto.driving_license_number ?? kyc.driving_license_number;
+    const drivingLicenseExpiryDate =
+      updateKycDto.driving_license_expiry_date ??
+      kyc.driving_license_expiry_date;
+    const certificateOfGoodConductIssueDate =
+      updateKycDto.certificate_of_good_conduct_issue_date ??
+      kyc.certificate_of_good_conduct_issue_date;
 
-    return this.kycRepository.update(user.id, {
+    return this.kycRepository.update(kyc.id, {
       national_id_front: nationalIdFront,
       national_id_back: nationalIdBack,
       passport_photo: passportPhoto,
       driving_license: drivingLicense,
       certificate_of_good_conduct: certificateOfGoodConduct,
+      kra_pin_vertificate: kraPinVertificate,
+      kra_pin: kraPin,
+      national_id_number: nationalIdNumber,
+      driving_license_number: drivingLicenseNumber,
+      driving_license_expiry_date: drivingLicenseExpiryDate,
+      certificate_of_good_conduct_issue_date: certificateOfGoodConductIssueDate,
       comments: updateKycDto.comments ?? kyc.comments,
       is_verified: updateKycDto.is_verified ?? kyc.is_verified,
       user: kyc.user,
@@ -241,14 +269,15 @@ export class KycService {
       });
     }
 
-    const kyc = await this.kycRepository.findById(user.id);
-    if (!kyc || (kyc.user && kyc.user.id)) {
+    // Look up the KYC record by driver/user id, not by KYC's own id
+    const kyc = await this.kycRepository.findByDriverId(user.id);
+    if (!kyc) {
       throw new NotFoundException({
         status: HttpStatus.NOT_FOUND,
         errors: { kyc: 'the kyc does not exist' },
       });
     }
 
-    await this.kycRepository.remove(user.id);
+    await this.kycRepository.remove(kyc.id);
   }
 }

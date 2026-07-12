@@ -43,6 +43,15 @@ export class VehicleEntity extends EntityRelationalHelper {
   @Column({ type: 'text', nullable: true })
   vehicle_image_url!: string | null;
 
+  @Column({ type: 'text', nullable: true })
+  vehicle_image_url_front!: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  vehicle_image_url_back!: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  vehicle_image_url_inside!: string | null;
+
   @Column({ type: 'integer', nullable: false })
   seat_count!: number;
 
@@ -56,7 +65,7 @@ export class VehicleEntity extends EntityRelationalHelper {
   comments!: string | null;
 
   @Column({ type: 'jsonb', nullable: true })
-  meta: any | null;
+  meta!: any | null;
 
   @Column({ type: 'text', nullable: true })
   vehicle_registration!: string | null;
@@ -66,6 +75,18 @@ export class VehicleEntity extends EntityRelationalHelper {
 
   @Column({ type: 'text', nullable: true })
   insurance_certificate!: string | null;
+
+  @Column({ type: 'date', nullable: true })
+  insurance_certificate_expiry!: Date | null;
+
+  @Column({ type: 'text', nullable: true })
+  logbook!: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  vehicle_inspection_report!: string | null;
+
+  @Column({ type: 'date', nullable: true })
+  vehicle_inspection_expiry!: Date | null;
 
   @Column({ type: 'jsonb', nullable: true })
   vehicle_data!: any | null;

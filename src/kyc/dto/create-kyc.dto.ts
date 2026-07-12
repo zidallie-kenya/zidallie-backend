@@ -1,5 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsBoolean, IsNumber, IsOptional, IsString } from 'class-validator';
+import {
+  IsBoolean,
+  IsDateString,
+  IsNumber,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 
 export class CreateKYCDto {
   @ApiProperty({
@@ -9,7 +15,7 @@ export class CreateKYCDto {
   })
   @IsString()
   @IsOptional()
-  national_id_front: string | null;
+  national_id_front?: string | null;
 
   @ApiProperty({
     type: String,
@@ -18,7 +24,7 @@ export class CreateKYCDto {
   })
   @IsString()
   @IsOptional()
-  national_id_back: string | null;
+  national_id_back?: string | null;
 
   @ApiProperty({
     type: String,
@@ -27,7 +33,7 @@ export class CreateKYCDto {
   })
   @IsString()
   @IsOptional()
-  passport_photo: string | null;
+  passport_photo?: string | null;
 
   @ApiProperty({
     type: String,
@@ -36,7 +42,7 @@ export class CreateKYCDto {
   })
   @IsString()
   @IsOptional()
-  driving_license: string | null;
+  driving_license?: string | null;
 
   @ApiProperty({
     type: String,
@@ -45,7 +51,61 @@ export class CreateKYCDto {
   })
   @IsString()
   @IsOptional()
-  certificate_of_good_conduct: string | null;
+  certificate_of_good_conduct?: string | null;
+
+  @ApiProperty({
+    type: String,
+    example: 'path/to/kra_pin_vertificate.jpg',
+    nullable: true,
+  })
+  @IsString()
+  @IsOptional()
+  kra_pin_vertificate?: string | null;
+
+  @ApiProperty({
+    type: String,
+    example: 'A123456789B',
+    nullable: true,
+  })
+  @IsString()
+  @IsOptional()
+  kra_pin?: string | null;
+
+  @ApiProperty({
+    type: String,
+    example: '12345678',
+    nullable: true,
+  })
+  @IsString()
+  @IsOptional()
+  national_id_number?: string | null;
+
+  @ApiProperty({
+    type: String,
+    example: 'DL123456',
+    nullable: true,
+  })
+  @IsString()
+  @IsOptional()
+  driving_license_number?: string | null;
+
+  @ApiProperty({
+    type: String,
+    example: '2027-06-30',
+    nullable: true,
+  })
+  @IsDateString()
+  @IsOptional()
+  driving_license_expiry_date?: Date | null;
+
+  @ApiProperty({
+    type: String,
+    example: '2025-01-15',
+    nullable: true,
+  })
+  @IsDateString()
+  @IsOptional()
+  certificate_of_good_conduct_issue_date?: Date | null;
 
   @ApiProperty({
     type: String,
@@ -54,13 +114,13 @@ export class CreateKYCDto {
   })
   @IsString()
   @IsOptional()
-  comments: string;
+  comments?: string;
 
   @ApiProperty({ type: Number, example: 1 })
   @IsNumber()
-  userId: number;
+  userId!: number;
 
   @ApiProperty({ type: Boolean, example: false })
   @IsBoolean()
-  is_verified: boolean;
+  is_verified!: boolean;
 }

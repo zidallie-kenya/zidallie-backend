@@ -88,6 +88,10 @@ export class VehicleService {
       vehicle_model: createVehicleDto.vehicle_model,
       vehicle_year: createVehicleDto.vehicle_year,
       vehicle_image_url: createVehicleDto.vehicle_image_url ?? null,
+      vehicle_image_url_front: createVehicleDto.vehicle_image_url_front ?? null,
+      vehicle_image_url_back: createVehicleDto.vehicle_image_url_back ?? null,
+      vehicle_image_url_inside:
+        createVehicleDto.vehicle_image_url_inside ?? null,
       seat_count: createVehicleDto.seat_count,
       available_seats: createVehicleDto.available_seats,
       is_inspected: createVehicleDto.is_inspected ?? false,
@@ -95,6 +99,13 @@ export class VehicleService {
       meta: createVehicleDto.meta ?? null,
       vehicle_registration: createVehicleDto.vehicle_registration ?? null,
       insurance_certificate: createVehicleDto.insurance_certificate ?? null,
+      insurance_certificate_expiry:
+        createVehicleDto.insurance_certificate_expiry ?? null,
+      logbook: createVehicleDto.logbook ?? null,
+      vehicle_inspection_report:
+        createVehicleDto.vehicle_inspection_report ?? null,
+      vehicle_inspection_expiry:
+        createVehicleDto.vehicle_inspection_expiry ?? null,
       vehicle_data: createVehicleDto.vehicle_data ?? null,
       status: createVehicleDto.status,
       vehicle_report: createVehicleDto.vehicle_report ?? [],
@@ -192,6 +203,9 @@ export class VehicleService {
       vehicle_model: updateVehicleDto.vehicle_model,
       vehicle_year: updateVehicleDto.vehicle_year,
       vehicle_image_url: updateVehicleDto.vehicle_image_url,
+      vehicle_image_url_front: updateVehicleDto.vehicle_image_url_front,
+      vehicle_image_url_back: updateVehicleDto.vehicle_image_url_back,
+      vehicle_image_url_inside: updateVehicleDto.vehicle_image_url_inside,
       seat_count: updateVehicleDto.seat_count,
       available_seats: updateVehicleDto.available_seats,
       is_inspected: updateVehicleDto.is_inspected,
@@ -199,6 +213,11 @@ export class VehicleService {
       meta: updateVehicleDto.meta,
       vehicle_registration: updateVehicleDto.vehicle_registration,
       insurance_certificate: updateVehicleDto.insurance_certificate,
+      insurance_certificate_expiry:
+        updateVehicleDto.insurance_certificate_expiry,
+      logbook: updateVehicleDto.logbook,
+      vehicle_inspection_report: updateVehicleDto.vehicle_inspection_report,
+      vehicle_inspection_expiry: updateVehicleDto.vehicle_inspection_expiry,
       vehicle_data: updateVehicleDto.vehicle_data,
       status: updateVehicleDto.status,
       vehicle_report: updateVehicleDto.vehicle_report,

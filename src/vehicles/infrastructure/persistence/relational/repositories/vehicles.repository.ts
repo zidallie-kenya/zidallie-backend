@@ -81,7 +81,7 @@ export class VehiclesRelationalRepository implements VehicleRepository {
         }),
         {},
       ),
-      relations: ['user', 'rides', 'daily_rides'],
+      relations: ['user'],
     });
 
     return entities.map((vehicle) => VehicleMapper.toDomain(vehicle));

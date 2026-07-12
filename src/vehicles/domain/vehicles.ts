@@ -48,6 +48,33 @@ export class Vehicle {
   @Expose({ groups: ['me', 'admin'] })
   vehicle_image_url!: string | null;
 
+  @ApiProperty({
+    type: String,
+    example: 'https://example.com/vehicles/bus123_front.jpg',
+    required: false,
+    nullable: true,
+  })
+  @Expose({ groups: ['me', 'admin'] })
+  vehicle_image_url_front!: string | null;
+
+  @ApiProperty({
+    type: String,
+    example: 'https://example.com/vehicles/bus123_back.jpg',
+    required: false,
+    nullable: true,
+  })
+  @Expose({ groups: ['me', 'admin'] })
+  vehicle_image_url_back!: string | null;
+
+  @ApiProperty({
+    type: String,
+    example: 'https://example.com/vehicles/bus123_inside.jpg',
+    required: false,
+    nullable: true,
+  })
+  @Expose({ groups: ['me', 'admin'] })
+  vehicle_image_url_inside!: string | null;
+
   @ApiProperty({ type: Number, example: 14 })
   @Expose({ groups: ['me', 'admin'] })
   seat_count!: number;
@@ -90,6 +117,32 @@ export class Vehicle {
   })
   @Expose({ groups: ['me', 'admin'] })
   insurance_certificate!: string | null;
+
+  @ApiProperty({ type: Date, required: false, nullable: true })
+  @Expose({ groups: ['me', 'admin'] })
+  insurance_certificate_expiry!: Date | null;
+
+  @ApiProperty({
+    type: String,
+    example: 'https://example.com/docs/logbook123.pdf',
+    required: false,
+    nullable: true,
+  })
+  @Expose({ groups: ['me', 'admin'] })
+  logbook!: string | null;
+
+  @ApiProperty({
+    type: String,
+    example: 'https://example.com/docs/inspection123.pdf',
+    required: false,
+    nullable: true,
+  })
+  @Expose({ groups: ['me', 'admin'] })
+  vehicle_inspection_report!: string | null;
+
+  @ApiProperty({ type: Date, required: false, nullable: true })
+  @Expose({ groups: ['me', 'admin'] })
+  vehicle_inspection_expiry!: Date | null;
 
   @ApiProperty({ type: Object, required: false, nullable: true })
   @Expose({ groups: ['me', 'admin'] })

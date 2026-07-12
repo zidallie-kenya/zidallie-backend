@@ -33,9 +33,6 @@ import { NotificationsRelationalRepository } from '../notifications/infrastructu
       useClass: NotificationsRelationalRepository,
     },
   ],
-  exports: [
-    DailyRidesService,
-    ExpoPushService,
-  ],
+  exports: [DailyRidesService, ExpoPushService],
 })
-export class DailyRidesModule { }
+export class DailyRidesModule {}

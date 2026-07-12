@@ -13,39 +13,57 @@ import { EntityRelationalHelper } from '../../../../../utils/relational-entity-h
 @Entity({ name: 'kyc' })
 export class KYCEntity extends EntityRelationalHelper {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column({ type: 'varchar', nullable: true })
-  national_id_front: string | null;
+  national_id_front?: string | null;
 
   @Column({ type: 'varchar', nullable: true })
-  national_id_back: string | null;
+  national_id_back?: string | null;
 
   @Column({ type: 'varchar', nullable: true })
-  passport_photo: string | null;
+  passport_photo?: string | null;
 
   @Column({ type: 'varchar', nullable: true })
-  driving_license: string | null;
+  driving_license?: string | null;
 
   @Column({ type: 'varchar', nullable: true })
-  certificate_of_good_conduct: string | null;
+  certificate_of_good_conduct?: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  kra_pin_vertificate?: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  kra_pin?: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  national_id_number?: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  driving_license_number?: string | null;
+
+  @Column({ type: 'date', nullable: true })
+  driving_license_expiry_date?: Date | null;
+
+  @Column({ type: 'date', nullable: true })
+  certificate_of_good_conduct_issue_date?: Date | null;
 
   @CreateDateColumn()
-  created_at: Date;
+  created_at?: Date;
 
   @UpdateDateColumn()
-  updated_at: Date;
+  updated_at?: Date;
 
   @Column({ type: 'varchar', nullable: true })
-  comments: string;
+  comments?: string | null;
 
   @Column({ type: 'boolean', default: false })
-  is_verified: boolean;
+  is_verified?: boolean;
 
   @OneToOne(() => UserEntity, (user) => user.kyc, {
     eager: true,
     nullable: true,
   })
   @JoinColumn()
-  user: UserEntity | null;
+  user?: UserEntity | null;
 }

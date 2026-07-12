@@ -18,7 +18,7 @@ export class VehicleMapper {
 
     const domainEntity = new Vehicle();
     domainEntity.id = raw.id;
-    domainEntity.vehicle_name = raw.vehicle_name;
+    domainEntity.vehicle_name = raw.vehicle_name ?? null;
 
     if (raw.user) {
       domainEntity.user = UserMapper.toDomain(raw.user);
@@ -26,23 +26,33 @@ export class VehicleMapper {
       domainEntity.user = null;
     }
 
-    domainEntity.vehicle_name = raw.vehicle_name;
     domainEntity.registration_number = raw.registration_number;
     domainEntity.vehicle_type = raw.vehicle_type;
     domainEntity.vehicle_model = raw.vehicle_model;
     domainEntity.vehicle_year = raw.vehicle_year;
-    domainEntity.vehicle_image_url = raw.vehicle_image_url;
+    domainEntity.vehicle_image_url = raw.vehicle_image_url ?? null;
+    domainEntity.vehicle_image_url_front = raw.vehicle_image_url_front ?? null;
+    domainEntity.vehicle_image_url_back = raw.vehicle_image_url_back ?? null;
+    domainEntity.vehicle_image_url_inside =
+      raw.vehicle_image_url_inside ?? null;
     domainEntity.seat_count = raw.seat_count;
     domainEntity.available_seats = raw.available_seats;
     domainEntity.is_inspected = raw.is_inspected;
-    domainEntity.comments = raw.comments;
-    domainEntity.meta = raw.meta;
-    domainEntity.vehicle_registration = raw.vehicle_registration;
-    domainEntity.insurance_certificate = raw.insurance_certificate;
-    domainEntity.vehicle_data = raw.vehicle_data;
+    domainEntity.comments = raw.comments ?? null;
+    domainEntity.meta = raw.meta ?? null;
+    domainEntity.vehicle_registration = raw.vehicle_registration ?? null;
+    domainEntity.insurance_certificate = raw.insurance_certificate ?? null;
+    domainEntity.insurance_certificate_expiry =
+      raw.insurance_certificate_expiry ?? null;
+    domainEntity.logbook = raw.logbook ?? null;
+    domainEntity.vehicle_inspection_report =
+      raw.vehicle_inspection_report ?? null;
+    domainEntity.vehicle_inspection_expiry =
+      raw.vehicle_inspection_expiry ?? null;
+    domainEntity.vehicle_data = raw.vehicle_data ?? null;
     domainEntity.status = raw.status;
-    domainEntity.minders_name = raw.minders_name;
-    domainEntity.minders_id_url = raw.minders_id_url;
+    domainEntity.minders_name = raw.minders_name ?? null;
+    domainEntity.minders_id_url = raw.minders_id_url ?? null;
 
     if (raw.vehicle_report) {
       domainEntity.vehicle_report = raw.vehicle_report.map((report) => ({
@@ -95,6 +105,17 @@ export class VehicleMapper {
     if (domainEntity.vehicle_image_url !== undefined)
       persistence.vehicle_image_url = domainEntity.vehicle_image_url;
 
+    if (domainEntity.vehicle_image_url_front !== undefined)
+      persistence.vehicle_image_url_front =
+        domainEntity.vehicle_image_url_front;
+
+    if (domainEntity.vehicle_image_url_back !== undefined)
+      persistence.vehicle_image_url_back = domainEntity.vehicle_image_url_back;
+
+    if (domainEntity.vehicle_image_url_inside !== undefined)
+      persistence.vehicle_image_url_inside =
+        domainEntity.vehicle_image_url_inside;
+
     if (domainEntity.seat_count !== undefined)
       persistence.seat_count = domainEntity.seat_count;
 
@@ -114,6 +135,21 @@ export class VehicleMapper {
 
     if (domainEntity.insurance_certificate !== undefined)
       persistence.insurance_certificate = domainEntity.insurance_certificate;
+
+    if (domainEntity.insurance_certificate_expiry !== undefined)
+      persistence.insurance_certificate_expiry =
+        domainEntity.insurance_certificate_expiry;
+
+    if (domainEntity.logbook !== undefined)
+      persistence.logbook = domainEntity.logbook;
+
+    if (domainEntity.vehicle_inspection_report !== undefined)
+      persistence.vehicle_inspection_report =
+        domainEntity.vehicle_inspection_report;
+
+    if (domainEntity.vehicle_inspection_expiry !== undefined)
+      persistence.vehicle_inspection_expiry =
+        domainEntity.vehicle_inspection_expiry;
 
     if (domainEntity.vehicle_data !== undefined)
       persistence.vehicle_data = domainEntity.vehicle_data;

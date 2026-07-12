@@ -6,6 +6,7 @@ import {
   IsEnum,
   IsOptional,
   IsNotEmpty,
+  IsDateString,
   ValidateNested,
   IsArray,
 } from 'class-validator';
@@ -43,6 +44,18 @@ export class CreateVehicleDto {
   @ApiPropertyOptional({ example: 'bus_image.jpg', nullable: true })
   @IsOptional()
   vehicle_image_url?: string | null;
+
+  @ApiPropertyOptional({ example: 'bus_image_front.jpg', nullable: true })
+  @IsOptional()
+  vehicle_image_url_front?: string | null;
+
+  @ApiPropertyOptional({ example: 'bus_image_back.jpg', nullable: true })
+  @IsOptional()
+  vehicle_image_url_back?: string | null;
+
+  @ApiPropertyOptional({ example: 'bus_image_inside.jpg', nullable: true })
+  @IsOptional()
+  vehicle_image_url_inside?: string | null;
 
   @ApiPropertyOptional({ example: 'minder_id.jpg', nullable: true })
   @IsOptional()
@@ -82,6 +95,32 @@ export class CreateVehicleDto {
   @ApiPropertyOptional({ nullable: true })
   @IsOptional()
   insurance_certificate?: string | null;
+
+  @ApiPropertyOptional({
+    example: '2027-06-30',
+    nullable: true,
+  })
+  @IsOptional()
+  @IsDateString()
+  insurance_certificate_expiry?: Date | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  @IsOptional()
+  @IsString()
+  logbook?: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  @IsOptional()
+  @IsString()
+  vehicle_inspection_report?: string | null;
+
+  @ApiPropertyOptional({
+    example: '2027-06-30',
+    nullable: true,
+  })
+  @IsOptional()
+  @IsDateString()
+  vehicle_inspection_expiry?: Date | null;
 
   @ApiPropertyOptional({ type: Object, nullable: true })
   @IsOptional()

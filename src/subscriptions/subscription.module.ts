@@ -20,4 +20,4 @@ import { DailyRidesModule } from '../daily_rides/daily_rides.module';
   providers: [SubscriptionService, SubscriptionRepository],
   exports: [SubscriptionService, SubscriptionRepository],
 })
-export class SubscriptionModule { }
+export class SubscriptionModule {}

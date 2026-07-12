@@ -11,20 +11,23 @@ import { VehicleEntity } from './vehicle.entity';
 @Entity()
 export class MaintenanceEntity {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column()
-  mileage: number; // You called it "mirage", usually referred to as "mileage"
+  mileage!: number; // You called it "mirage", usually referred to as "mileage"
 
   @Column('decimal')
-  cost: number;
+  cost!: number;
 
   @Column()
-  receipt_url: string;
+  receipt_url!: string;
+
+  @Column({ type: 'text', nullable: true })
+  notes?: string | null;
 
   @CreateDateColumn()
-  maintenance_date: Date;
+  maintenance_date!: Date;
 
   @ManyToOne(() => VehicleEntity, (vehicle) => vehicle.maintenanceLogs)
-  vehicle: VehicleEntity;
+  vehicle!: VehicleEntity;
 }

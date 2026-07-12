@@ -13,6 +13,13 @@ export class KYCMapper {
     domainEntity.passport_photo = raw.passport_photo;
     domainEntity.driving_license = raw.driving_license;
     domainEntity.certificate_of_good_conduct = raw.certificate_of_good_conduct;
+    domainEntity.kra_pin_vertificate = raw.kra_pin_vertificate;
+    domainEntity.kra_pin = raw.kra_pin;
+    domainEntity.national_id_number = raw.national_id_number;
+    domainEntity.driving_license_number = raw.driving_license_number;
+    domainEntity.driving_license_expiry_date = raw.driving_license_expiry_date;
+    domainEntity.certificate_of_good_conduct_issue_date =
+      raw.certificate_of_good_conduct_issue_date;
     domainEntity.created_at = raw.created_at;
     domainEntity.updated_at = raw.updated_at;
     domainEntity.comments = raw.comments;
@@ -39,6 +46,20 @@ export class KYCMapper {
     if (domainEntity.certificate_of_good_conduct !== undefined)
       persistence.certificate_of_good_conduct =
         domainEntity.certificate_of_good_conduct;
+    if (domainEntity.kra_pin_vertificate !== undefined)
+      persistence.kra_pin_vertificate = domainEntity.kra_pin_vertificate;
+    if (domainEntity.kra_pin !== undefined)
+      persistence.kra_pin = domainEntity.kra_pin;
+    if (domainEntity.national_id_number !== undefined)
+      persistence.national_id_number = domainEntity.national_id_number;
+    if (domainEntity.driving_license_number !== undefined)
+      persistence.driving_license_number = domainEntity.driving_license_number;
+    if (domainEntity.driving_license_expiry_date !== undefined)
+      persistence.driving_license_expiry_date =
+        domainEntity.driving_license_expiry_date;
+    if (domainEntity.certificate_of_good_conduct_issue_date !== undefined)
+      persistence.certificate_of_good_conduct_issue_date =
+        domainEntity.certificate_of_good_conduct_issue_date;
     if (domainEntity.comments !== undefined)
       persistence.comments = domainEntity.comments;
     if (domainEntity.is_verified !== undefined)

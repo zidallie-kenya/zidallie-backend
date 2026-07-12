@@ -90,9 +90,11 @@ export class DailyRideMapper {
     if (domainEntity.earnings_processed !== undefined)
       persistence.earnings_processed = domainEntity.earnings_processed;
     if (domainEntity.had_active_subscription !== undefined)
-      persistence.had_active_subscription = domainEntity.had_active_subscription;
+      persistence.had_active_subscription =
+        domainEntity.had_active_subscription;
     if (domainEntity.snapshot_subscription_id !== undefined)
-      persistence.snapshot_subscription_id = domainEntity.snapshot_subscription_id;
+      persistence.snapshot_subscription_id =
+        domainEntity.snapshot_subscription_id;
 
     //relations
 

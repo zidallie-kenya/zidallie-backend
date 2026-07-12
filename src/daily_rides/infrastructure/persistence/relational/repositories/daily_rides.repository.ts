@@ -32,7 +32,7 @@ export class DailyRidesRelationalRepository implements DailyRideRepository {
   constructor(
     @InjectRepository(DailyRideEntity)
     private readonly dailyRidesRepository: Repository<DailyRideEntity>,
-  ) { }
+  ) {}
 
   async create(data: DailyRide): Promise<DailyRide> {
     const persistenceModel = DailyRideMapper.toPersistence(data);

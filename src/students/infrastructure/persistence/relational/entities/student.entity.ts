@@ -65,7 +65,7 @@ export class StudentEntity extends EntityRelationalHelper {
 
   @Column({
     type: 'varchar',
-    length: 10,
+    length: 20,
     enum: ['school', 'carpool', 'private', 'instant_payment'],
     nullable: true,
   })

@@ -1356,7 +1356,7 @@ export class SubscriptionService {
     amountToDisburse?: number;
   }> {
     try {
-      logger.info(
+      console.log(
         `Processing instant payment for student ${student.id}, ride ${pending_payment.dailyRideId}`,
       );
 
@@ -1383,25 +1383,43 @@ export class SubscriptionService {
       // Extend the student's subscription
       await this.extendStudentSubscription(manager, student, amt);
 
-      // Fetch ride with lock
+      // 1. Lock the ride row itself first — no joins, so FOR UPDATE is unambiguous.
+      //    Postgres refuses FOR UPDATE across a LEFT JOIN (the joined tables here
+      //    are all LEFT JOINs under the hood via `relations`), so we can't lock
+      //    and fetch relations in a single query.
+      const lockedRide = await manager.getRepository(DailyRideEntity).findOne({
+        where: {
+          id: pending_payment.dailyRideId,
+        },
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      if (!lockedRide) {
+        console.error(
+          `Ride ${pending_payment.dailyRideId} not found for instant payment`,
+        );
+        return { shouldDisburse: false };
+      }
+
+      // 2. Now fetch with relations — no lock needed here, we already hold the
+      //    row lock from step 1 within this same transaction.
       const ride = await manager.getRepository(DailyRideEntity).findOne({
         where: {
           id: pending_payment.dailyRideId,
         },
         relations: ['ride', 'ride.parent', 'ride.student'],
-        lock: { mode: 'pessimistic_write' },
       });
 
       if (!ride) {
-        logger.error(
-          `Ride ${pending_payment.dailyRideId} not found for instant payment`,
+        console.error(
+          `Ride ${pending_payment.dailyRideId} not found for instant payment (relation fetch)`,
         );
         return { shouldDisburse: false };
       }
 
       // Already activated? (callback retry protection)
       if (ride.status === DailyRideStatus.Active) {
-        logger.warn(
+        console.warn(
           `Ride ${ride.id} already active. Callback may be duplicate.`,
         );
         await manager.remove(PendingPaymentEntity, pending_payment);
@@ -1417,13 +1435,13 @@ export class SubscriptionService {
       // Remove pending payment
       await manager.remove(PendingPaymentEntity, pending_payment);
 
-      logger.info(
+      console.log(
         `Instant payment completed. Ride ${ride.id} activated successfully.`,
       );
 
       //Create disbursement record if student has a school
       if (school) {
-        logger.info(
+        console.log(
           `Creating disbursement record for instant payment to school: ${school.name}`,
         );
 
@@ -1440,7 +1458,7 @@ export class SubscriptionService {
         });
 
         await manager.save(disbursementRecord);
-        logger.info(
+        console.log(
           `Disbursement record created with ID: ${disbursementRecord.id} for instant payment, student: ${student.id}`,
         );
 
@@ -1455,7 +1473,7 @@ export class SubscriptionService {
 
       return { shouldDisburse: false };
     } catch (error: any) {
-      logger.error(
+      console.error(
         `Error processing instant payment for ride ${pending_payment.dailyRideId}: ${error.message}`,
       );
       throw error;
@@ -1566,14 +1584,14 @@ export class SubscriptionService {
       console.log(
         `Initiating disbursement for record ID: ${disbursementRecord.id}`,
       );
-      logger.info(
+      console.log(
         `Initiating disbursement for record ID: ${disbursementRecord.id} to school: ${school.name} amount: ${amount}`,
       );
 
       if (school.disbursement_phone_number) {
         // B2C to phone
         console.log('Calling B2C API...');
-        logger.info(
+        console.log(
           `Calling B2C API for school: ${school.name} to phone number: ${school.disbursement_phone_number}`,
         );
         const response = await this.disburseFunds(
@@ -1588,13 +1606,13 @@ export class SubscriptionService {
         });
 
         console.log(`B2C disbursement initiated to: ${school.name}`);
-        logger.info(
+        console.log(
           `B2C disbursement initiated to: ${school.name} with phone number: ${school.disbursement_phone_number}`,
         );
       } else if (school.bank_account_number && school.bank_paybill_number) {
         // B2B to bank
         console.log('Calling B2B API...');
-        logger.info(
+        console.log(
           `Calling B2B API for school: ${school.name} to bank account: ${school.bank_account_number}, paybill: ${school.bank_paybill_number}`,
         );
         const response = await this.disbursebankFunds(
@@ -1610,7 +1628,7 @@ export class SubscriptionService {
         });
 
         console.log(`B2B disbursement initiated to: ${school.name}`);
-        logger.info(
+        console.log(
           `B2B disbursement initiated to: ${school.name} with bank account: ${school.bank_account_number}, paybill: ${school.bank_paybill_number}`,
         );
       } else {

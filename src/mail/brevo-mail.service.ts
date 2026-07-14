@@ -82,7 +82,11 @@ export class BrevoMailService {
     });
   }
   async forgotPassword(
-    mailData: MailData<{ hash: string; tokenExpires: number }>,
+    mailData: MailData<{
+      hash: string;
+      tokenExpires: number;
+      clientType?: 'driver' | 'parent';
+    }>,
   ): Promise<void> {
     const i18n = I18nContext.current();
     let resetPasswordTitle: MaybeType<string>;
@@ -102,7 +106,14 @@ export class BrevoMailService {
     }
 
     // Deep link — opens the app directly instead of a web page
-    const deepLink = `zidallieparents://password-change?hash=${mailData.data.hash}&expires=${mailData.data.tokenExpires}`;
+    const scheme =
+      mailData.data.clientType === 'driver'
+        ? 'ZidallieDriver'
+        : 'zidallieparents';
+
+    const deepLink = `${scheme}://password-change?hash=${mailData.data.hash}&expires=${mailData.data.tokenExpires}`;
+
+    // const deepLink = `zidallieparents://password-change?hash=${mailData.data.hash}&expires=${mailData.data.tokenExpires}`;
 
     await this.brevoMailerService.sendMail({
       to: mailData.to,

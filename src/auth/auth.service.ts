@@ -510,7 +510,10 @@ export class AuthService {
     await this.usersService.update(user.id, user);
   }
 
-  async forgotPassword(email: string): Promise<void> {
+  async forgotPassword(
+    email: string,
+    clientType?: 'driver' | 'parent',
+  ): Promise<void> {
     const user = await this.usersService.findByEmail(email);
 
     if (!user) {
@@ -545,6 +548,7 @@ export class AuthService {
       data: {
         hash,
         tokenExpires,
+        clientType,
       },
     });
   }

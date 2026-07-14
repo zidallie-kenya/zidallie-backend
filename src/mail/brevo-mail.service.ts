@@ -108,7 +108,7 @@ export class BrevoMailService {
     // Deep link — opens the app directly instead of a web page
     const scheme =
       mailData.data.clientType === 'driver'
-        ? 'ZidallieDriver'
+        ? 'ziddaliedriver'
         : 'zidallieparents';
 
     const deepLink = `${scheme}://password-change?hash=${mailData.data.hash}&expires=${mailData.data.tokenExpires}`;

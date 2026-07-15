@@ -317,15 +317,21 @@ export class TransportBookingService {
         schoolCoords,
       );
 
-      pricePerChild = await this.pricingRepo.getPrice(
-        region,
-        distanceKm,
-        'carpool',
-      );
-      if (!pricePerChild) {
-        throw new BadRequestException(
-          'The distance is out of our service range for your area.',
+      if (distanceKm >= 15.1 && distanceKm <= 20) {
+        pricePerChild = 50600;
+      } else if (distanceKm >= 20.1 && distanceKm <= 25) {
+        pricePerChild = 55600;
+      } else {
+        pricePerChild = await this.pricingRepo.getPrice(
+          region,
+          distanceKm,
+          'carpool',
         );
+        if (!pricePerChild) {
+          throw new BadRequestException(
+            'The distance is out of our service range for your area.',
+          );
+        }
       }
 
       // Apply 70% for one-way

@@ -12,11 +12,15 @@ import {
 } from 'class-validator';
 import { VehicleStatus, VehicleType } from '../../utils/types/enums';
 import { CreateVehicleReportDto } from './create-vehicle_report.dto';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 
 export class CreateVehicleDto {
   @ApiPropertyOptional({ type: Number, nullable: true })
   @IsOptional()
+  @Transform(({ value }) => {
+    if (typeof value === 'string') return JSON.parse(value);
+    return value;
+  })
   user?: { id: number } | null;
 
   @ApiPropertyOptional({ example: 'School Bus Alpha', nullable: true })
@@ -39,6 +43,7 @@ export class CreateVehicleDto {
 
   @ApiProperty({ example: 2018 })
   @IsNumber()
+  @Type(() => Number) // <--- Convert string "2020" to number 2020
   vehicle_year!: number;
 
   @ApiPropertyOptional({ example: 'bus_image.jpg', nullable: true })
@@ -68,15 +73,18 @@ export class CreateVehicleDto {
 
   @ApiProperty({ example: 14 })
   @IsNumber()
+  @Type(() => Number) // <--- Convert string "6" to number 6
   seat_count!: number;
 
   @ApiProperty({ example: 12 })
   @IsNumber()
+  @Type(() => Number) // <--- Convert string "6" to number 6
   available_seats!: number;
 
   @ApiPropertyOptional({ example: true, default: false })
   @IsOptional()
   @IsBoolean()
+  @Transform(({ value }) => value === 'true' || value === true) // <--- Convert string "false" to boolean false
   is_inspected?: boolean;
 
   @ApiPropertyOptional({ example: 'Good condition', nullable: true })
@@ -127,8 +135,8 @@ export class CreateVehicleDto {
   vehicle_data?: any | null;
 
   @ApiPropertyOptional({ enum: VehicleStatus, example: VehicleStatus.Active })
-  @IsEnum(VehicleStatus)
   @IsNotEmpty()
+  @IsEnum(VehicleStatus)
   status!: VehicleStatus;
 
   // This handles the historical reports relationship

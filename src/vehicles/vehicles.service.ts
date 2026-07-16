@@ -14,15 +14,27 @@ import { IPaginationOptions } from '../utils/types/pagination-options';
 import { NullableType } from '../utils/types/nullable.type';
 import { UpdateVehicleDto } from './dto/update-vehicle.dto';
 import { VehicleType } from '../utils/types/enums';
+import { S3Service } from '../kyc/s3.service';
 
 @Injectable()
 export class VehicleService {
   constructor(
     private readonly vehicleRepository: VehicleRepository,
     private readonly usersService: UsersService,
+    private readonly s3Service: S3Service,
   ) {}
 
-  async create(createVehicleDto: CreateVehicleDto): Promise<Vehicle> {
+  async create(
+    createVehicleDto: CreateVehicleDto,
+    files: {
+      vehicle_image_url_front?: Express.Multer.File[];
+      vehicle_image_url_back?: Express.Multer.File[];
+      vehicle_image_url_inside?: Express.Multer.File[];
+      insurance_certificate?: Express.Multer.File[];
+      logbook?: Express.Multer.File[];
+      vehicle_inspection_report?: Express.Multer.File[];
+    },
+  ): Promise<Vehicle> {
     // Validate user exists if provided
     let user: User | null = null;
     if (createVehicleDto.user?.id) {
@@ -80,6 +92,38 @@ export class VehicleService {
       });
     }
 
+    // Upload everything that was sent, in parallel, before writing the record.
+    const [
+      vehicleImageUrlFront,
+      vehicleImageUrlBack,
+      vehicleImageUrlInside,
+      insuranceCertificate,
+      logbook,
+      vehicleInspectionReport,
+    ] = await Promise.all([
+      this.s3Service.uploadIfPresent(
+        files.vehicle_image_url_front,
+        'vehicles/front',
+      ),
+      this.s3Service.uploadIfPresent(
+        files.vehicle_image_url_back,
+        'vehicles/back',
+      ),
+      this.s3Service.uploadIfPresent(
+        files.vehicle_image_url_inside,
+        'vehicles/inside',
+      ),
+      this.s3Service.uploadIfPresent(
+        files.insurance_certificate,
+        'vehicles/insurance',
+      ),
+      this.s3Service.uploadIfPresent(files.logbook, 'vehicles/logbook'),
+      this.s3Service.uploadIfPresent(
+        files.vehicle_inspection_report,
+        'vehicles/inspection',
+      ),
+    ]);
+
     return this.vehicleRepository.create({
       user,
       vehicle_name: createVehicleDto.vehicle_name ?? null,
@@ -88,22 +132,20 @@ export class VehicleService {
       vehicle_model: createVehicleDto.vehicle_model,
       vehicle_year: createVehicleDto.vehicle_year,
       vehicle_image_url: createVehicleDto.vehicle_image_url ?? null,
-      vehicle_image_url_front: createVehicleDto.vehicle_image_url_front ?? null,
-      vehicle_image_url_back: createVehicleDto.vehicle_image_url_back ?? null,
-      vehicle_image_url_inside:
-        createVehicleDto.vehicle_image_url_inside ?? null,
+      vehicle_image_url_front: vehicleImageUrlFront,
+      vehicle_image_url_back: vehicleImageUrlBack,
+      vehicle_image_url_inside: vehicleImageUrlInside,
       seat_count: createVehicleDto.seat_count,
       available_seats: createVehicleDto.available_seats,
       is_inspected: createVehicleDto.is_inspected ?? false,
       comments: createVehicleDto.comments ?? null,
       meta: createVehicleDto.meta ?? null,
       vehicle_registration: createVehicleDto.vehicle_registration ?? null,
-      insurance_certificate: createVehicleDto.insurance_certificate ?? null,
+      insurance_certificate: insuranceCertificate,
       insurance_certificate_expiry:
         createVehicleDto.insurance_certificate_expiry ?? null,
-      logbook: createVehicleDto.logbook ?? null,
-      vehicle_inspection_report:
-        createVehicleDto.vehicle_inspection_report ?? null,
+      logbook: logbook,
+      vehicle_inspection_report: vehicleInspectionReport,
       vehicle_inspection_expiry:
         createVehicleDto.vehicle_inspection_expiry ?? null,
       vehicle_data: createVehicleDto.vehicle_data ?? null,

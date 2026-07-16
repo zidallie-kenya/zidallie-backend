@@ -11,7 +11,10 @@ import {
   HttpStatus,
   HttpCode,
   SerializeOptions,
+  UploadedFiles,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { CreateVehicleDto } from './dto/create-vehicle.dto';
 import { UpdateVehicleDto } from './dto/update-vehicle.dto';
 import {
@@ -54,10 +57,31 @@ export class VehicleController {
   })
   @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
   @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'vehicle_image_url_front', maxCount: 1 },
+      { name: 'vehicle_image_url_back', maxCount: 1 },
+      { name: 'vehicle_image_url_inside', maxCount: 1 },
+      { name: 'insurance_certificate', maxCount: 1 },
+      { name: 'logbook', maxCount: 1 },
+      { name: 'vehicle_inspection_report', maxCount: 1 },
+    ]),
+  )
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  create(@Body() createVehicleDto: CreateVehicleDto): Promise<Vehicle> {
-    return this.vehicleService.create(createVehicleDto);
+  create(
+    @Body() createVehicleDto: CreateVehicleDto,
+    @UploadedFiles()
+    files: {
+      vehicle_image_url_front?: Express.Multer.File[];
+      vehicle_image_url_back?: Express.Multer.File[];
+      vehicle_image_url_inside?: Express.Multer.File[];
+      insurance_certificate?: Express.Multer.File[];
+      logbook?: Express.Multer.File[];
+      vehicle_inspection_report?: Express.Multer.File[];
+    },
+  ): Promise<Vehicle> {
+    return this.vehicleService.create(createVehicleDto, files);
   }
 
   @ApiOkResponse({

@@ -22,6 +22,8 @@ import { CreateKYCDto } from './dto/create-kyc.dto';
 import { NullableType } from '../utils/types/nullable.type';
 import { UpdateKycDto } from './dto/update-kyc.dto';
 import { JwtPayloadType } from '../auth/strategies/types/jwt-payload.type';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { UseInterceptors, UploadedFiles } from '@nestjs/common';
 // import { FilterKYCDto } from './dto/query-kyc.dto';
 // import { SortKYCDto } from './dto/sort-kyc.dto';
 // import { IPaginationOptions } from '../utils/types/pagination-options';
@@ -31,21 +33,36 @@ export class KycController {
   constructor(private readonly kycService: KycService) {}
 
   @ApiBearerAuth()
-  @SerializeOptions({
-    groups: ['me'],
-  })
+  @SerializeOptions({ groups: ['me'] })
   @Post()
   @UseGuards(AuthGuard('jwt'))
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'national_id_front', maxCount: 1 },
+      { name: 'national_id_back', maxCount: 1 },
+      { name: 'passport_photo', maxCount: 1 },
+      { name: 'driving_license', maxCount: 1 },
+      { name: 'certificate_of_good_conduct', maxCount: 1 },
+      { name: 'kra_pin_vertificate', maxCount: 1 },
+    ]),
+  )
   @HttpCode(HttpStatus.CREATED)
-  @ApiOkResponse({
-    type: KYC,
-  })
+  @ApiOkResponse({ type: KYC })
   async create(
     @Body() createKycDto: CreateKYCDto,
+    @UploadedFiles()
+    files: {
+      national_id_front?: Express.Multer.File[];
+      national_id_back?: Express.Multer.File[];
+      passport_photo?: Express.Multer.File[];
+      driving_license?: Express.Multer.File[];
+      certificate_of_good_conduct?: Express.Multer.File[];
+      kra_pin_vertificate?: Express.Multer.File[];
+    },
     @Request() request,
   ): Promise<KYC> {
     const token = request.headers.authorization?.replace('Bearer ', '');
-    return this.kycService.create(createKycDto, token);
+    return this.kycService.create(createKycDto, files, token);
   }
 
   @ApiBearerAuth()

@@ -16,6 +16,7 @@ import { NullableType } from '../utils/types/nullable.type';
 import { UpdateKycDto } from './dto/update-kyc.dto';
 import { KYCRepository } from './infrastructure/persistence/kyc.repository';
 import { JwtPayloadType } from '../auth/strategies/types/jwt-payload.type';
+import { S3Service } from './s3.service';
 
 @Injectable()
 export class KycService {
@@ -23,10 +24,21 @@ export class KycService {
     private readonly kycRepository: KYCRepository,
     private readonly usersService: UsersService,
     private readonly authService: AuthService,
+    private readonly s3Service: S3Service,
   ) {}
 
-  async create(createKycDto: CreateKYCDto, bearerToken: string): Promise<KYC> {
-    // Verify user authentication
+  async create(
+    createKycDto: CreateKYCDto,
+    files: {
+      national_id_front?: Express.Multer.File[];
+      national_id_back?: Express.Multer.File[];
+      passport_photo?: Express.Multer.File[];
+      driving_license?: Express.Multer.File[];
+      certificate_of_good_conduct?: Express.Multer.File[];
+      kra_pin_vertificate?: Express.Multer.File[];
+    },
+    bearerToken: string,
+  ): Promise<KYC> {
     const authenticatedUser =
       await this.authService.verifyBearerToken(bearerToken);
     if (!authenticatedUser) {
@@ -36,7 +48,6 @@ export class KycService {
       });
     }
 
-    // Ensure user exists
     const user = await this.usersService.findById(authenticatedUser.id);
     if (!user) {
       throw new UnprocessableEntityException({
@@ -45,7 +56,6 @@ export class KycService {
       });
     }
 
-    // Check if KYC already exists for user
     const existingKyc = await this.kycRepository.findByUserId(user);
     if (existingKyc) {
       throw new UnprocessableEntityException({
@@ -54,21 +64,46 @@ export class KycService {
       });
     }
 
-    // Validate userId matches authenticated user
-    if (createKycDto.userId !== authenticatedUser.id) {
+    // Multipart text fields arrive as strings — coerce before comparing to a number.
+    const submittedUserId = Number(createKycDto.userId);
+    if (submittedUserId !== authenticatedUser.id) {
       throw new UnprocessableEntityException({
         status: HttpStatus.UNPROCESSABLE_ENTITY,
         errors: { userId: 'the authenticated user does not match the userId' },
       });
     }
 
-    // Store file paths directly without validation
-    const nationalIdFront = createKycDto.national_id_front ?? null;
-    const nationalIdBack = createKycDto.national_id_back ?? null;
-    const passportPhoto = createKycDto.passport_photo ?? null;
-    const drivingLicense = createKycDto.driving_license ?? null;
-    const certificateOfGoodConduct =
-      createKycDto.certificate_of_good_conduct ?? null;
+    // Upload everything that was sent, in parallel, before writing the record.
+    const [
+      nationalIdFront,
+      nationalIdBack,
+      passportPhoto,
+      drivingLicense,
+      certificateOfGoodConduct,
+      kraPinVertificate,
+    ] = await Promise.all([
+      this.s3Service.uploadIfPresent(
+        files.national_id_front,
+        'kyc/national-id-front',
+      ),
+      this.s3Service.uploadIfPresent(
+        files.national_id_back,
+        'kyc/national-id-back',
+      ),
+      this.s3Service.uploadIfPresent(
+        files.passport_photo,
+        'kyc/passport-photo',
+      ),
+      this.s3Service.uploadIfPresent(
+        files.driving_license,
+        'kyc/driving-license',
+      ),
+      this.s3Service.uploadIfPresent(
+        files.certificate_of_good_conduct,
+        'kyc/good-conduct',
+      ),
+      this.s3Service.uploadIfPresent(files.kra_pin_vertificate, 'kyc/kra-pin'),
+    ]);
 
     return this.kycRepository.create({
       national_id_front: nationalIdFront,
@@ -76,7 +111,7 @@ export class KycService {
       passport_photo: passportPhoto,
       driving_license: drivingLicense,
       certificate_of_good_conduct: certificateOfGoodConduct,
-      kra_pin_vertificate: createKycDto.kra_pin_vertificate ?? null,
+      kra_pin_vertificate: kraPinVertificate,
       kra_pin: createKycDto.kra_pin ?? null,
       national_id_number: createKycDto.national_id_number ?? null,
       driving_license_number: createKycDto.driving_license_number ?? null,
@@ -85,11 +120,10 @@ export class KycService {
       certificate_of_good_conduct_issue_date:
         createKycDto.certificate_of_good_conduct_issue_date ?? null,
       comments: createKycDto.comments ?? null,
-      is_verified: createKycDto.is_verified ?? false,
+      is_verified: false,
       user,
     });
   }
-
   async findManyWithPagination({
     filterOptions,
     sortOptions,

@@ -11,15 +11,13 @@ import {
   HttpStatus,
   HttpCode,
   SerializeOptions,
-  UploadedFiles,
   UseInterceptors,
+  UploadedFiles,
 } from '@nestjs/common';
-import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { CreateVehicleDto } from './dto/create-vehicle.dto';
 import { UpdateVehicleDto } from './dto/update-vehicle.dto';
 import {
   ApiBearerAuth,
-  ApiCreatedResponse,
   ApiOkResponse,
   ApiParam,
   ApiTags,
@@ -39,6 +37,7 @@ import { infinityPagination } from '../utils/infinity-pagination';
 import { NullableType } from '../utils/types/nullable.type';
 import { QueryVehicleDto } from './dto/vehicle-query.dto';
 import { VehicleType } from '../utils/types/enums';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
 
 @ApiBearerAuth()
 @ApiTags('Vehicles')
@@ -49,14 +48,9 @@ import { VehicleType } from '../utils/types/enums';
 export class VehicleController {
   constructor(private readonly vehicleService: VehicleService) {}
 
-  @ApiCreatedResponse({
-    type: Vehicle,
-  })
-  @SerializeOptions({
-    groups: ['admin'],
-  })
-  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
+  @Roles(RoleEnum.admin, RoleEnum.driver)
   @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Post()
   @UseInterceptors(
     FileFieldsInterceptor([
       { name: 'vehicle_image_url_front', maxCount: 1 },
@@ -67,9 +61,8 @@ export class VehicleController {
       { name: 'vehicle_inspection_report', maxCount: 1 },
     ]),
   )
-  @Post()
   @HttpCode(HttpStatus.CREATED)
-  create(
+  async create(
     @Body() createVehicleDto: CreateVehicleDto,
     @UploadedFiles()
     files: {

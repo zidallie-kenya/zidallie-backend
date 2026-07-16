@@ -26,133 +26,62 @@ export class VehicleService {
 
   async create(
     createVehicleDto: CreateVehicleDto,
-    files: {
-      vehicle_image_url_front?: Express.Multer.File[];
-      vehicle_image_url_back?: Express.Multer.File[];
-      vehicle_image_url_inside?: Express.Multer.File[];
-      insurance_certificate?: Express.Multer.File[];
-      logbook?: Express.Multer.File[];
-      vehicle_inspection_report?: Express.Multer.File[];
-    },
+    files: any,
   ): Promise<Vehicle> {
-    // Validate user exists if provided
-    let user: User | null = null;
-    if (createVehicleDto.user?.id) {
-      const existingUser = await this.usersService.findById(
-        createVehicleDto.user.id,
-      );
-      if (!existingUser) {
-        throw new UnprocessableEntityException({
-          status: HttpStatus.UNPROCESSABLE_ENTITY,
-          errors: {
-            user: 'This user does not exist',
-          },
-        });
-      }
-      user = existingUser;
+    // 1. Check if user exists
+    const userId =
+      typeof createVehicleDto.user === 'string'
+        ? JSON.parse(createVehicleDto.user).id
+        : createVehicleDto.user?.id;
 
-      // Check if user already has a vehicle
-      const userVehicles = await this.vehicleRepository.findByUserId(
-        createVehicleDto.user.id,
-      );
-      if (userVehicles.length > 0) {
-        throw new UnprocessableEntityException({
-          status: HttpStatus.UNPROCESSABLE_ENTITY,
-          errors: {
-            user: 'This user already has a vehicle assigned',
-          },
-        });
-      }
-    }
-
-    // Check for existing vehicle with same registration number
-    if (createVehicleDto.registration_number) {
-      const existingVehicle =
-        await this.vehicleRepository.findByRegistrationNumber(
-          createVehicleDto.registration_number,
-        );
-
-      if (existingVehicle) {
-        throw new UnprocessableEntityException({
-          status: HttpStatus.UNPROCESSABLE_ENTITY,
-          errors: {
-            registration_number: 'this registration number already exists',
-          },
-        });
-      }
-    }
-
-    // Validate seat count vs available seats
-    if (createVehicleDto.available_seats > createVehicleDto.seat_count) {
+    const user = await this.usersService.findById(userId);
+    if (!user) {
       throw new UnprocessableEntityException({
-        status: HttpStatus.UNPROCESSABLE_ENTITY,
-        errors: {
-          available_seats: 'the available seats cannot exceed the total seats',
-        },
+        errors: { user: 'User not found' },
       });
     }
 
-    // Upload everything that was sent, in parallel, before writing the record.
-    const [
-      vehicleImageUrlFront,
-      vehicleImageUrlBack,
-      vehicleImageUrlInside,
-      insuranceCertificate,
-      logbook,
-      vehicleInspectionReport,
-    ] = await Promise.all([
-      this.s3Service.uploadIfPresent(
-        files.vehicle_image_url_front,
-        'vehicles/front',
-      ),
-      this.s3Service.uploadIfPresent(
-        files.vehicle_image_url_back,
-        'vehicles/back',
-      ),
-      this.s3Service.uploadIfPresent(
-        files.vehicle_image_url_inside,
-        'vehicles/inside',
-      ),
-      this.s3Service.uploadIfPresent(
-        files.insurance_certificate,
-        'vehicles/insurance',
-      ),
-      this.s3Service.uploadIfPresent(files.logbook, 'vehicles/logbook'),
-      this.s3Service.uploadIfPresent(
-        files.vehicle_inspection_report,
-        'vehicles/inspection',
-      ),
-    ]);
+    // 2. Upload files to S3 in parallel
+    const [front, back, inside, insurance, logbook, inspection] =
+      await Promise.all([
+        this.s3Service.uploadIfPresent(
+          files.vehicle_image_url_front,
+          'vehicles/front',
+        ),
+        this.s3Service.uploadIfPresent(
+          files.vehicle_image_url_back,
+          'vehicles/back',
+        ),
+        this.s3Service.uploadIfPresent(
+          files.vehicle_image_url_inside,
+          'vehicles/inside',
+        ),
+        this.s3Service.uploadIfPresent(
+          files.insurance_certificate,
+          'vehicles/insurance',
+        ),
+        this.s3Service.uploadIfPresent(files.logbook, 'vehicles/logbook'),
+        this.s3Service.uploadIfPresent(
+          files.vehicle_inspection_report,
+          'vehicles/inspection',
+        ),
+      ]);
 
+    // 3. Save to database (Coerce strings from FormData back to Numbers/Booleans)
     return this.vehicleRepository.create({
+      ...createVehicleDto,
       user,
-      vehicle_name: createVehicleDto.vehicle_name ?? null,
-      registration_number: createVehicleDto.registration_number,
-      vehicle_type: createVehicleDto.vehicle_type,
-      vehicle_model: createVehicleDto.vehicle_model,
-      vehicle_year: createVehicleDto.vehicle_year,
-      vehicle_image_url: createVehicleDto.vehicle_image_url ?? null,
-      vehicle_image_url_front: vehicleImageUrlFront,
-      vehicle_image_url_back: vehicleImageUrlBack,
-      vehicle_image_url_inside: vehicleImageUrlInside,
-      seat_count: createVehicleDto.seat_count,
-      available_seats: createVehicleDto.available_seats,
-      is_inspected: createVehicleDto.is_inspected ?? false,
-      comments: createVehicleDto.comments ?? null,
-      meta: createVehicleDto.meta ?? null,
-      vehicle_registration: createVehicleDto.vehicle_registration ?? null,
-      insurance_certificate: insuranceCertificate,
-      insurance_certificate_expiry:
-        createVehicleDto.insurance_certificate_expiry ?? null,
+      vehicle_image_url_front: front,
+      vehicle_image_url_back: back,
+      vehicle_image_url_inside: inside,
+      insurance_certificate: insurance,
       logbook: logbook,
-      vehicle_inspection_report: vehicleInspectionReport,
-      vehicle_inspection_expiry:
-        createVehicleDto.vehicle_inspection_expiry ?? null,
-      vehicle_data: createVehicleDto.vehicle_data ?? null,
-      status: createVehicleDto.status,
-      vehicle_report: createVehicleDto.vehicle_report ?? [],
-      minders_name: createVehicleDto.minders_name ?? null,
-      minders_id_url: createVehicleDto.minders_id_url ?? null,
+      vehicle_inspection_report: inspection,
+      // Form data arrives as strings; convert to appropriate types
+      vehicle_year: Number(createVehicleDto.vehicle_year),
+      seat_count: Number(createVehicleDto.seat_count),
+      available_seats: Number(createVehicleDto.available_seats),
+      is_inspected: String(createVehicleDto.is_inspected) === 'true',
     });
   }
 

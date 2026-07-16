@@ -29,101 +29,43 @@ export class KycService {
 
   async create(
     createKycDto: CreateKYCDto,
-    files: {
-      national_id_front?: Express.Multer.File[];
-      national_id_back?: Express.Multer.File[];
-      passport_photo?: Express.Multer.File[];
-      driving_license?: Express.Multer.File[];
-      certificate_of_good_conduct?: Express.Multer.File[];
-      kra_pin_vertificate?: Express.Multer.File[];
-    },
+    files: any,
     bearerToken: string,
   ): Promise<KYC> {
     const authenticatedUser =
       await this.authService.verifyBearerToken(bearerToken);
-    if (!authenticatedUser) {
-      throw new UnauthorizedException({
-        status: HttpStatus.UNAUTHORIZED,
-        errors: { auth: 'invalid token' },
-      });
-    }
+    if (!authenticatedUser) throw new UnauthorizedException();
 
     const user = await this.usersService.findById(authenticatedUser.id);
-    if (!user) {
-      throw new UnprocessableEntityException({
-        status: HttpStatus.UNPROCESSABLE_ENTITY,
-        errors: { user: 'This user does not exist' },
-      });
-    }
+    if (!user)
+      throw new UnprocessableEntityException({ errors: { user: 'No user' } });
 
-    const existingKyc = await this.kycRepository.findByUserId(user);
-    if (existingKyc) {
-      throw new UnprocessableEntityException({
-        status: HttpStatus.UNPROCESSABLE_ENTITY,
-        errors: { kyc: 'kyc already exist' },
-      });
-    }
-
-    // Multipart text fields arrive as strings — coerce before comparing to a number.
-    const submittedUserId = Number(createKycDto.userId);
-    if (submittedUserId !== authenticatedUser.id) {
-      throw new UnprocessableEntityException({
-        status: HttpStatus.UNPROCESSABLE_ENTITY,
-        errors: { userId: 'the authenticated user does not match the userId' },
-      });
-    }
-
-    // Upload everything that was sent, in parallel, before writing the record.
-    const [
-      nationalIdFront,
-      nationalIdBack,
-      passportPhoto,
-      drivingLicense,
-      certificateOfGoodConduct,
-      kraPinVertificate,
-    ] = await Promise.all([
-      this.s3Service.uploadIfPresent(
-        files.national_id_front,
-        'kyc/national-id-front',
-      ),
-      this.s3Service.uploadIfPresent(
-        files.national_id_back,
-        'kyc/national-id-back',
-      ),
-      this.s3Service.uploadIfPresent(
-        files.passport_photo,
-        'kyc/passport-photo',
-      ),
-      this.s3Service.uploadIfPresent(
-        files.driving_license,
-        'kyc/driving-license',
-      ),
+    // Upload all to S3
+    const [idFront, idBack, photo, dl, conduct, kra] = await Promise.all([
+      this.s3Service.uploadIfPresent(files.national_id_front, 'kyc/ids'),
+      this.s3Service.uploadIfPresent(files.national_id_back, 'kyc/ids'),
+      this.s3Service.uploadIfPresent(files.passport_photo, 'kyc/photos'),
+      this.s3Service.uploadIfPresent(files.driving_license, 'kyc/licences'),
       this.s3Service.uploadIfPresent(
         files.certificate_of_good_conduct,
-        'kyc/good-conduct',
+        'kyc/conduct',
       ),
-      this.s3Service.uploadIfPresent(files.kra_pin_vertificate, 'kyc/kra-pin'),
+      this.s3Service.uploadIfPresent(files.kra_pin_vertificate, 'kyc/kra'),
     ]);
 
     return this.kycRepository.create({
-      national_id_front: nationalIdFront,
-      national_id_back: nationalIdBack,
-      passport_photo: passportPhoto,
-      driving_license: drivingLicense,
-      certificate_of_good_conduct: certificateOfGoodConduct,
-      kra_pin_vertificate: kraPinVertificate,
-      kra_pin: createKycDto.kra_pin ?? null,
-      national_id_number: createKycDto.national_id_number ?? null,
-      driving_license_number: createKycDto.driving_license_number ?? null,
-      driving_license_expiry_date:
-        createKycDto.driving_license_expiry_date ?? null,
-      certificate_of_good_conduct_issue_date:
-        createKycDto.certificate_of_good_conduct_issue_date ?? null,
-      comments: createKycDto.comments ?? null,
-      is_verified: false,
+      ...createKycDto,
       user,
+      national_id_front: idFront,
+      national_id_back: idBack,
+      passport_photo: photo,
+      driving_license: dl,
+      certificate_of_good_conduct: conduct,
+      kra_pin_vertificate: kra,
+      is_verified: false,
     });
   }
+
   async findManyWithPagination({
     filterOptions,
     sortOptions,

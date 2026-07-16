@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Transform, Type } from 'class-transformer';
 import {
   IsBoolean,
   IsDateString,
@@ -118,9 +119,15 @@ export class CreateKYCDto {
 
   @ApiProperty({ type: Number, example: 1 })
   @IsNumber()
+  @Type(() => Number) // Converts string "123" to number 123
   userId!: number;
 
   @ApiProperty({ type: Boolean, example: false })
   @IsBoolean()
-  is_verified!: boolean;
+  @Transform(({ value }) => {
+    if (value === 'true' || value === true) return true;
+    if (value === 'false' || value === false) return false;
+    return value;
+  }) // Converts string "false" to boolean false
+  is_verified?: boolean;
 }

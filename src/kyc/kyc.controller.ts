@@ -61,6 +61,11 @@ export class KycController {
     },
     @Request() request,
   ): Promise<KYC> {
+    console.log(
+      'Files received in Controller====> KYC:',
+      Object.keys(files || {}),
+    );
+
     const token = request.headers.authorization?.replace('Bearer ', '');
     return this.kycService.create(createKycDto, files, token);
   }

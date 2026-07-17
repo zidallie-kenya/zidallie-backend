@@ -49,8 +49,8 @@ export class VehicleController {
   constructor(private readonly vehicleService: VehicleService) {}
 
   @Roles(RoleEnum.admin, RoleEnum.driver)
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Post()
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
   @UseInterceptors(
     FileFieldsInterceptor([
       { name: 'vehicle_image_url_front', maxCount: 1 },
@@ -66,6 +66,7 @@ export class VehicleController {
     @Body() createVehicleDto: CreateVehicleDto,
     @UploadedFiles()
     files: {
+      // <--- ADD THIS DECORATOR
       vehicle_image_url_front?: Express.Multer.File[];
       vehicle_image_url_back?: Express.Multer.File[];
       vehicle_image_url_inside?: Express.Multer.File[];
@@ -74,6 +75,12 @@ export class VehicleController {
       vehicle_inspection_report?: Express.Multer.File[];
     },
   ): Promise<Vehicle> {
+    // Pass the files object as the second argument
+    console.log(
+      'Files received in Controller==> Vehicle:',
+      Object.keys(files || {}),
+    );
+
     return this.vehicleService.create(createVehicleDto, files);
   }
 

@@ -28,6 +28,7 @@ export class VehicleService {
     createVehicleDto: CreateVehicleDto,
     files: any,
   ): Promise<Vehicle> {
+    console.log('VEHICLE==>Files received in Service:', files);
     // 1. Check if user exists
     const userId =
       typeof createVehicleDto.user === 'string'

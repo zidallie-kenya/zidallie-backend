@@ -32,6 +32,8 @@ export class KycService {
     files: any,
     bearerToken: string,
   ): Promise<KYC> {
+    console.log('KYC==>Files received in Service:', files);
+
     const authenticatedUser =
       await this.authService.verifyBearerToken(bearerToken);
     if (!authenticatedUser) throw new UnauthorizedException();

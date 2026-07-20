@@ -267,210 +267,210 @@ export class TransportBookingService {
   // STEP 1: CREATE BOOKING + CALCULATE PRICE
   // ─────────────────────────────────────────────
 
-  async createBooking(parentId: number, dto: CreateBookingDto) {
-    let region: string | null = null;
-    let distanceKm: number | null = null;
-    let pricePerChild: number | null = null;
+  // async createBooking(parentId: number, dto: CreateBookingDto) {
+  //   let region: string | null = null;
+  //   let distanceKm: number | null = null;
+  //   let pricePerChild: number | null = null;
 
-    const user = await this.usersService.findById(parentId);
-    if (!user) {
-      throw new UnprocessableEntityException({
-        status: HttpStatus.UNPROCESSABLE_ENTITY,
-        errors: {
-          email: 'A parent with this id does not exist',
-        },
-      });
-    }
+  //   const user = await this.usersService.findById(parentId);
+  //   if (!user) {
+  //     throw new UnprocessableEntityException({
+  //       status: HttpStatus.UNPROCESSABLE_ENTITY,
+  //       errors: {
+  //         email: 'A parent with this id does not exist',
+  //       },
+  //     });
+  //   }
 
-    if (dto.service_type === 'carpool') {
-      if (
-        !dto.carpool_school_id ||
-        dto.home_lat == null ||
-        dto.home_lon == null
-      ) {
-        throw new BadRequestException(
-          'Carpool requires carpool_school_id, home_lat, and home_lon',
-        );
-      }
+  //   if (dto.service_type === 'carpool') {
+  //     if (
+  //       !dto.carpool_school_id ||
+  //       dto.home_lat == null ||
+  //       dto.home_lon == null
+  //     ) {
+  //       throw new BadRequestException(
+  //         'Carpool requires carpool_school_id, home_lat, and home_lon',
+  //       );
+  //     }
 
-      const school = await this.carpoolSchoolRepo.findById(
-        dto.carpool_school_id,
-      );
-      if (!school) throw new NotFoundException('Carpool school not found');
+  //     const school = await this.carpoolSchoolRepo.findById(
+  //       dto.carpool_school_id,
+  //     );
+  //     if (!school) throw new NotFoundException('Carpool school not found');
 
-      region = school.region;
+  //     region = school.region;
 
-      let schoolCoords: { lat: number; lon: number } | null = null;
+  //     let schoolCoords: { lat: number; lon: number } | null = null;
 
-      if (school.latitude != null && school.longitude != null) {
-        schoolCoords = {
-          lat: Number(school.latitude),
-          lon: Number(school.longitude),
-        };
-      } else {
-        // Fallback for schools not yet backfilled with manual coordinates
-        const searchQuery = `${school.name}, ${region}, Nairobi, Kenya`;
-        schoolCoords = await this.getCoordinates(searchQuery);
-      }
+  //     if (school.latitude != null && school.longitude != null) {
+  //       schoolCoords = {
+  //         lat: Number(school.latitude),
+  //         lon: Number(school.longitude),
+  //       };
+  //     } else {
+  //       // Fallback for schools not yet backfilled with manual coordinates
+  //       const searchQuery = `${school.name}, ${region}, Nairobi, Kenya`;
+  //       schoolCoords = await this.getCoordinates(searchQuery);
+  //     }
 
-      if (!schoolCoords) {
-        throw new BadRequestException(
-          `Could not locate ${school.name} in ${region}. Please verify the school details.`,
-        );
-      }
+  //     if (!schoolCoords) {
+  //       throw new BadRequestException(
+  //         `Could not locate ${school.name} in ${region}. Please verify the school details.`,
+  //       );
+  //     }
 
-      distanceKm = this.haversineDistance(
-        { lat: Number(dto.home_lat), lon: Number(dto.home_lon) },
-        schoolCoords,
-      );
+  //     distanceKm = this.haversineDistance(
+  //       { lat: Number(dto.home_lat), lon: Number(dto.home_lon) },
+  //       schoolCoords,
+  //     );
 
-      console.log('carpool home to school distance:', distanceKm);
+  //     console.log('carpool home to school distance:', distanceKm);
 
-      if (distanceKm >= 15.1 && distanceKm <= 20) {
-        pricePerChild = 50600;
-      } else if (distanceKm >= 20.1 && distanceKm <= 25) {
-        pricePerChild = 55600;
-      } else {
-        pricePerChild = await this.pricingRepo.getPrice(
-          region,
-          distanceKm,
-          'carpool',
-        );
-        if (!pricePerChild) {
-          throw new BadRequestException(
-            'The distance is out of our service range for your area.',
-          );
-        }
-      }
+  //     if (distanceKm >= 15.1 && distanceKm <= 20) {
+  //       pricePerChild = 50600;
+  //     } else if (distanceKm >= 20.1 && distanceKm <= 25) {
+  //       pricePerChild = 55600;
+  //     } else {
+  //       pricePerChild = await this.pricingRepo.getPrice(
+  //         region,
+  //         distanceKm,
+  //         'carpool',
+  //       );
+  //       if (!pricePerChild) {
+  //         throw new BadRequestException(
+  //           'The distance is out of our service range for your area.',
+  //         );
+  //       }
+  //     }
 
-      console.log('price per child', pricePerChild);
+  //     console.log('price per child', pricePerChild);
 
-      // Apply 70% for one-way
-      if (dto.trip_type === 'one_way') {
-        pricePerChild = Math.round(pricePerChild * 0.7);
-      }
-    } else {
-      // Bus
-      if (!dto.bus_school_id || !dto.pickup_station_id) {
-        throw new BadRequestException(
-          'Bus service requires bus_school_id and pickup_station_id',
-        );
-      }
+  //     // Apply 70% for one-way
+  //     if (dto.trip_type === 'one_way') {
+  //       pricePerChild = Math.round(pricePerChild * 0.7);
+  //     }
+  //   } else {
+  //     // Bus
+  //     if (!dto.bus_school_id || !dto.pickup_station_id) {
+  //       throw new BadRequestException(
+  //         'Bus service requires bus_school_id and pickup_station_id',
+  //       );
+  //     }
 
-      const [busSchool, pickupStation] = await Promise.all([
-        this.busSchoolRepo.findById(dto.bus_school_id),
-        this.pickupStationRepo.findById(dto.pickup_station_id),
-      ]);
+  //     const [busSchool, pickupStation] = await Promise.all([
+  //       this.busSchoolRepo.findById(dto.bus_school_id),
+  //       this.pickupStationRepo.findById(dto.pickup_station_id),
+  //     ]);
 
-      if (!busSchool) throw new NotFoundException('Bus school not found');
-      if (!pickupStation)
-        throw new NotFoundException('Pickup station not found');
+  //     if (!busSchool) throw new NotFoundException('Bus school not found');
+  //     if (!pickupStation)
+  //       throw new NotFoundException('Pickup station not found');
 
-      region = busSchool.region;
+  //     region = busSchool.region;
 
-      let schoolCoords: { lat: number; lon: number } | null = null;
+  //     let schoolCoords: { lat: number; lon: number } | null = null;
 
-      if (busSchool.latitude != null && busSchool.longitude != null) {
-        schoolCoords = {
-          lat: Number(busSchool.latitude),
-          lon: Number(busSchool.longitude),
-        };
-      } else {
-        const schoolSearchQuery = `${busSchool.name}, ${region}, Nairobi, Kenya`;
-        schoolCoords = await this.getCoordinates(schoolSearchQuery);
-      }
+  //     if (busSchool.latitude != null && busSchool.longitude != null) {
+  //       schoolCoords = {
+  //         lat: Number(busSchool.latitude),
+  //         lon: Number(busSchool.longitude),
+  //       };
+  //     } else {
+  //       const schoolSearchQuery = `${busSchool.name}, ${region}, Nairobi, Kenya`;
+  //       schoolCoords = await this.getCoordinates(schoolSearchQuery);
+  //     }
 
-      if (!schoolCoords) {
-        throw new BadRequestException(
-          `Could not locate school ${busSchool.name} in ${region}.`,
-        );
-      }
+  //     if (!schoolCoords) {
+  //       throw new BadRequestException(
+  //         `Could not locate school ${busSchool.name} in ${region}.`,
+  //       );
+  //     }
 
-      // 2. Use the Pickup Station coordinates directly from the database
-      // Ensuring we have valid numbers from the entity
-      if (pickupStation.latitude == null || pickupStation.longitude == null) {
-        throw new BadRequestException(
-          'The selected pickup station does not have valid coordinates assigned.',
-        );
-      }
+  //     // 2. Use the Pickup Station coordinates directly from the database
+  //     // Ensuring we have valid numbers from the entity
+  //     if (pickupStation.latitude == null || pickupStation.longitude == null) {
+  //       throw new BadRequestException(
+  //         'The selected pickup station does not have valid coordinates assigned.',
+  //       );
+  //     }
 
-      const stationCoords = {
-        lat: Number(pickupStation.latitude),
-        lon: Number(pickupStation.longitude),
-      };
+  //     const stationCoords = {
+  //       lat: Number(pickupStation.latitude),
+  //       lon: Number(pickupStation.longitude),
+  //     };
 
-      // 3. Calculate distance between the Database Station and Geocoded School
-      console.log(stationCoords);
-      console.log(schoolCoords);
-      distanceKm = this.haversineDistance(stationCoords, schoolCoords);
+  //     // 3. Calculate distance between the Database Station and Geocoded School
+  //     console.log(stationCoords);
+  //     console.log(schoolCoords);
+  //     distanceKm = this.haversineDistance(stationCoords, schoolCoords);
 
-      console.log('bus pickup station to school distance:', distanceKm);
+  //     console.log('bus pickup station to school distance:', distanceKm);
 
-      pricePerChild = await this.pricingRepo.getPrice(
-        region,
-        distanceKm,
-        'bus',
-      );
-      console.log('price per child', pricePerChild);
+  //     pricePerChild = await this.pricingRepo.getPrice(
+  //       region,
+  //       distanceKm,
+  //       'bus',
+  //     );
+  //     console.log('price per child', pricePerChild);
 
-      if (!pricePerChild) {
-        throw new BadRequestException(
-          'The distance is out of our service range for your area.',
-        );
-      }
+  //     if (!pricePerChild) {
+  //       throw new BadRequestException(
+  //         'The distance is out of our service range for your area.',
+  //       );
+  //     }
 
-      if (dto.trip_type === 'one_way') {
-        pricePerChild = Math.round(pricePerChild * 0.7);
-      }
-    }
+  //     if (dto.trip_type === 'one_way') {
+  //       pricePerChild = Math.round(pricePerChild * 0.7);
+  //     }
+  //   }
 
-    const totalPrice = pricePerChild * dto.children_count;
-    const depositAmount = DEPOSIT_PER_CHILD * dto.children_count;
-    const balanceAmount = totalPrice - depositAmount;
+  //   const totalPrice = pricePerChild * dto.children_count;
+  //   const depositAmount = DEPOSIT_PER_CHILD * dto.children_count;
+  //   const balanceAmount = totalPrice - depositAmount;
 
-    const booking = await this.bookingRepo.create({
-      parent: { id: parentId } as any,
-      service_type: dto.service_type,
-      term: dto.term as any,
-      trip_type: dto.trip_type as any,
-      children_count: dto.children_count,
-      carpool_school: dto.carpool_school_id
-        ? ({ id: dto.carpool_school_id } as any)
-        : null,
-      home_area: dto.home_area ?? null,
-      home_lat: dto.home_lat ?? null,
-      home_lon: dto.home_lon ?? null,
-      bus_school: dto.bus_school_id ? ({ id: dto.bus_school_id } as any) : null,
-      pickup_station: dto.pickup_station_id
-        ? ({ id: dto.pickup_station_id } as any)
-        : null,
-      region,
-      distance_km: distanceKm,
-      price_per_child: pricePerChild,
-      total_price: totalPrice,
-      deposit_amount: depositAmount,
-      balance_amount: balanceAmount,
-      is_waitlisted: true,
-      status: 'pending',
-    });
+  //   const booking = await this.bookingRepo.create({
+  //     parent: { id: parentId } as any,
+  //     service_type: dto.service_type,
+  //     term: dto.term as any,
+  //     trip_type: dto.trip_type as any,
+  //     children_count: dto.children_count,
+  //     carpool_school: dto.carpool_school_id
+  //       ? ({ id: dto.carpool_school_id } as any)
+  //       : null,
+  //     home_area: dto.home_area ?? null,
+  //     home_lat: dto.home_lat ?? null,
+  //     home_lon: dto.home_lon ?? null,
+  //     bus_school: dto.bus_school_id ? ({ id: dto.bus_school_id } as any) : null,
+  //     pickup_station: dto.pickup_station_id
+  //       ? ({ id: dto.pickup_station_id } as any)
+  //       : null,
+  //     region,
+  //     distance_km: distanceKm,
+  //     price_per_child: pricePerChild,
+  //     total_price: totalPrice,
+  //     deposit_amount: depositAmount,
+  //     balance_amount: balanceAmount,
+  //     is_waitlisted: true,
+  //     status: 'pending',
+  //   });
 
-    return {
-      booking_id: booking.id,
-      service_type: booking.service_type,
-      term: booking.term,
-      trip_type: booking.trip_type,
-      children_count: booking.children_count,
-      region,
-      distance_km: distanceKm,
-      price_per_child: pricePerChild,
-      total_price: totalPrice,
-      deposit_amount: depositAmount,
-      balance_amount: balanceAmount,
-      home: booking.home_area || null,
-      bus_pickup: booking.pickup_station || null,
-      school: booking.bus_school || booking.carpool_school,
-    };
-  }
+  //   return {
+  //     booking_id: booking.id,
+  //     service_type: booking.service_type,
+  //     term: booking.term,
+  //     trip_type: booking.trip_type,
+  //     children_count: booking.children_count,
+  //     region,
+  //     distance_km: distanceKm,
+  //     price_per_child: pricePerChild,
+  //     total_price: totalPrice,
+  //     deposit_amount: depositAmount,
+  //     balance_amount: balanceAmount,
+  //     home: booking.home_area || null,
+  //     bus_pickup: booking.pickup_station || null,
+  //     school: booking.bus_school || booking.carpool_school,
+  //   };
+  // }
 
   // ─────────────────────────────────────────────
   // STEP 2: SUBMIT CHILD DETAILS
@@ -530,6 +530,168 @@ export class TransportBookingService {
   //   };
   //   return { message: 'Children details saved', data };
   // }
+
+  async createBooking(parentId: number, dto: CreateBookingDto) {
+    let region: string | null = null;
+    let distanceKm: number | null = null;
+    let pricePerChild: number | null = null;
+
+    const user = await this.usersService.findById(parentId);
+    if (!user) {
+      throw new UnprocessableEntityException({
+        status: HttpStatus.UNPROCESSABLE_ENTITY,
+        errors: { email: 'A parent with this id does not exist' },
+      });
+    }
+
+    if (dto.service_type === 'carpool') {
+      if (
+        !dto.carpool_school_id ||
+        dto.home_lat == null ||
+        dto.home_lon == null
+      ) {
+        throw new BadRequestException(
+          'Carpool requires school_id, lat, and lon',
+        );
+      }
+
+      const school = await this.carpoolSchoolRepo.findById(
+        dto.carpool_school_id,
+      );
+      if (!school) throw new NotFoundException('Carpool school not found');
+
+      region = school.region;
+      const homeCoords = {
+        lat: Number(dto.home_lat),
+        lon: Number(dto.home_lon),
+      };
+      const schoolCoords =
+        school.latitude && school.longitude
+          ? { lat: Number(school.latitude), lon: Number(school.longitude) }
+          : await this.getCoordinates(
+              `${school.name}, ${region}, Nairobi, Kenya`,
+            );
+
+      if (!schoolCoords)
+        throw new BadRequestException(`Could not locate school ${school.name}`);
+
+      // GET ROAD DISTANCE
+      distanceKm = await this.getRoadDistance(homeCoords, schoolCoords);
+
+      // Fallback to Haversine if API fails
+      if (distanceKm === null) {
+        console.warn('Falling back to Haversine distance');
+        distanceKm = this.haversineDistance(homeCoords, schoolCoords);
+      }
+
+      console.log('Carpool road distance:', distanceKm);
+
+      // Pricing Logic
+      if (distanceKm >= 15.1 && distanceKm <= 20) {
+        pricePerChild = 50600;
+      } else if (distanceKm >= 20.1 && distanceKm <= 25) {
+        pricePerChild = 55600;
+      } else {
+        // Pass distanceKm. For the database error, we ensure PricingRepo handles decimals
+        pricePerChild = await this.pricingRepo.getPrice(
+          region,
+          distanceKm,
+          'carpool',
+        );
+      }
+    } else {
+      // BUS LOGIC
+      if (!dto.bus_school_id || !dto.pickup_station_id) {
+        throw new BadRequestException(
+          'Bus service requires school and station',
+        );
+      }
+
+      const [busSchool, pickupStation] = await Promise.all([
+        this.busSchoolRepo.findById(dto.bus_school_id),
+        this.pickupStationRepo.findById(dto.pickup_station_id),
+      ]);
+
+      if (!busSchool || !pickupStation)
+        throw new NotFoundException('School or Station not found');
+
+      region = busSchool.region;
+      const stationCoords = {
+        lat: Number(pickupStation.latitude),
+        lon: Number(pickupStation.longitude),
+      };
+      const schoolCoords =
+        busSchool.latitude && busSchool.longitude
+          ? {
+              lat: Number(busSchool.latitude),
+              lon: Number(busSchool.longitude),
+            }
+          : await this.getCoordinates(
+              `${busSchool.name}, ${region}, Nairobi, Kenya`,
+            );
+
+      if (!schoolCoords)
+        throw new BadRequestException(
+          `Could not locate school ${busSchool.name}`,
+        );
+
+      // GET ROAD DISTANCE
+      distanceKm = await this.getRoadDistance(stationCoords, schoolCoords);
+
+      if (distanceKm === null) {
+        distanceKm = this.haversineDistance(stationCoords, schoolCoords);
+      }
+
+      console.log('Bus road distance:', distanceKm);
+      pricePerChild = await this.pricingRepo.getPrice(
+        region,
+        distanceKm,
+        'bus',
+      );
+    }
+
+    if (!pricePerChild) {
+      throw new BadRequestException(
+        'Distance out of service range for your area.',
+      );
+    }
+
+    if (dto.trip_type === 'one_way') {
+      pricePerChild = Math.round(pricePerChild * 0.7);
+    }
+
+    const totalPrice = pricePerChild * dto.children_count;
+    const depositAmount = DEPOSIT_PER_CHILD * dto.children_count;
+
+    const booking = await this.bookingRepo.create({
+      parent: { id: parentId } as any,
+      service_type: dto.service_type,
+      term: dto.term as any,
+      trip_type: dto.trip_type as any,
+      children_count: dto.children_count,
+      carpool_school: dto.carpool_school_id
+        ? ({ id: dto.carpool_school_id } as any)
+        : null,
+      home_area: dto.home_area ?? null,
+      home_lat: dto.home_lat ?? null,
+      home_lon: dto.home_lon ?? null,
+      bus_school: dto.bus_school_id ? ({ id: dto.bus_school_id } as any) : null,
+      pickup_station: dto.pickup_station_id
+        ? ({ id: dto.pickup_station_id } as any)
+        : null,
+      region,
+      distance_km: distanceKm,
+      price_per_child: pricePerChild,
+      total_price: totalPrice,
+      deposit_amount: depositAmount,
+      balance_amount: totalPrice - depositAmount,
+      is_waitlisted: true,
+      status: 'pending',
+    });
+
+    return { ...booking, school: booking.bus_school || booking.carpool_school };
+  }
+
   async submitChildren(
     parentId: number,
     bookingId: number,
@@ -1245,6 +1407,43 @@ export class TransportBookingService {
     const distance = R * 2 * Math.asin(Math.sqrt(x));
     console.log('Total distance: home to school', distance);
     return distance;
+  }
+
+  private async getRoadDistance(
+    origin: { lat: number; lon: number },
+    destination: { lat: number; lon: number },
+  ): Promise<number | null> {
+    const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+    if (!apiKey) return null;
+
+    try {
+      const response = await axios.get(
+        'https://maps.googleapis.com/maps/api/distancematrix/json',
+        {
+          params: {
+            origins: `${origin.lat},${origin.lon}`,
+            destinations: `${destination.lat},${destination.lon}`,
+            key: apiKey,
+          },
+        },
+      );
+
+      const element = response.data?.rows?.[0]?.elements?.[0];
+
+      if (element?.status === 'OK') {
+        // distance.value is in meters, convert to KM
+        return element.distance.value / 1000;
+      }
+
+      console.warn(
+        'Distance Matrix API returned non-OK status:',
+        element?.status,
+      );
+      return null;
+    } catch (error) {
+      console.log(error);
+      return null;
+    }
   }
 
   private toRad(deg: number) {

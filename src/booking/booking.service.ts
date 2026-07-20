@@ -300,11 +300,18 @@ export class TransportBookingService {
 
       region = school.region;
 
-      // Get school coordinates via Google Maps
+      let schoolCoords: { lat: number; lon: number } | null = null;
 
-      const searchQuery = `${school.name}, ${region}, Nairobi, Kenya`;
-
-      const schoolCoords = await this.getCoordinates(searchQuery);
+      if (school.latitude != null && school.longitude != null) {
+        schoolCoords = {
+          lat: Number(school.latitude),
+          lon: Number(school.longitude),
+        };
+      } else {
+        // Fallback for schools not yet backfilled with manual coordinates
+        const searchQuery = `${school.name}, ${region}, Nairobi, Kenya`;
+        schoolCoords = await this.getCoordinates(searchQuery);
+      }
 
       if (!schoolCoords) {
         throw new BadRequestException(
@@ -316,6 +323,8 @@ export class TransportBookingService {
         { lat: Number(dto.home_lat), lon: Number(dto.home_lon) },
         schoolCoords,
       );
+
+      console.log('carpool home to school distance:', distanceKm);
 
       if (distanceKm >= 15.1 && distanceKm <= 20) {
         pricePerChild = 50600;
@@ -333,6 +342,8 @@ export class TransportBookingService {
           );
         }
       }
+
+      console.log('price per child', pricePerChild);
 
       // Apply 70% for one-way
       if (dto.trip_type === 'one_way') {
@@ -357,9 +368,17 @@ export class TransportBookingService {
 
       region = busSchool.region;
 
-      // 1. Get school coordinates using Name + Region for accuracy
-      const schoolSearchQuery = `${busSchool.name}, ${region}, Nairobi, Kenya`;
-      const schoolCoords = await this.getCoordinates(schoolSearchQuery);
+      let schoolCoords: { lat: number; lon: number } | null = null;
+
+      if (busSchool.latitude != null && busSchool.longitude != null) {
+        schoolCoords = {
+          lat: Number(busSchool.latitude),
+          lon: Number(busSchool.longitude),
+        };
+      } else {
+        const schoolSearchQuery = `${busSchool.name}, ${region}, Nairobi, Kenya`;
+        schoolCoords = await this.getCoordinates(schoolSearchQuery);
+      }
 
       if (!schoolCoords) {
         throw new BadRequestException(
@@ -385,11 +404,14 @@ export class TransportBookingService {
       console.log(schoolCoords);
       distanceKm = this.haversineDistance(stationCoords, schoolCoords);
 
+      console.log('bus pickup station to school distance:', distanceKm);
+
       pricePerChild = await this.pricingRepo.getPrice(
         region,
         distanceKm,
         'bus',
       );
+      console.log('price per child', pricePerChild);
 
       if (!pricePerChild) {
         throw new BadRequestException(

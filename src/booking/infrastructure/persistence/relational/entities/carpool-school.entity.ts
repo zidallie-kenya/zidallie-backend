@@ -17,6 +17,12 @@ export class CarpoolSchoolEntity {
   @Column({ type: 'varchar', length: 100 })
   region!: string;
 
+  @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
+  latitude!: number | null;
+
+  @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
+  longitude!: number | null;
+
   @CreateDateColumn()
   created_at!: Date;
 

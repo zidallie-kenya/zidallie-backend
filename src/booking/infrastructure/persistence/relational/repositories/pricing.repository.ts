@@ -19,7 +19,7 @@ export class PricingRepository {
       .createQueryBuilder('p')
       .where('LOWER(p.region) = LOWER(:region)', { region })
       .andWhere('p.service_type = :serviceType', { serviceType })
-      .andWhere('p.max_km >= :distance', { distance: Math.ceil(distanceKm) })
+      .andWhere('p.max_km >= :distance', { distance: distanceKm })
       .orderBy('p.max_km', 'ASC')
       .getOne();
 

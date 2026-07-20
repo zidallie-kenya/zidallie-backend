@@ -787,6 +787,10 @@ export class TransportBookingService {
         await manager.save(deposit);
 
         bookingToUpdate.total_paid = totalPaidBefore + Number(amount);
+        bookingToUpdate.balance_amount = Math.max(
+          0,
+          totalPrice - bookingToUpdate.total_paid,
+        );
 
         if (bookingToUpdate.total_paid >= totalPrice) {
           bookingToUpdate.status = 'completed';

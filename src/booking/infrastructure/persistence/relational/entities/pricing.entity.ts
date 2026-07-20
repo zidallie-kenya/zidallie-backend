@@ -20,7 +20,7 @@ export class PricingEntity {
   @Column({ type: 'varchar', length: 20 }) // e.g. "0-5", "5-10"
   distance_range!: string;
 
-  @Column({ type: 'int' })
+  @Column({ type: 'decimal', precision: 6, scale: 2, default: 0 })
   max_km!: number;
 
   @Column({ type: 'decimal', precision: 10, scale: 2 })

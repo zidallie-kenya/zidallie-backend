@@ -381,6 +381,8 @@ export class TransportBookingService {
       };
 
       // 3. Calculate distance between the Database Station and Geocoded School
+      console.log(stationCoords);
+      console.log(schoolCoords);
       distanceKm = this.haversineDistance(stationCoords, schoolCoords);
 
       pricePerChild = await this.pricingRepo.getPrice(
@@ -1199,6 +1201,8 @@ export class TransportBookingService {
     a: { lat: number; lon: number },
     b: { lat: number; lon: number },
   ): number {
+    console.log(a);
+    console.log(b);
     const R = 6371;
     const dLat = this.toRad(b.lat - a.lat);
     const dLon = this.toRad(b.lon - a.lon);
@@ -1207,7 +1211,10 @@ export class TransportBookingService {
     const x =
       Math.sin(dLat / 2) ** 2 +
       Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
-    return R * 2 * Math.asin(Math.sqrt(x));
+
+    const distance = R * 2 * Math.asin(Math.sqrt(x));
+    console.log('Total distance: home to school', distance);
+    return distance;
   }
 
   private toRad(deg: number) {

@@ -1,5 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsEmail, IsEnum, IsNotEmpty, IsOptional } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { lowerCaseTransformer } from '../../utils/transformers/lower-case.transformer';
 
@@ -14,7 +14,8 @@ export class AuthEmailLoginDto {
   @IsNotEmpty()
   password!: string;
 
-  @ApiProperty()
-  @IsNotEmpty()
+  @ApiPropertyOptional({ enum: ['CarpoolDriver', 'BusAttendant', 'Parent'] })
+  @IsOptional() // <--- CHANGE THIS FROM @IsNotEmpty()
+  @IsEnum(['CarpoolDriver', 'BusAttendant', 'Parent']) // Added for safety
   app_role?: 'CarpoolDriver' | 'BusAttendant' | 'Parent';
 }

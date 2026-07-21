@@ -8,7 +8,7 @@ import {
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { lowerCaseTransformer } from '../../utils/transformers/lower-case.transformer';
-import { UserKind } from '../../users/dto/user.dto'; // or wherever you've defined it
+import { AppRole, UserKind } from '../../users/dto/user.dto'; // or wherever you've defined it
 import { UserMetaDto } from '../../users/dto/user.dto';
 
 export class AuthUpdateDto {
@@ -46,6 +46,11 @@ export class AuthUpdateDto {
   @IsEmail()
   @Transform(lowerCaseTransformer)
   email?: string;
+
+  @ApiPropertyOptional({ enum: ['CarpoolDriver', 'BusAttendant', 'Parent'] })
+  @IsOptional()
+  @IsEnum(['CarpoolDriver', 'BusAttendant', 'Parent'])
+  app_role?: AppRole | null;
 
   @ApiPropertyOptional()
   @IsOptional()

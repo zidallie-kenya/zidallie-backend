@@ -9,8 +9,8 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
-export type UserKind = 'Parent' | 'Driver' | 'Admin';
-
+export type UserKind = 'Parent' | 'Driver' | 'Admin' | 'School';
+export type AppRole = 'CarpoolDriver' | 'BusAttendant' | 'Parent';
 export class UserDto {
   @ApiProperty({
     type: String,

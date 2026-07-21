@@ -28,6 +28,7 @@ import { SessionService } from '../session/session.service';
 import { StatusEnum } from '../statuses/statuses.enum';
 import { User } from '../users/domain/user';
 import { BrevoMailService } from '../mail/brevo-mail.service';
+import { UserKind } from '../users/dto/user.dto';
 
 @Injectable()
 export class AuthService {
@@ -49,6 +50,15 @@ export class AuthService {
         status: HttpStatus.UNPROCESSABLE_ENTITY,
         errors: {
           email: 'This user doesnt have an active account, please register',
+        },
+      });
+    }
+
+    if (user.app_role && user.app_role !== loginDto.app_role) {
+      throw new UnprocessableEntityException({
+        status: HttpStatus.UNPROCESSABLE_ENTITY,
+        errors: {
+          email: `This account is locked to the ${user.app_role} role. You cannot login here.`,
         },
       });
     }
@@ -125,6 +135,24 @@ export class AuthService {
       sessionId: session.id,
       hash,
     });
+
+    // 2. DIFFERENTIATED MESSAGING
+    // Determine role for messaging: use DB role, fallback to the portal they are using
+    const effectiveRole = user.app_role || loginDto.app_role;
+
+    if (effectiveRole === 'CarpoolDriver') {
+      console.log(
+        `[Login] Carpool Driver: ${user.email} accessing Driver Dashboard.`,
+      );
+      // You could even add a custom field to the response if needed:
+      // response.message = "Drive safely!";
+    } else if (effectiveRole === 'BusAttendant') {
+      console.log(
+        `[Login] Bus Attendant: ${user.email} accessing NFC Scanner.`,
+      );
+    } else {
+      console.log('No user role: Legacy users with no app role');
+    }
 
     return {
       refreshToken,
@@ -231,17 +259,22 @@ export class AuthService {
   }
 
   async register(dto: AuthRegisterLoginDto): Promise<void> {
-    let current_role = { id: RoleEnum.user };
-    if (dto.kind === 'Parent') {
-      current_role = { id: RoleEnum.parent };
+    // 1. BLOCK BUS ATTENDANT SIGNUP
+    if (dto.app_role === 'BusAttendant') {
+      throw new UnprocessableEntityException({
+        status: HttpStatus.UNPROCESSABLE_ENTITY,
+        errors: {
+          email: 'Bus Attendant accounts must be created by an administrator.',
+        },
+      });
     }
-    if (dto.kind === 'Driver') {
-      current_role = { id: RoleEnum.driver };
-    }
-    if (dto.kind === 'Admin') {
-      current_role = {
-        id: RoleEnum.admin,
-      };
+
+    let internalKind: UserKind = 'Parent'; // Default to Parent
+    let internalRoleId = RoleEnum.parent; // Default Role ID (e.g., 4)
+
+    if (dto.app_role === 'CarpoolDriver') {
+      internalKind = 'Driver'; // Translate "CarpoolDriver" to "Driver"
+      internalRoleId = RoleEnum.driver; // Translate to Role ID (e.g., 3)
     }
 
     if (!dto.email) {
@@ -286,13 +319,13 @@ export class AuthService {
       password: dto.password,
       firstName: dto.firstName ?? null,
       lastName: dto.lastName ?? null,
-      kind: dto.kind ?? 'Parent',
-      phone_number: dto.phone_number,
+      kind: internalKind, // SAVES: 'Driver' or 'Parent'
+      app_role: dto.app_role, // SAVES: 'CarpoolDriver' or 'Parent'      phone_number: dto.phone_number,
+      role: { id: internalRoleId },
       meta: dto.meta ?? null,
       wallet_balance: 0, // default value
       is_kyc_verified: false, // default value
       provider: AuthProvidersEnum.email,
-      role: current_role,
       status: { id: StatusEnum.inactive },
       payout: null,
       last_earnings_reset_at: null,

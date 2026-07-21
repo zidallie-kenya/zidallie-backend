@@ -8,9 +8,13 @@ export class AuthEmailLoginDto {
   @Transform(lowerCaseTransformer)
   @IsEmail()
   @IsNotEmpty()
-  email: string;
+  email!: string;
 
   @ApiProperty()
   @IsNotEmpty()
-  password: string;
+  password!: string;
+
+  @ApiProperty()
+  @IsNotEmpty()
+  app_role!: 'CarpoolDriver' | 'BusAttendant' | 'Parent';
 }

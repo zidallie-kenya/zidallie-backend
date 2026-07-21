@@ -16,9 +16,7 @@ import {
 import { RoleDto } from '../../roles/dto/role.dto';
 import { StatusDto } from '../../statuses/dto/status.dto';
 import { lowerCaseTransformer } from '../../utils/transformers/lower-case.transformer';
-import { UserMetaDto } from './user.dto';
-
-export type UserKind = 'Parent' | 'Driver' | 'Admin';
+import { AppRole, UserKind, UserMetaDto } from './user.dto';
 
 export class UpdateUserDto extends PartialType(CreateUserDto) {
   @ApiPropertyOptional({ example: 'test1@example.com', type: String })
@@ -76,8 +74,12 @@ export class UpdateUserDto extends PartialType(CreateUserDto) {
 
   @ApiPropertyOptional({ enum: ['Parent', 'Driver', 'Admin'] })
   @IsOptional()
-  @IsEnum(['Parent', 'Driver', 'Admin'])
+  @IsEnum(['Parent', 'Driver', 'Admin', 'School'])
   kind?: UserKind;
+
+  @IsOptional()
+  @IsEnum(['CarpoolDriver', 'BusAttendant', 'Parent'])
+  app_role?: AppRole | null;
 
   @ApiPropertyOptional({ type: () => UserMetaDto })
   @IsOptional()

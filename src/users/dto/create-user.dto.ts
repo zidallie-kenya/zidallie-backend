@@ -15,9 +15,8 @@ import {
 import { RoleDto } from '../../roles/dto/role.dto';
 import { StatusDto } from '../../statuses/dto/status.dto';
 import { lowerCaseTransformer } from '../../utils/transformers/lower-case.transformer';
-import { UserMetaDto } from './user.dto'; // adjust path if needed
+import { AppRole, UserKind, UserMetaDto } from './user.dto'; // adjust path if needed
 
-export type UserKind = 'Parent' | 'Driver' | 'Admin';
 export class PayoutDto {
   @ApiProperty({ enum: ['weekly', 'monthly'] })
   payment_model!: 'weekly' | 'monthly';
@@ -53,6 +52,10 @@ export class CreateUserDto {
   @IsNotEmpty()
   lastName!: string | null;
 
+  @ApiProperty({ example: 'John Doe', type: String })
+  @IsNotEmpty()
+  name?: string | null;
+
   @ApiPropertyOptional({ example: '+254712345678', type: String })
   @IsOptional()
   @IsString()
@@ -76,8 +79,12 @@ export class CreateUserDto {
 
   @ApiProperty({ enum: ['Parent', 'Driver', 'Admin'] })
   @IsNotEmpty()
-  @IsEnum(['Parent', 'Driver', 'Admin'])
+  @IsEnum(['Parent', 'Driver', 'Admin', 'School'])
   kind!: UserKind;
+
+  @IsOptional()
+  @IsEnum(['CarpoolDriver', 'BusAttendant', 'Parent'])
+  app_role?: AppRole | null;
 
   @ApiPropertyOptional({ type: () => UserMetaDto })
   @IsOptional()

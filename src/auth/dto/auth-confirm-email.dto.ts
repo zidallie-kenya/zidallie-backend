@@ -5,5 +5,5 @@ export class AuthConfirmEmailDto {
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
-  hash: string;
+  hash!: string;
 }

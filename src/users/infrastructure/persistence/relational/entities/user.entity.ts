@@ -24,7 +24,8 @@ import { PaymentEntity } from '../../../../../payments/infrastructure/persistenc
 import { NotificationEntity } from '../../../../../notifications/infrastructure/persistence/relational/entities/notification.entity';
 import { LocationEntity } from '../../../../../location/infrastructure/persistence/relational/entities/location.entity';
 
-export type UserKind = 'Parent' | 'Driver' | 'Admin';
+export type UserKind = 'Parent' | 'Driver' | 'Admin' | 'School';
+export type AppRole = 'CarpoolDriver' | 'BusAttendant' | 'Parent';
 
 export type UserMeta = {
   payments: {
@@ -94,6 +95,13 @@ export class UserEntity extends EntityRelationalHelper {
     enum: ['Parent', 'Driver', 'Admin'],
   })
   kind!: UserKind;
+
+  @Column({
+    type: 'varchar',
+    nullable: true,
+    enum: ['CarpoolDriver', 'BusAttendant', 'Parent'],
+  })
+  app_role?: AppRole | null;
 
   @Column({ type: 'jsonb', nullable: true })
   meta!: UserMeta | null;

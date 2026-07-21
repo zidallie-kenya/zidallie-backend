@@ -4,7 +4,8 @@ import { Role } from '../../roles/domain/role';
 import { Status } from '../../statuses/domain/status';
 import { UserMetaDto } from '../dto/user.dto';
 
-export type UserKind = 'Parent' | 'Driver' | 'Admin';
+export type UserKind = 'Parent' | 'Driver' | 'Admin' | 'School';
+export type AppRole = 'CarpoolDriver' | 'BusAttendant' | 'Parent';
 
 export class User {
   @ApiProperty({ type: Number })
@@ -58,6 +59,10 @@ export class User {
   @ApiProperty({ enum: ['Parent', 'Driver'] })
   @Expose({ groups: ['me', 'admin'] })
   kind!: UserKind;
+
+  @ApiProperty({ enum: ['CarpoolDriver', 'BusAttendant', 'Parent'] })
+  @Expose({ groups: ['me', 'admin'] })
+  app_role?: AppRole | null;
 
   @ApiProperty({ type: () => UserMetaDto, required: false })
   @Expose({ groups: ['me', 'admin'] })

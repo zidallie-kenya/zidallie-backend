@@ -8,7 +8,7 @@ import {
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { lowerCaseTransformer } from '../../utils/transformers/lower-case.transformer';
-import { UserKind, UserMetaDto } from '../../users/dto/user.dto'; // import types from your user module
+import { UserKind, UserMetaDto } from '../../users/dto/user.dto';
 
 export class AuthRegisterLoginDto {
   @ApiProperty({ example: 'test1@example.com', type: String })
@@ -30,10 +30,17 @@ export class AuthRegisterLoginDto {
   @IsNotEmpty()
   lastName?: string;
 
-  @ApiProperty({ example: 'Parent', enum: ['Parent', 'Driver', 'Admin'] })
-  @IsEnum(['Parent', 'Driver', 'Admin'])
+  @ApiProperty({
+    example: 'Parent',
+    enum: ['Parent', 'Driver', 'Admin', 'School'],
+  })
+  @IsEnum(['Parent', 'Driver', 'Admin', 'School'])
   @IsNotEmpty()
   kind?: UserKind;
+
+  @ApiProperty()
+  @IsNotEmpty()
+  app_role!: 'CarpoolDriver' | 'BusAttendant' | 'Parent';
 
   @ApiProperty({ example: '+254712345678' })
   @IsOptional()

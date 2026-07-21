@@ -34,6 +34,7 @@ export class UserMapper {
     domainEntity.last_earnings_reset_at = raw.last_earnings_reset_at;
     domainEntity.emailOtp = raw.emailOtp;
     domainEntity.emailOtpExpires = raw.emailOtpExpires;
+    domainEntity.app_role = raw.app_role;
     return domainEntity;
   }
 
@@ -94,6 +95,8 @@ export class UserMapper {
       persistence.emailOtp = domainEntity.emailOtp;
     if (domainEntity.emailOtpExpires !== undefined)
       persistence.emailOtpExpires = domainEntity.emailOtpExpires;
+    if (domainEntity.app_role !== undefined)
+      persistence.app_role = domainEntity.app_role;
     if (domainEntity.meta !== undefined && domainEntity.meta !== null) {
       persistence.meta = {
         county: domainEntity.meta.county ?? null,

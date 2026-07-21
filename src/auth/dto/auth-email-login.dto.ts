@@ -16,5 +16,5 @@ export class AuthEmailLoginDto {
 
   @ApiProperty()
   @IsNotEmpty()
-  app_role!: 'CarpoolDriver' | 'BusAttendant' | 'Parent';
+  app_role?: 'CarpoolDriver' | 'BusAttendant' | 'Parent';
 }

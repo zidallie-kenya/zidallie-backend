@@ -41,8 +41,8 @@ export class AuthService {
   ) {}
 
   async validateLogin(loginDto: AuthEmailLoginDto): Promise<LoginResponseDto> {
-    const now = Date.now();
-    console.log(now);
+    const intendedRole = loginDto.app_role || 'Parent';
+
     const user = await this.usersService.findByEmail(loginDto.email);
 
     if (!user) {
@@ -54,11 +54,11 @@ export class AuthService {
       });
     }
 
-    if (user.app_role && user.app_role !== loginDto.app_role) {
+    if (user.app_role && user.app_role !== intendedRole) {
       throw new UnprocessableEntityException({
         status: HttpStatus.UNPROCESSABLE_ENTITY,
         errors: {
-          email: `This account is locked to the ${user.app_role} role. You cannot login here.`,
+          email: `This account is registered as a ${user.app_role}. You cannot login as a ${intendedRole}.`,
         },
       });
     }

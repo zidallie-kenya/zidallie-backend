@@ -689,7 +689,11 @@ export class TransportBookingService {
       status: 'pending',
     });
 
-    return { ...booking, school: booking.bus_school || booking.carpool_school };
+    return {
+      ...booking,
+      booking_id: booking.id,
+      school: booking.bus_school || booking.carpool_school,
+    };
   }
 
   async submitChildren(

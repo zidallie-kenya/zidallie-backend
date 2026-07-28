@@ -1418,37 +1418,93 @@ export class TransportBookingService {
     destination: { lat: number; lon: number },
   ): Promise<number | null> {
     const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+
     if (!apiKey) return null;
 
     try {
-      const response = await axios.get(
-        'https://maps.googleapis.com/maps/api/distancematrix/json',
+      const response = await axios.post(
+        'https://routes.googleapis.com/directions/v2:computeRoutes',
         {
-          params: {
-            origins: `${origin.lat},${origin.lon}`,
-            destinations: `${destination.lat},${destination.lon}`,
-            key: apiKey,
+          origin: {
+            location: {
+              latLng: {
+                latitude: origin.lat,
+                longitude: origin.lon,
+              },
+            },
+          },
+          destination: {
+            location: {
+              latLng: {
+                latitude: destination.lat,
+                longitude: destination.lon,
+              },
+            },
+          },
+          travelMode: 'DRIVE',
+          routingPreference: 'TRAFFIC_UNAWARE',
+        },
+        {
+          headers: {
+            'X-Goog-Api-Key': apiKey,
+            'X-Goog-FieldMask':
+              'routes.distanceMeters,routes.duration,routes.polyline',
           },
         },
       );
 
-      const element = response.data?.rows?.[0]?.elements?.[0];
+      const route = response.data.routes?.[0];
 
-      if (element?.status === 'OK') {
-        // distance.value is in meters, convert to KM
-        return element.distance.value / 1000;
-      }
+      if (!route) return null;
 
-      console.warn(
-        'Distance Matrix API returned non-OK status:',
-        element?.status,
-      );
-      return null;
-    } catch (error) {
-      console.log(error);
+      const distanceKm = route.distanceMeters / 1000;
+      const billableDistance = Math.floor(distanceKm);
+
+      return billableDistance;
+    } catch (err) {
+      console.error(err);
       return null;
     }
   }
+
+  // private async getRoadDistance(
+  //   origin: { lat: number; lon: number },
+  //   destination: { lat: number; lon: number },
+  // ): Promise<number | null> {
+  //   const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+  //   if (!apiKey) return null;
+
+  //   try {
+  //     const response = await axios.get(
+  //       'https://maps.googleapis.com/maps/api/distancematrix/json',
+  //       {
+  //         params: {
+  //           origins: `${origin.lat},${origin.lon}`,
+  //           destinations: `${destination.lat},${destination.lon}`,
+  //           key: apiKey,
+  //         },
+  //       },
+  //     );
+
+  //     console.log(JSON.stringify(response.data, null, 2));
+
+  //     const element = response.data?.rows?.[0]?.elements?.[0];
+
+  //     if (element?.status === 'OK') {
+  //       // distance.value is in meters, convert to KM
+  //       return element.distance.value / 1000;
+  //     }
+
+  //     console.warn(
+  //       'Distance Matrix API returned non-OK status:',
+  //       element?.status,
+  //     );
+  //     return null;
+  //   } catch (error) {
+  //     console.log(error);
+  //     return null;
+  //   }
+  // }
 
   private toRad(deg: number) {
     return (deg * Math.PI) / 180;

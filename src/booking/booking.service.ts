@@ -1458,7 +1458,9 @@ export class TransportBookingService {
       if (!route) return null;
 
       const distanceKm = route.distanceMeters / 1000;
+      console.log(distanceKm);
       const billableDistance = Math.floor(distanceKm);
+      console.log(billableDistance);
 
       return billableDistance;
     } catch (err) {

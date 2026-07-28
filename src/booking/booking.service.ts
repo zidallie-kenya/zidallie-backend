@@ -1453,6 +1453,8 @@ export class TransportBookingService {
         },
       );
 
+      console.log(response);
+
       const route = response.data.routes?.[0];
 
       if (!route) return null;

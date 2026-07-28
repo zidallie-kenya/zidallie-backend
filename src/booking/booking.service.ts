@@ -586,19 +586,14 @@ export class TransportBookingService {
 
       console.log('Carpool road distance:', distanceKm);
 
-      // Pricing Logic
-      if (distanceKm >= 15.1 && distanceKm <= 20) {
-        pricePerChild = 50600;
-      } else if (distanceKm >= 20.1 && distanceKm <= 25) {
-        pricePerChild = 55600;
-      } else {
-        // Pass distanceKm. For the database error, we ensure PricingRepo handles decimals
-        pricePerChild = await this.pricingRepo.getPrice(
-          region,
-          distanceKm,
-          'carpool',
-        );
-      }
+      // Pass distanceKm. For the database error, we ensure PricingRepo handles decimals
+      pricePerChild = await this.pricingRepo.getPrice(
+        region,
+        distanceKm,
+        'carpool',
+      );
+
+      console.log(pricePerChild);
     } else {
       // BUS LOGIC
       if (!dto.bus_school_id || !dto.pickup_station_id) {

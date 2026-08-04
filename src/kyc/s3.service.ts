@@ -12,11 +12,27 @@ export class S3Service {
     },
   });
 
+  /**
+   * Cleans filenames to prevent URL encoding issues (like the %20 vs %2520 bug).
+   * Replaces spaces with hyphens and removes special characters.
+   */
+  private sanitizeFilename(filename: string): string {
+    return filename
+      .toLowerCase()
+      .replace(/\s+/g, '-') // Replace spaces with -
+      .replace(/[^a-z0-9.\-_]/g, '') // Remove everything except letters, numbers, dots, hyphens, underscores
+      .replace(/-+/g, '-'); // Prevent double hyphens --
+  }
+
   async uploadFile(file: Express.Multer.File, folder: string): Promise<string> {
-    const fileKey = `${folder}/${uuidv4()}-${file.originalname}`;
+    // 1. Sanitize the original name before creating the S3 Key
+    const cleanFileName = this.sanitizeFilename(file.originalname);
+
+    // 2. Generate the key (path in S3)
+    const fileKey = `${folder}/${uuidv4()}-${cleanFileName}`;
 
     console.log(
-      `[S3] Attempting upload: ${file.originalname} (${file.mimetype}) to ${fileKey}`,
+      `[S3] Attempting upload: ${file.originalname} -> ${cleanFileName} to ${fileKey}`,
     );
 
     try {
@@ -26,22 +42,19 @@ export class S3Service {
           Key: fileKey,
           Body: file.buffer,
           ContentType: file.mimetype,
-          // ContentDisposition: 'inline' allows browsers to view PDFs instead of downloading
           ContentDisposition: 'inline',
         }),
       );
 
+      // 3. Construct the final URL.
+      // Since fileKey is now "clean", this URL will never have encoding issues.
       const url = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`;
+
       console.log(`[S3] Upload Success: ${url}`);
       return url;
     } catch (error) {
-      // Detailed error logging
       console.error(`[S3] Upload Failed for file: ${file.originalname}`);
       console.error(`[S3] Error Message: ${error.message}`);
-      console.error(`[S3] AWS Request ID: ${error.$metadata?.requestId}`);
-
-      // Console log the full error for deep debugging if needed
-      console.error('Full S3 Error Object:', error);
 
       throw new InternalServerErrorException(
         `Failed to upload file to S3: ${error.message}`,
@@ -53,19 +66,11 @@ export class S3Service {
     files: Express.Multer.File[] | undefined,
     folder: string,
   ): Promise<string | null> {
-    // 1. Debug log to check if files actually reached the service
     if (!files || files.length === 0) {
-      console.log(
-        `[S3] Skipping upload for ${folder}: No file provided in the request.`,
-      );
       return null;
     }
 
     const file = files[0];
-    console.log(
-      `[S3] File detected for ${folder}. Starting upload sequence...`,
-    );
-
     return this.uploadFile(file, folder);
   }
 }

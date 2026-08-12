@@ -15,20 +15,20 @@ import { Gender } from '../../utils/types/enums';
 export class SchoolReferenceDto {
   @ApiProperty({ type: Number, example: 1 })
   @IsNumber()
-  id: number;
+  id?: number;
 }
 
 export class ParentReferenceDto {
   @ApiProperty({ type: Number, example: 1 })
   @IsNumber()
-  id: number;
+  id?: number;
 }
 
 export class CreateStudentDto {
   @ApiProperty({ type: String, example: 'Jane Doe' })
   @IsString()
   @IsNotEmpty()
-  name: string;
+  name?: string;
 
   @ApiProperty({ type: () => SchoolReferenceDto, required: false })
   @IsOptional()
@@ -98,6 +98,11 @@ export class CreateStudentDto {
   @IsOptional()
   @IsString()
   phone_number?: string | null;
+
+  @ApiProperty({ type: String, example: '254754321234', required: false })
+  @IsOptional()
+  @IsString()
+  emergency_contact?: string | null;
 
   @ApiProperty({ type: Number, example: 12000, required: false })
   @IsOptional()

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, MoreThanOrEqual, Repository } from 'typeorm';
 import { BookingEntity } from '../entities/booking.entity';
 
 @Injectable()
@@ -39,14 +39,38 @@ export class BookingRepository {
       ],
     });
   }
-  findByParentId(parentId: number): Promise<BookingEntity[]> {
+
+  // findByParentId(parentId: number): Promise<BookingEntity[]> {
+  //   return this.repo.find({
+  //     where: { parent: { id: parentId } },
+  //     relations: [
+  //       'carpool_school',
+  //       'bus_school',
+  //       'pickup_station',
+  //       'cluster',
+  //       'children',
+  //       'deposits',
+  //     ],
+  //     order: { created_at: 'DESC' },
+  //   });
+  // }
+
+  findByParentId(
+    parentId: number,
+    minTotalPaid = 3000,
+  ): Promise<BookingEntity[]> {
     return this.repo.find({
-      where: { parent: { id: parentId } },
+      where: {
+        parent: { id: parentId },
+        total_paid: MoreThanOrEqual(minTotalPaid),
+      },
       relations: [
+        'parent',
         'carpool_school',
         'bus_school',
         'pickup_station',
         'cluster',
+        'cluster.bookings',
         'children',
         'deposits',
       ],

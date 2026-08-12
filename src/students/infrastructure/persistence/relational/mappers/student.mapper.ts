@@ -41,6 +41,7 @@ export class StudentMapper {
     domainEntity.service_type = raw.service_type;
     domainEntity.rfid_code = raw.rfid_code;
     domainEntity.phone_number = raw.phone_number;
+    domainEntity.emergency_contact = raw.emergency_contact;
 
     if (raw.rides) {
       domainEntity.rides = raw.rides.map((ride) => RideMapper.toDomain(ride));
@@ -88,6 +89,8 @@ export class StudentMapper {
       persistence.rfid_code = domainEntity.rfid_code;
     if (domainEntity.phone_number !== undefined)
       persistence.phone_number = domainEntity.phone_number;
+    if (domainEntity.emergency_contact !== undefined)
+      persistence.emergency_contact = domainEntity.emergency_contact;
 
     if (domainEntity.rides !== undefined)
       persistence.rides = domainEntity.rides.map(

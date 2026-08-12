@@ -106,6 +106,15 @@ export class Student {
   phone_number!: string | null;
 
   @ApiProperty({
+    type: String,
+    example: '254754321234',
+    required: false,
+    nullable: true,
+  })
+  @Expose({ groups: ['me', 'admin'] })
+  emergency_contact?: string | null;
+
+  @ApiProperty({
     enum: ['school', 'carpool', 'private', 'instant_payment'],
     required: false,
     nullable: true,

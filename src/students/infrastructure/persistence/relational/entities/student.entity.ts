@@ -60,6 +60,9 @@ export class StudentEntity extends EntityRelationalHelper {
   @Column({ type: 'varchar', nullable: true })
   phone_number!: string | null;
 
+  @Column({ type: 'varchar', nullable: true })
+  emergency_contact?: string | null;
+
   @Column({ type: 'float', nullable: true })
   transport_term_fee!: number | null;
 

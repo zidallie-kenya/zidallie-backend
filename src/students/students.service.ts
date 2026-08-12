@@ -72,7 +72,7 @@ export class StudentsService {
 
     try {
       return await this.studentsRepository.create({
-        name: createStudentDto.name,
+        name: createStudentDto.name ?? '',
         school,
         parent,
         profile_picture: createStudentDto.profile_picture ?? null,
@@ -85,11 +85,12 @@ export class StudentsService {
         daily_fee: createStudentDto.daily_fee ?? null,
         rfid_code: createStudentDto.rfid_code ?? null,
         phone_number: createStudentDto.phone_number ?? null,
+        emergency_contact: createStudentDto.emergency_contact ?? null,
         transport_term_fee: createStudentDto.transport_term_fee ?? null,
         service_type: createStudentDto.service_type ?? null,
         rides: [],
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating student:', error);
       throw new UnprocessableEntityException({
         status: HttpStatus.UNPROCESSABLE_ENTITY,
@@ -223,6 +224,10 @@ export class StudentsService {
 
     if (updateStudentDto.service_type !== undefined) {
       updateData.service_type = updateStudentDto.service_type;
+    }
+
+    if (updateStudentDto.emergency_contact !== undefined) {
+      updateData.emergency_contact = updateStudentDto.emergency_contact;
     }
 
     return this.studentsRepository.update(id, updateData);

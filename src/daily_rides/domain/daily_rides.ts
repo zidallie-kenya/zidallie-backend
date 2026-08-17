@@ -60,6 +60,14 @@ export class DailyRide {
   @Expose({ groups: ['me', 'admin'] })
   disembark_longitude!: number | null;
 
+  @ApiProperty({ type: Number, required: false, nullable: true })
+  @Expose({ groups: ['me', 'admin'] })
+  start_latitude!: number | null; // The GPS gate latitude
+
+  @ApiProperty({ type: Number, required: false, nullable: true })
+  @Expose({ groups: ['me', 'admin'] })
+  start_longitude!: number | null; // The GPS gate longitude
+
   @ApiProperty({
     type: () => DailyRideMetaDto,
     required: false,

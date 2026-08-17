@@ -22,7 +22,7 @@ import { RolesGuard } from '../roles/roles.guard';
 import { Roles } from '../roles/roles.decorator';
 import { RoleEnum } from '../roles/roles.enum';
 import { DailyRide } from './domain/daily_rides';
-import { DailyRideStatus } from '../utils/types/enums';
+import { DailyRideKind, DailyRideStatus } from '../utils/types/enums';
 import { NullableType } from '../utils/types/nullable.type';
 import { UpdateDailyRideDto } from './dto/update-daily_ride.dto';
 import { CreateDailyRideDto } from './dto/create-daily_ride.dto';
@@ -67,7 +67,8 @@ export class DailyRidesController {
     return this.dailyRidesService.create(createDailyRideDto);
   }
 
-  // batch update ride statuses
+  // batch update ride statuses — retained for admin/dispatch bulk corrections;
+  // the driver app itself now uses embark/disembark/cancel/start-day/end-day
   @SerializeOptions({ groups: ['admin'] })
   @Patch('batch-update-status')
   // @Roles(RoleEnum.admin, RoleEnum.driver)
@@ -214,20 +215,46 @@ export class DailyRidesController {
     return this.dailyRidesService.findMyDailyRides(userJwtPayload, status);
   }
 
-  // driver starts all today's ride [marks all todays rides as Started]
+  // driver starts today's rides for one leg (Pickup for the morning,
+  // Dropoff for the evening) [marks that leg's rides as Started]
+  // -> sends "trip started" notification to every parent on that leg
   @SerializeOptions({
     groups: ['admin'],
   })
   @Patch('start-day')
   @Roles(RoleEnum.admin, RoleEnum.driver)
   @HttpCode(HttpStatus.OK)
-  startDay(@Req() req: any): Promise<{
+  startDay(
+    @Req() req: any,
+    @Body('kind') kind: DailyRideKind,
+  ): Promise<{
     message: string;
     updatedRides: DailyRide[];
     driverStartTime: Date;
   }> {
     const userJwtPayload: JwtPayloadType = req.user;
-    return this.dailyRidesService.startDriverDay(userJwtPayload);
+    return this.dailyRidesService.startDriverDay(userJwtPayload, kind);
+  }
+
+  // driver closes out one leg's rides once every child is resolved
+  // -> stamps end_time on that leg's finished rides; runs the weekly
+  //    pending_earnings reset once the Dropoff (evening) leg closes
+  @SerializeOptions({
+    groups: ['admin'],
+  })
+  @Patch('end-day')
+  @Roles(RoleEnum.admin, RoleEnum.driver)
+  @HttpCode(HttpStatus.OK)
+  endDay(
+    @Req() req: any,
+    @Body('kind') kind: DailyRideKind,
+  ): Promise<{
+    message: string;
+    updatedRides: DailyRide[];
+    driverEndTime: Date;
+  }> {
+    const userJwtPayload: JwtPayloadType = req.user;
+    return this.dailyRidesService.endDriverDay(userJwtPayload, kind);
   }
 
   // get the ongoing ride for a driver (if any)
@@ -242,7 +269,11 @@ export class DailyRidesController {
     return this.dailyRidesService.findOngoingRideForDriver(driverId);
   }
 
-  // changes a student's daily ride status to Active
+  // changes a student's daily ride status to Active (boarded)
+  // -> sends "boarded" notification, records embark time/location,
+  //    runs the subscription/instant-payment check
+  // daily-rides.controller.ts
+
   @SerializeOptions({
     groups: ['admin'],
   })
@@ -252,11 +283,18 @@ export class DailyRidesController {
   @ApiParam({ name: 'id', type: 'number' })
   embarkStudent(
     @Param('id', ParseIntPipe) id: number,
+    @Body() body: { payment_phone_number?: string; amount_to_pay?: number },
   ): Promise<DailyRide | null> {
-    return this.dailyRidesService.embarkStudent(id);
+    return this.dailyRidesService.embarkStudent(
+      id,
+      body.payment_phone_number,
+      body.amount_to_pay,
+    );
   }
 
-  // changes the student's daily ride status to Finished
+  // changes the student's daily ride status to Finished (dropped off)
+  // -> sends "arrived" notification, records disembark time/location,
+  //    processes earnings + route data
   @SerializeOptions({
     groups: ['admin'],
   })
@@ -299,7 +337,8 @@ export class DailyRidesController {
     return this.dailyRidesService.update(id, updateDailyRideDto);
   }
 
-  //marks a ride as Finished since it was cancelled
+  // marks a ride Finished because the child was absent (✕)
+  // -> sends the "Missing" notification, no drop-off step expected
   @SerializeOptions({
     groups: ['admin'],
   })

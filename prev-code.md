@@ -1,3 +1,334 @@
+# Working
+
+```ts
+import {
+  Body,
+  Controller,
+  DefaultValuePipe,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+  SerializeOptions,
+  Req,
+  BadRequestException,
+} from '@nestjs/common';
+import { ApiBearerAuth, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { AuthGuard } from '@nestjs/passport';
+import { RolesGuard } from '../roles/roles.guard';
+import { Roles } from '../roles/roles.decorator';
+import { RoleEnum } from '../roles/roles.enum';
+import { DailyRide } from './domain/daily_rides';
+import { DailyRideStatus } from '../utils/types/enums';
+import { NullableType } from '../utils/types/nullable.type';
+import { UpdateDailyRideDto } from './dto/update-daily_ride.dto';
+import { CreateDailyRideDto } from './dto/create-daily_ride.dto';
+import { DailyRidesService } from './daily_rides.service';
+import { JwtPayloadType } from '../auth/strategies/types/jwt-payload.type';
+import { MyRidesResponseDto } from './dto/response.dto';
+import { BatchUpdateDailyRideDto } from './dto/batch-update-daily_ride.dto';
+
+const parseDate = (dateStr: string): Date => {
+  const [day, month, year] = dateStr.split('-').map(Number);
+  if (!day || !month || !year || isNaN(day) || isNaN(month) || isNaN(year)) {
+    throw new BadRequestException({
+      status: HttpStatus.BAD_REQUEST,
+      errors: { date: `Invalid date format: ${dateStr}. Use DD-MM-YYYY.` },
+    });
+  }
+  const date = new Date(year, month - 1, day); // Month is 0-based in JavaScript
+  if (isNaN(date.getTime())) {
+    throw new BadRequestException({
+      status: HttpStatus.BAD_REQUEST,
+      errors: { date: `Invalid date: ${dateStr}` },
+    });
+  }
+  return date;
+};
+
+@ApiBearerAuth()
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@ApiTags('DailyRides')
+@Controller({ path: 'daily-rides', version: '1' })
+export class DailyRidesController {
+  constructor(private readonly dailyRidesService: DailyRidesService) {}
+
+  //create the daily ride
+  @SerializeOptions({
+    groups: ['admin'],
+  })
+  @Post()
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
+  @HttpCode(HttpStatus.CREATED)
+  create(@Body() createDailyRideDto: CreateDailyRideDto): Promise<DailyRide> {
+    return this.dailyRidesService.create(createDailyRideDto);
+  }
+
+  // batch update ride statuses
+  @SerializeOptions({ groups: ['admin'] })
+  @Patch('batch-update-status')
+  // @Roles(RoleEnum.admin, RoleEnum.driver)
+  @HttpCode(HttpStatus.OK)
+  batchUpdateStatus(
+    @Body() batchUpdateDto: BatchUpdateDailyRideDto,
+  ): Promise<DailyRide[]> {
+    return this.dailyRidesService.batchUpdateStatus(
+      batchUpdateDto.ids,
+      batchUpdateDto.payment_phone_number,
+      batchUpdateDto.amount_to_pay,
+      batchUpdateDto.status,
+    );
+  }
+
+  //returns all the upcoming daily rides => dashboard
+  @SerializeOptions({
+    groups: ['admin'],
+  })
+  @Get('upcoming')
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
+  @HttpCode(HttpStatus.OK)
+  @ApiQuery({
+    name: 'days',
+    required: false,
+    description: 'Number of days ahead to fetch (default: 7)',
+  })
+  findUpcoming(
+    @Query('days', new DefaultValuePipe(7), ParseIntPipe) days: number,
+  ): Promise<DailyRide[]> {
+    return this.dailyRidesService.findUpcomingDailyRides(days);
+  }
+
+  //return all upcoming rides for user
+  @SerializeOptions({ groups: ['admin'] })
+  @Get('user/upcoming')
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
+  @HttpCode(HttpStatus.OK)
+  @ApiQuery({
+    name: 'days',
+    required: false,
+    description: 'Number of days ahead to fetch (default: 7)',
+  })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    description: 'Filter rides by status',
+    enum: DailyRideStatus,
+  })
+  findUpcomingRidesForUser(
+    @Req() req: any, // required first
+    @Query('days', new DefaultValuePipe(7), ParseIntPipe) days: number,
+    @Query('status') status?: DailyRideStatus, // optional
+  ): Promise<DailyRide[]> {
+    const userJwtPayload: JwtPayloadType = req.user;
+    return this.dailyRidesService.findUpcomingDailyRidesForUser(
+      days,
+      userJwtPayload,
+      status,
+    );
+  }
+
+  // returns daily-rides by status
+  @SerializeOptions({
+    groups: ['admin'],
+  })
+  @Get('by-status/:status')
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
+  @HttpCode(HttpStatus.OK)
+  @ApiParam({ name: 'status', enum: DailyRideStatus })
+  findByStatus(@Param('status') status: DailyRideStatus): Promise<DailyRide[]> {
+    return this.dailyRidesService.findDailyRidesByStatus(status);
+  }
+
+  // returns a specific daily ride
+  @SerializeOptions({
+    groups: ['admin'],
+  })
+  @Get('by-ride/:rideId')
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
+  @HttpCode(HttpStatus.OK)
+  @ApiParam({ name: 'rideId', type: 'number' })
+  findByRideId(
+    @Param('rideId', ParseIntPipe) rideId: number,
+  ): Promise<DailyRide[]> {
+    return this.dailyRidesService.findByRideId(rideId);
+  }
+
+  // returns daily rides by-date-range
+  @SerializeOptions({
+    groups: ['admin'],
+  })
+  @Get('by-date-range')
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
+  @HttpCode(HttpStatus.OK)
+  @ApiQuery({
+    name: 'startDate',
+    type: 'string',
+    format: 'date',
+    description: 'Start date in DD-MM-YYYY format (e.g., 26-08-2025)',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    type: 'string',
+    format: 'date',
+    description: 'End date in DD-MM-YYYY format (e.g., 26-09-2025)',
+  })
+  findByDateRange(
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+  ): Promise<DailyRide[]> {
+    try {
+      const start = parseDate(startDate);
+      const end = parseDate(endDate);
+      return this.dailyRidesService.findByDateRange(start, end);
+    } catch (error) {
+      console.log(error);
+
+      throw new BadRequestException({
+        status: HttpStatus.BAD_REQUEST,
+        errors: { date: 'Failed to parse dates. Ensure format is DD-MM-YYYY.' },
+      });
+    }
+  }
+
+  //returns a driver's and parent's rides
+  @SerializeOptions({
+    groups: ['admin'],
+  })
+  @Get('my-rides')
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
+  @HttpCode(HttpStatus.OK)
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    description: 'Filter by ride status',
+    enum: DailyRideStatus,
+  })
+  getMyRides(
+    @Req() req: any,
+    @Query('status') status?: DailyRideStatus,
+  ): Promise<MyRidesResponseDto[]> {
+    const userJwtPayload: JwtPayloadType = req.user;
+    return this.dailyRidesService.findMyDailyRides(userJwtPayload, status);
+  }
+
+  // driver starts all today's ride [marks all todays rides as Started]
+  @SerializeOptions({
+    groups: ['admin'],
+  })
+  @Patch('start-day')
+  @Roles(RoleEnum.admin, RoleEnum.driver)
+  @HttpCode(HttpStatus.OK)
+  startDay(@Req() req: any): Promise<{
+    message: string;
+    updatedRides: DailyRide[];
+    driverStartTime: Date;
+  }> {
+    const userJwtPayload: JwtPayloadType = req.user;
+    return this.dailyRidesService.startDriverDay(userJwtPayload);
+  }
+
+  // get the ongoing ride for a driver (if any)
+  @SerializeOptions({ groups: ['admin'] })
+  @Get('driver/:driverId/ongoing')
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
+  @HttpCode(HttpStatus.OK)
+  @ApiParam({ name: 'driverId', type: 'number' })
+  findOngoingRideForDriver(
+    @Param('driverId', ParseIntPipe) driverId: number,
+  ): Promise<NullableType<DailyRide>> {
+    return this.dailyRidesService.findOngoingRideForDriver(driverId);
+  }
+
+  // changes a student's daily ride status to Active
+  @SerializeOptions({
+    groups: ['admin'],
+  })
+  @Patch(':id/embark')
+  @Roles(RoleEnum.admin, RoleEnum.driver)
+  @HttpCode(HttpStatus.OK)
+  @ApiParam({ name: 'id', type: 'number' })
+  embarkStudent(
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<DailyRide | null> {
+    return this.dailyRidesService.embarkStudent(id);
+  }
+
+  // changes the student's daily ride status to Finished
+  @SerializeOptions({
+    groups: ['admin'],
+  })
+  @Patch(':id/disembark')
+  @Roles(RoleEnum.admin, RoleEnum.driver)
+  @HttpCode(HttpStatus.OK)
+  @ApiParam({ name: 'id', type: 'number' })
+  disembarkStudent(
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<DailyRide | null> {
+    return this.dailyRidesService.disembarkStudent(id);
+  }
+
+  //gets a specific dairy ride
+  @SerializeOptions({
+    groups: ['admin'],
+  })
+  @Get(':id')
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
+  @HttpCode(HttpStatus.OK)
+  @ApiParam({ name: 'id', type: 'number' })
+  findOne(
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<NullableType<DailyRide>> {
+    return this.dailyRidesService.findById(id);
+  }
+
+  // updates a daily ride
+  @SerializeOptions({
+    groups: ['admin'],
+  })
+  @Patch(':id')
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
+  @HttpCode(HttpStatus.OK)
+  @ApiParam({ name: 'id', type: 'number' })
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateDailyRideDto: UpdateDailyRideDto,
+  ): Promise<DailyRide | null> {
+    return this.dailyRidesService.update(id, updateDailyRideDto);
+  }
+
+  //marks a ride as Finished since it was cancelled
+  @SerializeOptions({
+    groups: ['admin'],
+  })
+  @Patch(':id/cancel')
+  @Roles(RoleEnum.admin, RoleEnum.driver, RoleEnum.user, RoleEnum.parent)
+  @HttpCode(HttpStatus.OK)
+  @ApiParam({ name: 'id', type: 'number' })
+  cancelDailyRide(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('reason') reason?: string,
+  ): Promise<DailyRide | null> {
+    return this.dailyRidesService.cancelDailyRide(id, reason);
+  }
+
+  // delete a daily ride
+  @Delete(':id')
+  @Roles(RoleEnum.admin)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiParam({ name: 'id', type: 'number' })
+  remove(@Param('id', ParseIntPipe) id: number): Promise<void> {
+    return this.dailyRidesService.remove(id);
+  }
+}
+```
+
+```ts
 import {
   HttpStatus,
   Injectable,
@@ -28,7 +359,7 @@ import { IPaginationOptions } from '../utils/types/pagination-options';
 import { JwtPayloadType } from '../auth/strategies/types/jwt-payload.type';
 import { MyRidesResponseDto } from './dto/response.dto';
 import { ExpoPushService } from './expopush.service';
-import { DataSource, In } from 'typeorm';
+import { DataSource, In } from 'typeorm'; // Add for transactions
 import { DailyRideEntity } from './infrastructure/persistence/relational/entities/daily_ride.entity';
 import { LocationsService } from '../location/location.service';
 import { Location } from '../location/domain/location';
@@ -37,18 +368,6 @@ import { SubscriptionRepository } from '../subscriptions/infrastructure/persiste
 import { SubscriptionService } from '../subscriptions/subscription.service';
 import { CreateSubscriptionDto } from '../subscriptions/dto/create-subscription.dto';
 import { isNumber } from 'class-validator';
-import { IsNull } from 'typeorm';
-
-// Notification copy — keep in one place so the four driver-triggered
-// moments (start, board, absent, drop-off) stay consistent everywhere
-// they're sent from.
-const NOTIFICATIONS = {
-  TRIP_STARTED:
-    'Zidallie school transport has started, Please have your child ready.',
-  EMBARKED: 'Your child has safely boarded and is on their way.',
-  ABSENT: 'Missing - your child was absent for the trip',
-  DISEMBARKED: 'Your child has safely arrived at their destination.',
-};
 
 @Injectable()
 export class DailyRidesService {
@@ -175,8 +494,6 @@ export class DailyRidesService {
         createDailyRideDto.snapshot_subscription_id ?? null,
       had_active_subscription:
         createDailyRideDto.had_active_subscription ?? false,
-      start_latitude: createDailyRideDto.start_latitude ?? null,
-      start_longitude: createDailyRideDto.start_longitude ?? null,
     });
 
     return dailyRide;
@@ -240,6 +557,7 @@ export class DailyRidesService {
     userJwtPayload: JwtPayloadType,
     status?: DailyRideStatus,
   ): Promise<MyRidesResponseDto[]> {
+    // Get the full user details to check their kind
     const user = await this.usersService.findById(userJwtPayload.id);
 
     if (!user) {
@@ -249,22 +567,26 @@ export class DailyRidesService {
       });
     }
 
+    // Determine if user is a driver or parent based on their kind
     const isDriver = user.kind === 'Driver';
     const isParent = user.kind === 'Parent';
 
     let rides: DailyRide[] = [];
 
     if (isDriver) {
+      // Driver sees their own rides
       rides = await this.dailyRideRepository.findByDriverIdWithStatus(
         user.id,
         status,
       );
     } else if (isParent) {
+      // Parent sees rides for their children
       rides = await this.dailyRideRepository.findByParentIdWithStatus(
         user.id,
         status,
       );
     } else {
+      // User is neither driver nor parent, return empty array
       rides = [];
     }
 
@@ -275,24 +597,19 @@ export class DailyRidesService {
     );
   }
 
-  // ── STEP 1: driver taps "Start Trip" ────────────────────────────────
-  // Marks today's Inactive rides of the given kind (Pickup for the
-  // morning leg, Dropoff for the evening leg) Started, stamps
-  // start_time, and tells every parent on that leg to get their child
-  // ready.
-  async startDriverDay(
-    userJwtPayload: JwtPayloadType,
-    kind: DailyRideKind,
-  ): Promise<{
+  // mark todays rides as started
+  async startDriverDay(userJwtPayload: JwtPayloadType): Promise<{
     message: string;
     updatedRides: DailyRide[];
     driverStartTime: Date;
   }> {
+    //the trascation ensures that either all operations succees or if fail, all changes are rolled back
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
+      // Get the driver and validate
       const driver = await this.usersService.findById(userJwtPayload.id);
 
       if (!driver) {
@@ -309,16 +626,10 @@ export class DailyRidesService {
         });
       }
 
-      if (!Object.values(DailyRideKind).includes(kind)) {
-        throw new UnprocessableEntityException({
-          status: HttpStatus.UNPROCESSABLE_ENTITY,
-          errors: { kind: 'Invalid kind — expected Pickup or Dropoff' },
-        });
-      }
-
       const today = this.getTodayDate();
       const driverStartTime = new Date();
 
+      // Use transaction for atomic updates
       const updatedCount = await queryRunner.manager
         .getRepository(DailyRideEntity)
         .createQueryBuilder()
@@ -329,7 +640,6 @@ export class DailyRidesService {
         })
         .where('driver.id = :driverId', { driverId: driver.id })
         .andWhere('date = :date', { date: today })
-        .andWhere('kind = :kind', { kind })
         .andWhere('status = :currentStatus', {
           currentStatus: DailyRideStatus.Inactive,
         })
@@ -338,25 +648,24 @@ export class DailyRidesService {
       if (updatedCount.affected === 0) {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
-          errors: {
-            rides: `No inactive ${kind} rides found for today`,
-          },
+          errors: { rides: 'No inactive rides found for today' },
         });
       }
 
-      const updatedRides = (
+      // Get updated rides
+      const updatedRides =
         await this.dailyRideRepository.findTodayRidesForDriver(
           driver.id,
           this.formatDateToString(today),
-        )
-      ).filter((r) => r.kind === kind);
+        );
 
       await queryRunner.commitTransaction();
 
+      // Send notifications after successful transaction
       await this.sendRideStartNotifications(updatedRides, driver);
 
       return {
-        message: `Started ${updatedCount.affected} daily rides for today`,
+        message: `Started ${updatedCount} daily rides for today`,
         updatedRides,
         driverStartTime,
       };
@@ -378,24 +687,19 @@ export class DailyRidesService {
         this.expoPushService
           .sendPushNotification(
             ride.ride!.parent!.push_token!,
-            'Trip Started',
-            NOTIFICATIONS.TRIP_STARTED,
+            'Ride Started',
+            `Your child's ride has started.`,
             { rideId: ride.id, driverId: driver.id },
           )
           .catch((error) => console.log(error)),
       );
 
+    // Send all notifications concurrently
     await Promise.allSettled(notificationPromises);
   }
 
-  // ── STEP 2: driver taps ✓ (present) ─────────────────────────────────
-  // Full subscription / instant-payment handling from batchUpdateStatus's
-  // Active branch, run per-child at embark time.
-  async embarkStudent(
-    id: DailyRide['id'],
-    payment_phone_number?: string,
-    amount_to_pay?: number,
-  ): Promise<DailyRide | null> {
+  // when driver embarks a student (ride becomes Active)
+  async embarkStudent(id: DailyRide['id']): Promise<DailyRide | null> {
     const dailyRide = await this.dailyRideRepository.findById(id);
 
     if (!dailyRide) {
@@ -405,6 +709,7 @@ export class DailyRidesService {
       });
     }
 
+    // Check if ride is in correct status to embark
     if (dailyRide.status !== DailyRideStatus.Started) {
       throw new UnprocessableEntityException({
         status: HttpStatus.UNPROCESSABLE_ENTITY,
@@ -416,88 +721,35 @@ export class DailyRidesService {
 
     const embarkTime = new Date();
 
+    // Fetch the latest location for this driver
     let latestLocation: Location | null = null;
+
+    console.log('embarkStudent - dailyRide.driver?.id:', dailyRide.driver?.id);
+
     if (dailyRide.driver?.id) {
       latestLocation = await this.locationsService.findLatestByDriverId(
-        dailyRide.driver.id,
+        dailyRide?.driver.id,
       );
     }
 
-    let hadActiveSubscription = dailyRide.had_active_subscription ?? false;
-    let snapshotSubscriptionId = dailyRide.snapshot_subscription_id ?? null;
-
-    const student = dailyRide.ride?.student;
-    if (student?.id) {
-      const activeSub =
-        await this.subscriptionRepository.checkActiveStatusByDate(
-          student.id,
-          embarkTime,
-        );
-      const hasActiveSub = isNumber(activeSub?.id);
-
-      if (student.service_type === 'instant_payment') {
-        if (hasActiveSub) {
-          hadActiveSubscription = true;
-          snapshotSubscriptionId = activeSub!.id;
-        } else {
-          hadActiveSubscription = false;
-          snapshotSubscriptionId = null;
-
-          const dto = new CreateSubscriptionDto();
-          const student_daily_amount = student?.daily_fee ?? 0;
-          dto.student_id = student.id;
-
-          if ((amount_to_pay ?? 0) < student_daily_amount) {
-            throw new NotFoundException({
-              status: HttpStatus.UNPROCESSABLE_ENTITY,
-              errors: {
-                amount:
-                  'Amount cannot be less than the daily amount of ' +
-                  student_daily_amount,
-              },
-            });
-          }
-          if (!payment_phone_number) {
-            throw new NotFoundException({
-              status: HttpStatus.UNPROCESSABLE_ENTITY,
-              errors: {
-                phone_number: 'Provide a valid phone Number to proceed',
-              },
-            });
-          }
-
-          dto.amount = amount_to_pay!;
-          dto.isInstantPayment = true;
-          dto.daily_ride_id = dailyRide.id;
-          dto.phone_number = payment_phone_number;
-
-          try {
-            await this.subscriptionService.initiatePayment(dto);
-          } catch (e) {
-            console.error('Instant payment failed for student', student.id, e);
-          }
-        }
-      } else {
-        hadActiveSubscription = hasActiveSub;
-        snapshotSubscriptionId = hasActiveSub ? activeSub!.id : null;
-      }
-    }
+    console.log('embarkStudent - latestLocation:', latestLocation);
+    console.log('latestLocation?.latitude:', latestLocation?.latitude);
+    console.log('latestLocation?.longitude:', latestLocation?.longitude);
 
     const updated = await this.update(id, {
       status: DailyRideStatus.Active,
+      start_time: new Date().toISOString(),
       embark_time: embarkTime.toISOString(),
       embark_latitude: latestLocation?.latitude,
       embark_longitude: latestLocation?.longitude,
-      had_active_subscription: hadActiveSubscription,
-      snapshot_subscription_id: snapshotSubscriptionId,
     });
 
-    if (updated?.ride?.parent?.push_token) {
+    if (updated?.ride?.parent?.push_token && updated.ride.student?.name) {
       try {
         await this.expoPushService.sendPushNotification(
           updated.ride.parent.push_token,
-          'Student Boarded',
-          NOTIFICATIONS.EMBARKED,
+          'Student Embarked',
+          `${updated.ride.student.name} has boarded the vehicle.`,
           { rideId: updated.id },
         );
       } catch (error) {
@@ -508,12 +760,85 @@ export class DailyRidesService {
     return updated;
   }
 
-  // ── STEP 2 (alt): driver taps ✕ (absent) ────────────────────────────
-  // No drop-off is expected, so the ride goes straight to Finished.
+  // when driver disembarks a student (ride becomes Finished)
+  async disembarkStudent(id: DailyRide['id']): Promise<DailyRide | null> {
+    return await this.dataSource.transaction(
+      async (transactionalEntityManager) => {
+        // 1. Fetch
+        const dailyRide = await transactionalEntityManager.findOne(
+          DailyRideEntity,
+          {
+            where: { id },
+            relations: ['driver', 'ride', 'ride.parent', 'ride.student'],
+          },
+        );
+
+        if (!dailyRide || dailyRide.status !== DailyRideStatus.Active) {
+          throw new UnprocessableEntityException(
+            'Ride not found or not active',
+          );
+        }
+
+        // 2. Earnings Logic (The Guard)
+        if (
+          !dailyRide.earnings_processed &&
+          dailyRide.driver?.payout &&
+          dailyRide.driver?.sasapay_account_number
+        ) {
+          const amountToEarn = this.EarningsHelper.calculatePerRide(
+            dailyRide.driver.payout.payment_model,
+            dailyRide.driver.payout.agreed_salary,
+          );
+          await this.usersService.incrementPendingEarnings(
+            dailyRide.driver.id,
+            amountToEarn,
+          );
+        }
+
+        // 3. Process Location Data inside the transaction
+        const disembarkTime = new Date();
+        const locations =
+          await this.locationsService.findByDailyRideIdInTimeRange(
+            id,
+            dailyRide.embark_time ?? disembarkTime,
+            disembarkTime,
+          );
+        const routeSnapshot = locations.map((loc) => ({
+          lat: loc.latitude,
+          lng: loc.longitude,
+          ts: loc.timestamp,
+        }));
+        const compressedString = Buffer.from(
+          pako.gzip(JSON.stringify(routeSnapshot)),
+        ).toString('base64');
+
+        // 4. Update the ride status AND earnings_processed flag
+        const updatedRide = await transactionalEntityManager.save(
+          DailyRideEntity,
+          {
+            ...dailyRide,
+            status: DailyRideStatus.Finished,
+            end_time: disembarkTime,
+            disembark_time: disembarkTime,
+            route_data: compressedString,
+            earnings_processed: true, // Mark as processed here
+          },
+        );
+
+        // 5. Cleanup
+        await this.locationsService.deleteManyByDailyRideId(id);
+
+        // Note: Push notifications are side-effects; keep them outside transaction or after commit
+        return updatedRide;
+      },
+    );
+  }
+
   async cancelDailyRide(
     id: DailyRide['id'],
     reason?: string,
   ): Promise<DailyRide | null> {
+    // validate if the ride exists
     const existingRide = await this.dailyRideRepository.findById(id);
 
     if (!existingRide) {
@@ -523,6 +848,7 @@ export class DailyRidesService {
       });
     }
 
+    // Check if ride can be cancelled
     if (existingRide.status === DailyRideStatus.Finished) {
       throw new UnprocessableEntityException({
         status: HttpStatus.UNPROCESSABLE_ENTITY,
@@ -532,11 +858,12 @@ export class DailyRidesService {
       });
     }
 
+    // Update the ride status
     let updated: DailyRide | null;
     try {
       updated = await this.update(id, {
         status: DailyRideStatus.Finished,
-        comments: reason ?? 'Marked absent by driver',
+        comments: reason ?? 'Cancelled',
       });
 
       if (!updated) {
@@ -552,198 +879,65 @@ export class DailyRidesService {
       });
     }
 
+    // send notifications
     const notificationPromises: Promise<void>[] = [];
 
     if (updated.ride?.parent?.push_token) {
-      notificationPromises.push(
-        this.expoPushService.sendPushNotification(
-          updated.ride.parent.push_token,
-          'Marked Absent',
-          NOTIFICATIONS.ABSENT,
-          { rideId: updated.id, type: 'absent' },
-        ),
+      const parentNotification = this.expoPushService.sendPushNotification(
+        updated.ride.parent.push_token,
+        'Ride Cancelled',
+        `Your child's ride was cancelled. Reason: ${reason ?? 'Not specified'}`,
+        { rideId: updated.id, type: 'cancellation' },
       );
+
+      notificationPromises.push(parentNotification);
+    }
+
+    if (updated.ride?.driver?.push_token) {
+      const studentName = updated.ride?.student?.name ?? 'Student';
+      const driverNotification = this.expoPushService.sendPushNotification(
+        updated.ride.driver.push_token,
+        'Ride Cancelled',
+        `${studentName}'s ride was cancelled. Reason: ${reason ?? 'Not specified'}`,
+        { rideId: updated.id, type: 'cancellation' },
+      );
+
+      notificationPromises.push(driverNotification);
     }
 
     if (notificationPromises.length > 0) {
-      Promise.allSettled(notificationPromises).catch((error) =>
-        console.log(
-          `Unexpected error sending absent notification for ride ${id}:`,
-          error,
-        ),
-      );
-    }
+      Promise.allSettled(notificationPromises)
+        .then((results) => {
+          const failures = results.filter(
+            (result): result is PromiseRejectedResult =>
+              result.status === 'rejected',
+          ).length;
 
+          if (failures > 0) {
+            console.log(
+              `${failures} out of ${results.length} notifications failed for cancelled ride ${id}`,
+            );
+          } else {
+            console.log(
+              `All notifications sent successfully for cancelled ride ${id}`,
+            );
+          }
+        })
+        .catch((error) => {
+          console.log(
+            `Unexpected error in notification handling for ride ${id}:`,
+            error,
+          );
+        });
+    }
     return updated;
-  }
-
-  // ── STEP 3: driver taps "End Trip — [Child]" ────────────────────────
-  // Same earnings + route-compression logic batchUpdateStatus ran for
-  // the Finished status, now run per-child at disembark time, plus the
-  // weekly pending_earnings reset check that batchUpdateStatus also did.
-  async disembarkStudent(id: DailyRide['id']): Promise<DailyRide | null> {
-    const updatedRide = await this.dataSource.transaction(
-      async (transactionalEntityManager) => {
-        const dailyRide = await transactionalEntityManager.findOne(
-          DailyRideEntity,
-          {
-            where: { id },
-            relations: ['driver', 'ride', 'ride.parent', 'ride.student'],
-          },
-        );
-
-        if (!dailyRide || dailyRide.status !== DailyRideStatus.Active) {
-          throw new UnprocessableEntityException(
-            'Ride not found or not active',
-          );
-        }
-
-        if (!dailyRide?.driver?.id) {
-          throw new UnprocessableEntityException(
-            'Driver id for this ride not found',
-          );
-        }
-
-        const disembarkTime = new Date();
-
-        // Get Coordinates
-        const latestLocation = await this.locationsService.findLatestByDriverId(
-          dailyRide.driver.id,
-        );
-        const disembark_lat = latestLocation?.latitude ?? null;
-        const disembark_long = latestLocation?.longitude ?? null;
-
-        // Process Route Data
-        // const locations =
-        //   await this.locationsService.findByDailyRideIdInTimeRange(
-        //     id,
-        //     dailyRide.embark_time ?? disembarkTime,
-        //     disembarkTime,
-        //   );
-
-        // const routeSnapshot = locations.map((loc) => ({
-        //   lat: loc.latitude,
-        //   lng: loc.longitude,
-        //   ts: loc.timestamp,
-        // }));
-
-        // const compressedString = Buffer.from(
-        //   pako.gzip(JSON.stringify(routeSnapshot)),
-        // ).toString('base64');
-
-        const saved = await transactionalEntityManager.save(DailyRideEntity, {
-          ...dailyRide,
-          status: DailyRideStatus.Finished,
-          disembark_time: disembarkTime,
-          disembark_latitude: disembark_lat,
-          disembark_longitude: disembark_long,
-          // route_data: compressedString,
-        });
-
-        await this.locationsService.deleteManyByDailyRideId(id);
-
-        return saved;
-      },
-    );
-
-    const full = await this.dailyRideRepository.findById(id);
-    if (full?.ride?.parent?.push_token) {
-      try {
-        await this.expoPushService.sendPushNotification(
-          full.ride.parent.push_token,
-          'Student Dropped Off',
-          NOTIFICATIONS.DISEMBARKED,
-          { rideId: full.id },
-        );
-      } catch (error) {
-        console.log(error);
-      }
-    }
-
-    return full ?? updatedRide;
-  }
-
-  // ── STEP 4: driver taps the main "End Trip" button ──────────────────
-  // Every child has been resolved (marked + present ones dropped off).
-  // Close out today's rides for this leg and settle the weekly earnings
-  // reset batchUpdateStatus used to run inline on every Finished ride.
-  async endDriverDay(
-    userJwtPayload: JwtPayloadType,
-    kind: DailyRideKind,
-  ): Promise<{
-    message: string;
-    updatedRides: DailyRide[];
-    driverEndTime: Date;
-  }> {
-    const driver = await this.usersService.findById(userJwtPayload.id);
-
-    if (!driver || driver.kind !== 'Driver') {
-      throw new UnprocessableEntityException('Only drivers can end their day');
-    }
-
-    const today = this.getTodayDate();
-    const driverEndTime = new Date();
-
-    return await this.dataSource.transaction(async (manager) => {
-      // FIX: Use IsNull() instead of null
-      const ridesToProcess = await manager.find(DailyRideEntity, {
-        where: {
-          driver: { id: driver.id },
-          date: today,
-          kind: kind,
-          status: DailyRideStatus.Finished,
-          end_time: IsNull(),
-        },
-        relations: ['driver'],
-      });
-
-      let totalEarningsForLeg = 0;
-
-      for (const ride of ridesToProcess) {
-        if (
-          !ride.earnings_processed &&
-          driver.payout &&
-          driver.sasapay_account_number
-        ) {
-          const amountToEarn = this.EarningsHelper.calculatePerRide(
-            driver.payout.payment_model,
-            Number(driver.payout.agreed_salary),
-          );
-          totalEarningsForLeg += amountToEarn;
-        }
-
-        await manager.update(DailyRideEntity, ride.id, {
-          end_time: driverEndTime,
-          earnings_processed: true,
-        });
-      }
-
-      if (totalEarningsForLeg > 0) {
-        await this.usersService.incrementPendingEarnings(
-          driver.id,
-          totalEarningsForLeg,
-        );
-      }
-
-      const updatedRides = (
-        await this.dailyRideRepository.findTodayRidesForDriver(
-          driver.id,
-          this.formatDateToString(today),
-        )
-      ).filter((r) => r.kind === kind);
-
-      return {
-        message: `Trip ended. Processed earnings for ${ridesToProcess.length} student(s).`,
-        updatedRides,
-        driverEndTime,
-      };
-    });
   }
 
   async update(
     id: DailyRide['id'],
     updateDailyRideDto: UpdateDailyRideDto,
   ): Promise<DailyRide | null> {
+    // Check if daily ride exists
     const existingDailyRide = await this.dailyRideRepository.findById(id);
     if (!existingDailyRide) {
       throw new NotFoundException({
@@ -754,6 +948,7 @@ export class DailyRidesService {
       });
     }
 
+    // Validate ride exists (if provided)
     if (updateDailyRideDto.ride?.id) {
       const ride = await this.ridesService.findById(updateDailyRideDto.ride.id);
       if (!ride) {
@@ -766,6 +961,7 @@ export class DailyRidesService {
       }
     }
 
+    // Validate vehicle exists (if provided)
     if (updateDailyRideDto.vehicle?.id) {
       const vehicle = await this.vehiclesService.findById(
         updateDailyRideDto.vehicle.id,
@@ -780,6 +976,7 @@ export class DailyRidesService {
       }
     }
 
+    // Validate driver exists (if provided)
     if (updateDailyRideDto.driver?.id) {
       const driver = await this.usersService.findById(
         updateDailyRideDto.driver.id,
@@ -794,6 +991,7 @@ export class DailyRidesService {
       }
     }
 
+    // Validate kind enum (if provided)
     if (
       updateDailyRideDto.kind &&
       !Object.values(DailyRideKind).includes(updateDailyRideDto.kind)
@@ -806,6 +1004,7 @@ export class DailyRidesService {
       });
     }
 
+    // Validate status enum (if provided)
     if (
       updateDailyRideDto.status &&
       !Object.values(DailyRideStatus).includes(updateDailyRideDto.status)
@@ -840,8 +1039,6 @@ export class DailyRidesService {
       earnings_processed: updateDailyRideDto.earnings_processed,
       had_active_subscription: updateDailyRideDto.had_active_subscription,
       snapshot_subscription_id: updateDailyRideDto.snapshot_subscription_id,
-      start_latitude: updateDailyRideDto.start_latitude,
-      start_longitude: updateDailyRideDto.start_longitude,
     });
   }
 
@@ -859,6 +1056,7 @@ export class DailyRidesService {
     await this.dailyRideRepository.remove(id);
   }
 
+  // Additional utility methods specific to daily rides
   async findUpcomingDailyRides(daysAhead: number = 7): Promise<DailyRide[]> {
     const startDate = new Date();
     const endDate = new Date();
@@ -870,8 +1068,9 @@ export class DailyRidesService {
   async findUpcomingDailyRidesForUser(
     daysAhead: number = 7,
     userJwtPayload: JwtPayloadType,
-    status?: DailyRideStatus,
+    status?: DailyRideStatus, // optional
   ): Promise<DailyRide[]> {
+    // Get full user details
     const user = await this.usersService.findById(userJwtPayload.id);
     if (!user) {
       throw new NotFoundException({
@@ -889,14 +1088,15 @@ export class DailyRidesService {
         user.id,
         today,
         endDate,
-        status,
+        status, // pass optional status
       );
     } else if (user.kind === 'Parent') {
+      // console.log('is parent');
       return this.dailyRideRepository.findUpcomingRidesForParent(
         user.id,
         today,
         endDate,
-        status,
+        status, // pass optional status
       );
     } else {
       return [];
@@ -911,16 +1111,93 @@ export class DailyRidesService {
     });
   }
 
-  // Retained for admin/dispatch use (e.g. bulk corrections) — the driver
-  // app now drives status changes one child at a time via embarkStudent /
-  // disembarkStudent / cancelDailyRide above, which is where the
-  // subscription, earnings, and weekly-reset logic now lives.
+  //           // 2. Process Route Data (Compress)
+  //           const locations = await this.locationsService.findByDailyRideId(
+  //             ride.id,
+  //           );
+  //           const routeSnapshot = locations.map((loc) => ({
+  //             lat: loc.latitude,
+  //             lng: loc.longitude,
+  //             ts: loc.timestamp,
+  //           }));
+
+  //           ride.route_data = Buffer.from(
+  //             pako.gzip(JSON.stringify(routeSnapshot)),
+  //           ).toString('base64');
+
+  //           // 3. DELETE RAW LOCATIONS (Inside Transaction)
+  //           // We use the manager directly to ensure it's part of this transaction
+  //           await transactionalEntityManager.delete(LocationEntity, {
+  //             daily_ride: { id: ride.id },
+  //           });
+
+  //           // 4. PAY DRIVER (Inside Transaction)
+  //           if (ride.driver?.payout && !ride.earnings_processed) {
+  //             const salary = Number(ride.driver.payout.agreed_salary);
+
+  //             // Check if salary is a valid number and model exists
+  //             if (
+  //               !isNaN(salary) &&
+  //               salary > 0 &&
+  //               ride.driver.payout.payment_model
+  //             ) {
+  //               const amountToEarn = this.EarningsHelper.calculatePerRide(
+  //                 ride.driver.payout.payment_model,
+  //                 salary,
+  //               );
+
+  //               // Final safety check before DB operation
+  //               if (!isNaN(amountToEarn) && isFinite(amountToEarn)) {
+  //                 console.log(
+  //                   `Crediting driver ${ride.driver.id} with amount ${amountToEarn} for ride ${ride.id}`,
+  //                 );
+  //                 await transactionalEntityManager.increment(
+  //                   UserEntity,
+  //                   { id: ride.driver.id },
+  //                   'pending_earnings',
+  //                   amountToEarn,
+  //                 );
+  //                 ride.earnings_processed = true;
+  //               } else {
+  //                 console.error(
+  //                   `Invalid earnings calculated for driver ${ride.driver.id}: ${amountToEarn}`,
+  //                 );
+  //               }
+  //             } else {
+  //               console.warn(
+  //                 `Driver ${ride.driver.id} has invalid payout configuration. Salary: ${ride.driver?.payout.agreed_salary}`,
+  //               );
+  //             }
+  //           }
+  //         }
+  //       }
+
+  //       // 5. SAVE ALL RIDES AT ONCE
+  //       const savedEntities = await transactionalEntityManager.save(
+  //         DailyRideEntity,
+  //         rides,
+  //       );
+
+  //       // 6. MAP BACK TO DOMAIN
+  //       const savedRides = savedEntities.map((entity) =>
+  //         DailyRideMapper.toDomain(entity),
+  //       );
+
+  //       // Side Effects (Notifications) - Run these after the transaction is committed
+  //       this.sendBatchNotifications(savedRides, status);
+
+  //       return savedRides;
+  //     },
+  //   );
+  // }
+
   async batchUpdateStatus(
     ids: number[],
     payment_phone_number: any,
     amount_to_pay: any,
     status: DailyRideStatus,
   ): Promise<DailyRide[]> {
+    // 1. FETCH DATA
     const rides = await this.dailyRideRepository.findByIds(ids);
     if (rides.length === 0) {
       throw new NotFoundException(`No rides found for given IDs`);
@@ -929,10 +1206,12 @@ export class DailyRidesService {
     const currentTime = new Date();
     const mostRecentMonday = this.getMostRecentMonday();
 
+    // We will store "work" to be done in the transaction here
     const ridesToSave: DailyRide[] = [];
     const driversToReset = new Set<number>();
     const earningsToIncrement: Map<number, number> = new Map();
 
+    // 2. PROCESS (Heavy lifting & CPU work happens here, NOT in transaction)
     for (const ride of rides) {
       ride.status = status;
 
@@ -949,8 +1228,10 @@ export class DailyRidesService {
             );
           const hasActiveSub = isNumber(activeSub?.id);
 
+          // Handle instant payment service type
           if (student.service_type === 'instant_payment') {
             if (hasActiveSub) {
+              // Permanent record for reporting: Did they have a valid sub on this date?
               ride.had_active_subscription = hasActiveSub;
               ride.snapshot_subscription_id = hasActiveSub
                 ? activeSub.id
@@ -985,6 +1266,7 @@ export class DailyRidesService {
               dto.phone_number = payment_phone_number || '';
 
               try {
+                console.log('Initiating payment for student', student.id);
                 await this.subscriptionService.initiatePayment(dto);
               } catch (e) {
                 console.error(
@@ -995,6 +1277,11 @@ export class DailyRidesService {
               }
             }
           } else {
+            console.log(
+              `Checked active subscription for student ${ride.ride.student.id} on ride ${ride.id}:`,
+              activeSub,
+            );
+            // Permanent record for reporting: Did they have a valid sub on this date?
             ride.had_active_subscription = hasActiveSub;
             ride.snapshot_subscription_id = activeSub ? activeSub.id : null;
           }
@@ -1016,6 +1303,10 @@ export class DailyRidesService {
         ride.disembark_latitude = latestLocation?.latitude ?? null;
         ride.disembark_longitude = latestLocation?.longitude ?? null;
 
+        // COMPRESSION (CPU Intensive - Safe here because we aren't in a transaction yet)
+        // const locations = await this.locationsService.findByDailyRideId(
+        //   ride.id,
+        // );
         const locations: any = [];
         const routeSnapshot = locations.map((loc) => ({
           lat: loc.latitude,
@@ -1027,6 +1318,7 @@ export class DailyRidesService {
           pako.gzip(JSON.stringify(routeSnapshot)),
         ).toString('base64');
 
+        // Calculate Earnings
         if (ride.driver?.payout && !ride.earnings_processed) {
           const salary = Number(ride.driver.payout.agreed_salary);
 
@@ -1042,6 +1334,7 @@ export class DailyRidesService {
           ride.earnings_processed = true;
         }
 
+        // Weekly Reset logic
         if (ride.driver) {
           const lastReset = ride.driver.last_earnings_reset_at;
           if (!lastReset || new Date(lastReset) < mostRecentMonday) {
@@ -1052,7 +1345,9 @@ export class DailyRidesService {
       ridesToSave.push(ride);
     }
 
+    // 3. ATOMIC WRITE (Fast transaction)
     return await this.dataSource.transaction(async (manager) => {
+      // Perform resets
       for (const driverId of driversToReset) {
         await manager.update(UserEntity, driverId, {
           pending_earnings: 0,
@@ -1060,6 +1355,7 @@ export class DailyRidesService {
         });
       }
 
+      // Perform increments
       for (const [driverId, amount] of earningsToIncrement) {
         await manager.increment(
           UserEntity,
@@ -1069,7 +1365,11 @@ export class DailyRidesService {
         );
       }
 
+      // Save rides and delete raw locations
+      // const entities = ridesToSave.map((r) => DailyRideMapper.toPersistence(r));
+      // const savedEntities = await manager.save(DailyRideEntity, entities);
       for (const ride of ridesToSave) {
+        //skip for instant payment and active status and has no active subscription
         if (
           ride.ride?.student?.service_type === 'instant_payment' &&
           !ride.had_active_subscription &&
@@ -1101,7 +1401,9 @@ export class DailyRidesService {
     });
   }
 
+  // Helper method to keep the transaction block clean
   private sendBatchNotifications(rides: DailyRide[], status: DailyRideStatus) {
+    //skip for instant payment and active status
     if (
       rides.every(
         (ride) =>
@@ -1118,8 +1420,8 @@ export class DailyRidesService {
 
     const message =
       status === DailyRideStatus.Active
-        ? NOTIFICATIONS.EMBARKED
-        : NOTIFICATIONS.DISEMBARKED;
+        ? 'Your child has safely boarded and is on their way.'
+        : 'Your child has safely arrived at their destination.';
 
     if (pushTokens.length > 0) {
       const promises = pushTokens.map((token) =>
@@ -1159,8 +1461,6 @@ export class DailyRidesService {
           id: dailyRide.ride?.student?.id || 0,
           name: dailyRide.ride?.student?.name || '',
           address: dailyRide.ride?.student?.address || '',
-          service_type: dailyRide.ride?.student?.service_type || 'carpool',
-          daily_fee: dailyRide.ride?.student?.daily_fee || 0,
         },
         parent: {
           id: dailyRide.ride?.parent?.id || 0,
@@ -1207,7 +1507,9 @@ export class DailyRidesService {
 
   private getMostRecentMonday(): Date {
     const now = new Date();
-    const day = now.getDay();
+    const day = now.getDay(); // 0 is Sunday, 1 is Monday...
+
+    // Calculate difference: If Sunday(0), go back 6 days. Otherwise, go back to day 1.
     const diff = now.getDate() - day + (day === 0 ? -6 : 1);
 
     const monday = new Date(now.setDate(diff));
@@ -1215,3 +1517,4 @@ export class DailyRidesService {
     return monday;
   }
 }
+```

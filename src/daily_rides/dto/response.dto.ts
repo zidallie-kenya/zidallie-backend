@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { ServiceType } from '../../students/domain/student';
 
 export class VehicleInfoDto {
   @ApiProperty()
@@ -20,6 +21,12 @@ export class StudentInfoDto {
 
   @ApiProperty()
   address: string;
+
+  @ApiProperty()
+  service_type: ServiceType;
+
+  @ApiProperty()
+  daily_fee: number;
 }
 
 export class ParentInfoDto {

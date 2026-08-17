@@ -85,6 +85,12 @@ export class DailyRideEntity extends EntityRelationalHelper {
   @Column({ type: 'float', nullable: true })
   disembark_longitude!: number | null;
 
+  @Column({ type: 'float', nullable: true })
+  start_latitude!: number | null; // The GPS gate latitude
+
+  @Column({ type: 'float', nullable: true })
+  start_longitude!: number | null; // The GPS gate longitude
+
   @Column({ type: 'jsonb', nullable: true })
   route_data: any;
 

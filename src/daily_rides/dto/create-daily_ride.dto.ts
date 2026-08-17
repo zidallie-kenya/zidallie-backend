@@ -128,6 +128,12 @@ export class CreateDailyRideDto {
   disembark_longitude?: number;
 
   @IsOptional()
+  start_latitude!: number | null;
+
+  @IsOptional()
+  start_longitude!: number | null;
+
+  @IsOptional()
   route_data?: any;
 
   @IsOptional()

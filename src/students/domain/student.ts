@@ -97,6 +97,28 @@ export class Student {
   rfid_code!: string | null;
 
   @ApiProperty({
+    type: Number,
+    example: 12000,
+    required: false,
+    nullable: true,
+  })
+  @Expose({ groups: ['me', 'admin'] })
+  discount_code_amount?: number | null;
+
+  @ApiProperty({
+    type: String,
+    example: 'J87834RER43',
+    required: false,
+    nullable: true,
+  })
+  @Expose({ groups: ['me', 'admin'] })
+  discount_code?: string | null;
+
+  @ApiProperty()
+  @Expose({ groups: ['me', 'admin'] })
+  discount_code_expiry?: Date | null;
+
+  @ApiProperty({
     type: String,
     example: '254754321234',
     required: false,

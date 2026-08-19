@@ -29,6 +29,7 @@ import { ReceiptPaymentType } from './infrastructure/persistence/relational/enti
 import { NotificationsService } from '../notifications/notifications.service';
 import { UserMeta } from '../users/infrastructure/persistence/relational/entities/user.entity';
 import { UpdateNotificationSettingsDto } from '../users/dto/update-notification-settings.dto';
+import { ApplyDiscountDto } from '../students/dto/apply-discount.dto';
 
 const DEPOSIT_PER_CHILD = 3000;
 const CLUSTER_MIN = 3;
@@ -864,6 +865,101 @@ export class TransportBookingService {
         'Failed to initiate payment. Please try again.',
       );
     }
+  }
+
+  async applyDiscountCode(
+    parentId: number,
+    bookingId: number,
+    dto: ApplyDiscountDto,
+  ) {
+    const booking = await this.bookingRepo.findById(bookingId);
+    if (!booking) throw new NotFoundException('Booking not found');
+    if (booking.parent.id !== parentId) {
+      throw new BadRequestException('Unauthorized');
+    }
+
+    const totalPaid = Number(booking.total_paid || 0);
+    const depositAmount = Number(booking.deposit_amount || 0);
+    const balanceAmount = Number(booking.balance_amount || 0);
+
+    const baseAmount =
+      totalPaid >= depositAmount ? balanceAmount : depositAmount;
+
+    const code = (dto.code || '').trim().toUpperCase();
+
+    // Match by name instead of blindly grabbing the parent's first student —
+    // a booking can be for any of the parent's children.
+    const matchedStudents = await this.findMatchingStudents(parentId, booking);
+    const student = matchedStudents[0] ?? null;
+
+    console.log(`Matched student during discount, ${student}`);
+
+    const notApplicable = {
+      applicable: false,
+      message: 'This is not applicable for this account',
+      amount_due: baseAmount,
+    };
+
+    if (code === 'ZIDONEWAY') {
+      const discountedAmount = Math.round(baseAmount * 0.85);
+
+      if (matchedStudents.length) {
+        const expiry = new Date();
+        expiry.setDate(expiry.getDate() + 7);
+        await Promise.all(
+          matchedStudents.map((s) =>
+            this.studentsService.update(s.id, {
+              discount_code: 'ZIDONEWAY',
+              discount_code_expiry: expiry,
+            } as any),
+          ),
+        );
+      }
+
+      return {
+        applicable: true,
+        message: 'One-way discount applied.',
+        amount_due: discountedAmount,
+      };
+    }
+
+    if (code === 'ZIDSPECIAL') {
+      if (!student) return notApplicable;
+
+      const expiry = student.discount_code_expiry
+        ? new Date(student.discount_code_expiry)
+        : null;
+      const isExpired = !expiry || expiry.getTime() < Date.now();
+
+      if (isExpired) return notApplicable;
+      if (student.discount_code !== 'ZIDSPECIAL') return notApplicable;
+
+      const discountAmount = Number(student.discount_code_amount || 0);
+      const discountedAmount = Math.max(0, baseAmount - discountAmount);
+
+      return {
+        applicable: true,
+        message: `Special rate applied: KES ${discountAmount.toLocaleString()} off.`,
+        amount_due: discountedAmount,
+      };
+    }
+
+    return notApplicable;
+  }
+
+  private async findMatchingStudents(parentId: number, booking: BookingEntity) {
+    const students = await this.studentsService.findByParentId(parentId);
+    if (!students?.length) return [];
+
+    const childNames = (booking.children ?? [])
+      .map((c) => c.name?.trim().toLowerCase())
+      .filter((n): n is string => !!n);
+
+    if (!childNames.length) return [];
+
+    return students.filter((s) =>
+      childNames.includes((s.name ?? '').trim().toLowerCase()),
+    );
   }
 
   // ─────────────────────────────────────────────

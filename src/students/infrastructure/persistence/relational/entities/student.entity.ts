@@ -66,6 +66,16 @@ export class StudentEntity extends EntityRelationalHelper {
   @Column({ type: 'float', nullable: true })
   transport_term_fee!: number | null;
 
+  //Discount Codes
+  @Column({ type: 'float', nullable: true })
+  discount_code_amount?: number | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  discount_code?: string | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  discount_code_expiry?: Date | null;
+
   @Column({
     type: 'varchar',
     length: 20,

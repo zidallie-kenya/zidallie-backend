@@ -89,6 +89,9 @@ export class StudentsService {
         transport_term_fee: createStudentDto.transport_term_fee ?? null,
         service_type: createStudentDto.service_type ?? null,
         rides: [],
+        discount_code: createStudentDto.discount_code ?? null,
+        discount_code_amount: createStudentDto.discount_code_amount ?? null,
+        discount_code_expiry: createStudentDto.discount_code_expiry ?? null,
       });
     } catch (error: any) {
       console.error('Error creating student:', error);
@@ -228,6 +231,18 @@ export class StudentsService {
 
     if (updateStudentDto.emergency_contact !== undefined) {
       updateData.emergency_contact = updateStudentDto.emergency_contact;
+    }
+
+    if (updateStudentDto.discount_code !== undefined) {
+      updateData.discount_code = updateStudentDto.discount_code;
+    }
+
+    if (updateStudentDto.discount_code_expiry !== undefined) {
+      updateData.discount_code_expiry = updateStudentDto.discount_code_expiry;
+    }
+
+    if (updateStudentDto.discount_code_amount !== undefined) {
+      updateData.discount_code_amount = updateStudentDto.discount_code_amount;
     }
 
     return this.studentsRepository.update(id, updateData);

@@ -33,6 +33,9 @@ export class StudentMapper {
     domainEntity.address = raw.address;
     domainEntity.comments = raw.comments;
     domainEntity.meta = raw.meta;
+    domainEntity.discount_code = raw.discount_code;
+    domainEntity.discount_code_amount = raw.discount_code_amount;
+    domainEntity.discount_code_expiry = raw.discount_code_expiry;
 
     // 🆕 Payment fields
     domainEntity.account_number = raw.account_number;
@@ -101,6 +104,15 @@ export class StudentMapper {
         (subscription) =>
           SubscriptionMapper.toPersistence(subscription) as SubscriptionEntity,
       );
+
+    if (domainEntity.discount_code !== undefined)
+      persistence.discount_code = domainEntity.discount_code;
+
+    if (domainEntity.discount_code_amount !== undefined)
+      persistence.discount_code_amount = domainEntity.discount_code_amount;
+
+    if (domainEntity.discount_code_expiry !== undefined)
+      persistence.discount_code_expiry = domainEntity.discount_code_expiry;
 
     // Relations
     persistence.school =

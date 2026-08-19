@@ -21,6 +21,7 @@ import { SubmitChildrenDto } from './dto/submit-children.dto';
 import { InitiateDepositDto } from './dto/initiate-deposit.dto';
 import { TransportBookingService } from './booking.service';
 import { UpdateNotificationSettingsDto } from '../users/dto/update-notification-settings.dto';
+import { ApplyDiscountDto } from '../students/dto/apply-discount.dto';
 
 @ApiTags('Transport Bookings')
 @UseGuards(JwtAuthGuard)
@@ -86,6 +87,16 @@ export class TransportBookingController {
     @Body() dto: InitiateDepositDto,
   ) {
     return this.service.initiateDeposit(req.user.id, bookingId, dto);
+  }
+
+  @Post(':bookingId/apply-discount')
+  @Roles(RoleEnum.parent)
+  applyDiscount(
+    @Req() req: any,
+    @Param('bookingId', ParseIntPipe) bookingId: number,
+    @Body() dto: ApplyDiscountDto,
+  ) {
+    return this.service.applyDiscountCode(req.user.id, bookingId, dto);
   }
 
   @Get('my')

@@ -8,6 +8,7 @@ import {
   IsUrl,
   IsObject,
   IsNumber,
+  IsDateString,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { Gender } from '../../utils/types/enums';
@@ -93,6 +94,21 @@ export class CreateStudentDto {
   @IsOptional()
   @IsString()
   rfid_code?: string | null;
+
+  @ApiProperty({ type: Number, example: 500, required: false })
+  @IsOptional()
+  @IsNumber()
+  discount_code_amount?: number | null;
+
+  @ApiProperty({ type: String, example: 'HD849123', required: false })
+  @IsOptional()
+  @IsString()
+  discount_code?: string | null;
+
+  @ApiProperty({ type: Date, example: '2025-06-03', required: false })
+  @IsOptional()
+  @IsDateString()
+  discount_code_expiry?: Date | null;
 
   @ApiProperty({ type: String, example: '254754321234', required: false })
   @IsOptional()

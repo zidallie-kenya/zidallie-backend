@@ -1145,6 +1145,8 @@ export class DailyRidesService {
       id: dailyRide.id,
       status: dailyRide.status,
       date: dailyRide.date,
+      start_latitude: dailyRide.start_latitude || null,
+      start_longitude: dailyRide.start_longitude || null,
       start_time: dailyRide.start_time || new Date(),
       end_time: dailyRide.end_time || new Date(),
       ride: {

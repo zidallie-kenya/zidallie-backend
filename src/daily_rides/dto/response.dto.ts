@@ -91,6 +91,12 @@ export class MyRidesResponseDto {
   status?: string;
 
   @ApiProperty()
+  start_latitude: number | null;
+
+  @ApiProperty()
+  start_longitude: number | null;
+
+  @ApiProperty()
   date?: Date;
 
   @ApiProperty()

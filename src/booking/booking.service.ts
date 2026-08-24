@@ -1475,9 +1475,9 @@ export class TransportBookingService {
         }
       }
 
-      const totalPrice = Number(b.total_price ?? 0);
-      const totalPaid = Number(b.total_paid ?? 0);
-      const balanceAmount = Math.max(0, totalPrice - totalPaid);
+      // const totalPrice = Number(b.total_price ?? 0);
+      // const totalPaid = Number(b.total_paid ?? 0);
+      // const balanceAmount = Math.max(0, totalPrice - totalPaid);
 
       return {
         id: b.id,
@@ -1492,7 +1492,7 @@ export class TransportBookingService {
         price_per_child: b.price_per_child,
         total_price: b.total_price,
         deposit_amount: b.deposit_amount,
-        balance_amount: balanceAmount,
+        balance_amount: b.balance_amount,
         total_paid: b.total_paid,
         region: b.region,
         distance_km: b.distance_km,

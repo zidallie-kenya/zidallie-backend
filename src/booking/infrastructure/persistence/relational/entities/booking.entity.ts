@@ -101,6 +101,18 @@ export class BookingEntity {
   @Column({ type: 'boolean', default: true })
   is_waitlisted!: boolean;
 
+  @Column({ type: 'varchar', nullable: true })
+  discount_code_applied?: string | null;
+
+  @Column({
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    nullable: true,
+    default: 0,
+  })
+  discount_amount_applied?: number;
+
   @Column({ type: 'varchar', length: 20, default: 'pending' })
   status!: BookingStatus;
 

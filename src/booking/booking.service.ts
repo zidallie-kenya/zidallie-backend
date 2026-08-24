@@ -867,6 +867,88 @@ export class TransportBookingService {
     }
   }
 
+  // async applyDiscountCode(
+  //   parentId: number,
+  //   bookingId: number,
+  //   dto: ApplyDiscountDto,
+  // ) {
+  //   const booking = await this.bookingRepo.findById(bookingId);
+  //   if (!booking) throw new NotFoundException('Booking not found');
+  //   if (booking.parent.id !== parentId) {
+  //     throw new BadRequestException('Unauthorized');
+  //   }
+
+  //   const totalPaid = Number(booking.total_paid || 0);
+  //   const depositAmount = Number(booking.deposit_amount || 0);
+  //   const balanceAmount = Number(booking.balance_amount || 0);
+
+  //   const baseAmount =
+  //     totalPaid >= depositAmount ? balanceAmount : depositAmount;
+
+  //   const code = (dto.code || '').trim().toUpperCase();
+
+  //   // Match by name instead of blindly grabbing the parent's first student —
+  //   // a booking can be for any of the parent's children.
+  //   const matchedStudents = await this.findMatchingStudents(parentId, booking);
+  //   const student = matchedStudents[0] ?? null;
+
+  //   console.log(`Matched student during discount, ${student.name}`);
+
+  //   const notApplicable = {
+  //     applicable: false,
+  //     message: 'This is not applicable for this account',
+  //     amount_due: baseAmount,
+  //   };
+
+  //   if (code === 'ZIDONEWAY') {
+  //     const discountedAmount = Math.round(baseAmount * 0.85);
+
+  //     if (matchedStudents.length) {
+  //       const expiry = new Date();
+  //       expiry.setDate(expiry.getDate() + 7);
+  //       await Promise.all(
+  //         matchedStudents.map((s) =>
+  //           this.studentsService.update(s.id, {
+  //             discount_code: 'ZIDONEWAY',
+  //             discount_code_expiry: expiry,
+  //           } as any),
+  //         ),
+  //       );
+  //     }
+
+  //     return {
+  //       applicable: true,
+  //       message: 'One-way discount applied.',
+  //       amount_due: discountedAmount,
+  //     };
+  //   }
+
+  //   if (code === 'ZIDSPECIAL') {
+  //     if (!student) return notApplicable;
+
+  //     const expiry = student.discount_code_expiry
+  //       ? new Date(student.discount_code_expiry)
+  //       : null;
+  //     const isExpired = !expiry || expiry.getTime() < Date.now();
+
+  //     console.log(isExpired);
+
+  //     if (isExpired) return notApplicable;
+  //     if (student.discount_code !== 'ZIDSPECIAL') return notApplicable;
+
+  //     const discountAmount = Number(student.discount_code_amount || 0);
+  //     const discountedAmount = Math.max(0, baseAmount - discountAmount);
+
+  //     return {
+  //       applicable: true,
+  //       message: `Special rate applied: KES ${discountAmount.toLocaleString()} off.`,
+  //       amount_due: discountedAmount,
+  //     };
+  //   }
+
+  //   return notApplicable;
+  // }
+
   async applyDiscountCode(
     parentId: number,
     bookingId: number,
@@ -878,21 +960,44 @@ export class TransportBookingService {
       throw new BadRequestException('Unauthorized');
     }
 
+    const code = (dto.code || '').trim().toUpperCase();
+
+    // ── IDEMPOTENT GUARD: prevent stacking, allow safe re-submission ──
+    if (booking.discount_code_applied) {
+      if (booking.discount_code_applied === code) {
+        // Same code re-submitted (app reopened, retried, etc.) — no-op success.
+        console.log('Discount already applied to this booking.');
+        return {
+          applicable: true,
+          message: 'Discount already applied to this booking.',
+          amount_due: Number(booking.balance_amount),
+        };
+      }
+      // A different code — block stacking.
+      console.log(
+        `A discount (${booking.discount_code_applied}) is already applied to this booking.`,
+      );
+      return {
+        applicable: false,
+        message: `A discount (${booking.discount_code_applied}) is already applied to this booking.`,
+        amount_due: Number(booking.balance_amount),
+      };
+    }
+
     const totalPaid = Number(booking.total_paid || 0);
     const depositAmount = Number(booking.deposit_amount || 0);
     const balanceAmount = Number(booking.balance_amount || 0);
+    const totalPrice = Number(booking.total_price || 0);
 
-    const baseAmount =
-      totalPaid >= depositAmount ? balanceAmount : depositAmount;
-
-    const code = (dto.code || '').trim().toUpperCase();
+    const payingDeposit = totalPaid < depositAmount;
+    const baseAmount = payingDeposit ? depositAmount : balanceAmount;
 
     // Match by name instead of blindly grabbing the parent's first student —
     // a booking can be for any of the parent's children.
     const matchedStudents = await this.findMatchingStudents(parentId, booking);
     const student = matchedStudents[0] ?? null;
 
-    console.log(`Matched student during discount, ${student}`);
+    console.log('Student that matched:', student.name);
 
     const notApplicable = {
       applicable: false,
@@ -900,8 +1005,20 @@ export class TransportBookingService {
       amount_due: baseAmount,
     };
 
+    const persistDiscount = async (discount: number, appliedCode: string) => {
+      booking.total_price = totalPrice - discount;
+      if (payingDeposit) {
+        booking.deposit_amount = depositAmount - discount;
+      }
+      booking.balance_amount = Math.max(0, booking.total_price - totalPaid);
+      booking.discount_code_applied = appliedCode;
+      booking.discount_amount_applied = discount;
+      await this.bookingRepo.save(booking);
+    };
+
     if (code === 'ZIDONEWAY') {
       const discountedAmount = Math.round(baseAmount * 0.85);
+      const discount = baseAmount - discountedAmount;
 
       if (matchedStudents.length) {
         const expiry = new Date();
@@ -915,6 +1032,8 @@ export class TransportBookingService {
           ),
         );
       }
+
+      await persistDiscount(discount, 'ZIDONEWAY');
 
       return {
         applicable: true,
@@ -931,11 +1050,24 @@ export class TransportBookingService {
         : null;
       const isExpired = !expiry || expiry.getTime() < Date.now();
 
+      const log_text = isExpired
+        ? 'The discount has Expired'
+        : 'Discount code is still valid';
+      console.log(log_text);
+
       if (isExpired) return notApplicable;
-      if (student.discount_code !== 'ZIDSPECIAL') return notApplicable;
+      if (student.discount_code !== 'ZIDSPECIAL') {
+        console.log(
+          `student discount code did not match, student code: ${student.discount_code}`,
+        );
+        return notApplicable;
+      }
 
       const discountAmount = Number(student.discount_code_amount || 0);
       const discountedAmount = Math.max(0, baseAmount - discountAmount);
+      const discount = baseAmount - discountedAmount;
+
+      await persistDiscount(discount, 'ZIDSPECIAL');
 
       return {
         applicable: true,

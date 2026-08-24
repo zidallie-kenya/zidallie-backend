@@ -6,6 +6,7 @@ import { PickupStation } from './pickup-station';
 import { Cluster } from './cluster';
 import { BookingChild } from './booking-child';
 import { BookingDeposit } from './booking-deposit';
+import { Decimal128 } from 'typeorm';
 
 export class Booking {
   @ApiProperty({ type: Number })
@@ -47,6 +48,14 @@ export class Booking {
   @ApiProperty({ type: Number, nullable: true })
   @Expose()
   home_lon!: number | null;
+
+  @ApiProperty({ type: String, nullable: true })
+  @Expose()
+  discount_code_applied?: string | null;
+
+  @ApiProperty({ type: Decimal128, nullable: false })
+  @Expose()
+  discount_amount_applied?: number;
 
   @ApiProperty({ type: () => BusSchool, nullable: true })
   @Expose()

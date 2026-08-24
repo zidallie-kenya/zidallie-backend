@@ -56,6 +56,8 @@ export class BookingMapper {
       deposits: entity.deposits
         ? entity.deposits.map(BookingDepositMapper.toDomain)
         : [],
+      discount_code_applied: entity.discount_code_applied || null,
+      discount_amount_applied: entity.discount_amount_applied,
       created_at: entity.created_at,
       updated_at: entity.updated_at,
     });
@@ -81,6 +83,8 @@ export class BookingMapper {
     entity.status = domain.status as any;
     entity.total_paid = domain.total_paid;
     entity.waitlist_started_at = domain.waitlist_started_at;
+    entity.discount_amount_applied = domain.discount_amount_applied;
+    entity.discount_code_applied = domain.discount_code_applied;
 
     if (domain.parent_id) {
       entity.parent = { id: domain.parent_id } as UserEntity;

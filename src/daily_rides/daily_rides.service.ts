@@ -353,7 +353,7 @@ export class DailyRidesService {
 
       await queryRunner.commitTransaction();
 
-      await this.sendRideStartNotifications(updatedRides, driver);
+      void this.sendRideStartNotifications(updatedRides, driver);
 
       return {
         message: `Started ${updatedCount.affected} daily rides for today`,
@@ -368,6 +368,7 @@ export class DailyRidesService {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/require-await
   private async sendRideStartNotifications(
     rides: DailyRide[],
     driver: any,
@@ -385,7 +386,7 @@ export class DailyRidesService {
           .catch((error) => console.log(error)),
       );
 
-    await Promise.allSettled(notificationPromises);
+    void Promise.allSettled(notificationPromises);
   }
 
   // ── STEP 2: driver taps ✓ (present) ─────────────────────────────────
@@ -405,11 +406,14 @@ export class DailyRidesService {
       });
     }
 
-    if (dailyRide.status !== DailyRideStatus.Started) {
+    if (
+      dailyRide.status !== DailyRideStatus.Started &&
+      dailyRide.status !== DailyRideStatus.Active
+    ) {
       throw new UnprocessableEntityException({
         status: HttpStatus.UNPROCESSABLE_ENTITY,
         errors: {
-          status: `Cannot embark student. Ride must be in 'Started' status, currently '${dailyRide.status}'`,
+          status: `Cannot embark student. Current status is ${dailyRide.status}`,
         },
       });
     }
@@ -494,7 +498,7 @@ export class DailyRidesService {
 
     if (updated?.ride?.parent?.push_token) {
       try {
-        await this.expoPushService.sendPushNotification(
+        void this.expoPushService.sendPushNotification(
           updated.ride.parent.push_token,
           'Student Boarded',
           NOTIFICATIONS.EMBARKED,
@@ -649,7 +653,7 @@ export class DailyRidesService {
     const full = await this.dailyRideRepository.findById(id);
     if (full?.ride?.parent?.push_token) {
       try {
-        await this.expoPushService.sendPushNotification(
+        void this.expoPushService.sendPushNotification(
           full.ride.parent.push_token,
           'Student Dropped Off',
           NOTIFICATIONS.DISEMBARKED,

@@ -46,7 +46,7 @@ const NOTIFICATIONS = {
   TRIP_STARTED:
     'Zidallie school transport has started, Please have your child ready.',
   EMBARKED: 'Your child has safely boarded and is on their way.',
-  ABSENT: 'Missing - your child was absent for the trip',
+  ABSENT: 'Absent - your child was absent for the trip',
   DISEMBARKED: 'Your child has safely arrived at their destination.',
 };
 

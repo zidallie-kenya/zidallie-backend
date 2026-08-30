@@ -28,7 +28,7 @@ import { IPaginationOptions } from '../utils/types/pagination-options';
 import { JwtPayloadType } from '../auth/strategies/types/jwt-payload.type';
 import { MyRidesResponseDto } from './dto/response.dto';
 import { ExpoPushService } from './expopush.service';
-import { DataSource, In } from 'typeorm';
+import { DataSource, In, Not, IsNull } from 'typeorm';
 import { DailyRideEntity } from './infrastructure/persistence/relational/entities/daily_ride.entity';
 import { LocationsService } from '../location/location.service';
 import { Location } from '../location/domain/location';
@@ -37,7 +37,6 @@ import { SubscriptionRepository } from '../subscriptions/infrastructure/persiste
 import { SubscriptionService } from '../subscriptions/subscription.service';
 import { CreateSubscriptionDto } from '../subscriptions/dto/create-subscription.dto';
 import { isNumber } from 'class-validator';
-import { IsNull } from 'typeorm';
 
 // Notification copy — keep in one place so the four driver-triggered
 // moments (start, board, absent, drop-off) stay consistent everywhere
@@ -689,7 +688,6 @@ export class DailyRidesService {
     const driverEndTime = new Date();
 
     return await this.dataSource.transaction(async (manager) => {
-      // FIX: Use IsNull() instead of null
       const ridesToProcess = await manager.find(DailyRideEntity, {
         where: {
           driver: { id: driver.id },
@@ -700,6 +698,37 @@ export class DailyRidesService {
         },
         relations: ['driver'],
       });
+
+      // Nothing left to close out for this leg — figure out whether that's
+      // because the day was already ended, so we can short-circuit instead
+      // of re-running the earnings/notification logic.
+      if (ridesToProcess.length === 0) {
+        const alreadyEndedRide = await manager.findOne(DailyRideEntity, {
+          where: {
+            driver: { id: driver.id },
+            date: today,
+            kind: kind,
+            status: DailyRideStatus.Finished,
+            end_time: Not(IsNull()),
+          },
+          order: { end_time: 'DESC' },
+        });
+
+        if (alreadyEndedRide) {
+          const updatedRides = (
+            await this.dailyRideRepository.findTodayRidesForDriver(
+              driver.id,
+              this.formatDateToString(today),
+            )
+          ).filter((r) => r.kind === kind);
+
+          return {
+            message: `Trip for today's ${kind} was already ended.`,
+            updatedRides,
+            driverEndTime: alreadyEndedRide.end_time as Date,
+          };
+        }
+      }
 
       let totalEarningsForLeg = 0;
 

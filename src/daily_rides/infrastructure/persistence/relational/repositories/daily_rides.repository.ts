@@ -14,6 +14,19 @@ import { DailyRideRepository } from '../../daily_rides.repository';
 import { DailyRideStatus } from '../../../../../utils/types/enums';
 
 // Relations constant to avoid repetition and ensure consistency
+// 1. Minimal: For background logic/GPS checks
+// const MINIMAL_RELATIONS = ['driver', 'ride'];
+
+// 2. Standard: For Driver App views (Today's rides)
+const DRIVER_APP_RELATIONS = [
+  'ride',
+  'ride.student',
+  'ride.parent',
+  // 'vehicle',
+  'driver',
+];
+
+// 3. Full: For Admin/Detail views ONLY
 const DAILY_RIDE_RELATIONS = [
   'ride',
   'ride.vehicle',
@@ -23,8 +36,6 @@ const DAILY_RIDE_RELATIONS = [
   'ride.parent',
   'vehicle',
   'driver',
-  // 'locations',
-  // 'locations.driver',
 ];
 
 @Injectable()
@@ -172,18 +183,10 @@ export class DailyRidesRelationalRepository implements DailyRideRepository {
   ): Promise<DailyRide[]> {
     const queryBuilder = this.dailyRidesRepository
       .createQueryBuilder('daily_ride')
+      // We only join the bare essentials for the list view
       .leftJoinAndSelect('daily_ride.ride', 'ride')
-      .leftJoinAndSelect('ride.vehicle', 'ride_vehicle')
-      .leftJoinAndSelect('ride.driver', 'ride_driver')
-      .leftJoinAndSelect('ride.school', 'ride_school')
       .leftJoinAndSelect('ride.student', 'ride_student')
-      .leftJoinAndSelect('ride_student.subscriptions', 'subscriptions')
-      .leftJoinAndSelect('ride.parent', 'ride_parent')
-      .leftJoinAndSelect('daily_ride.vehicle', 'vehicle')
-      .leftJoinAndSelect('daily_ride.driver', 'driver')
-      // .leftJoinAndSelect('daily_ride.locations', 'locations')
-      // .leftJoinAndSelect('locations.driver', 'locationDriver')
-      .where('daily_ride.driver.id = :driverId', { driverId })
+      .where('daily_ride.driverId = :driverId', { driverId })
       .andWhere('daily_ride.date BETWEEN :startDate AND :endDate', {
         startDate: startDate.toISOString().split('T')[0],
         endDate: endDate.toISOString().split('T')[0],
@@ -234,23 +237,36 @@ export class DailyRidesRelationalRepository implements DailyRideRepository {
   }
 
   // get today's rides for a driver
+  // async findTodayRidesForDriver(
+  //   driverId: number,
+  //   date: string,
+  // ): Promise<DailyRide[]> {
+  //   const dateObj = new Date(date); // Convert string to Date object
+  //   const entities = await this.dailyRidesRepository.find({
+  //     where: {
+  //       driver: { id: driverId },
+  //       date: dateObj,
+  //     },
+  //     order: { start_time: 'ASC' },
+  //     relations: DAILY_RIDE_RELATIONS,
+  //   });
+
+  //   return entities.map((dailyRide) => DailyRideMapper.toDomain(dailyRide));
+  // }
   async findTodayRidesForDriver(
     driverId: number,
     date: string,
   ): Promise<DailyRide[]> {
-    const dateObj = new Date(date); // Convert string to Date object
     const entities = await this.dailyRidesRepository.find({
       where: {
         driver: { id: driverId },
-        date: dateObj,
+        date: new Date(date),
       },
       order: { start_time: 'ASC' },
-      relations: DAILY_RIDE_RELATIONS,
+      relations: DRIVER_APP_RELATIONS, // Don't use the FULL relations here
     });
-
     return entities.map((dailyRide) => DailyRideMapper.toDomain(dailyRide));
   }
-
   async findByDriverIdWithStatus(
     driverId: number,
     status?: DailyRideStatus,
@@ -377,55 +393,61 @@ export class DailyRidesRelationalRepository implements DailyRideRepository {
     await this.dailyRidesRepository.softDelete(id);
   }
 
-  // In your Repository
-  // findActiveRideByDriverId(driverId: number): Promise<DailyRide | null> {
-  //   return this.dailyRidesRepository
-  //     .createQueryBuilder('daily_ride')
-  //     .leftJoinAndSelect('daily_ride.ride', 'ride')
-  //     .leftJoinAndSelect('daily_ride.vehicle', 'vehicle')
-  //     .leftJoinAndSelect('daily_ride.driver', 'driver')
-  //     .where('daily_ride.driverId = :driverId', { driverId })
-  //     .andWhere('daily_ride.status = :status', {
-  //       status: DailyRideStatus.Active,
-  //     })
-  //     .getOne();
+  // async findActiveRideByDriverId(driverId: number): Promise<DailyRide | null> {
+  //   return (
+  //     this.dailyRidesRepository
+  //       .createQueryBuilder('daily_ride')
+  //       // 1. Join without selecting everything automatically
+  //       .leftJoin('daily_ride.ride', 'ride')
+  //       .leftJoin('daily_ride.vehicle', 'vehicle')
+  //       .leftJoin('daily_ride.driver', 'driver')
+
+  //       // 2. Select only the necessary fields
+  //       .select([
+  //         'daily_ride.id',
+  //         'daily_ride.status',
+  //         'daily_ride.kind',
+  //         'daily_ride.date',
+  //         'daily_ride.embark_time',
+  //         // DO NOT select daily_ride.route_data here
+
+  //         'ride.id',
+  //         'ride.status',
+
+  //         'vehicle.id',
+  //         'vehicle.registration_number',
+  //         'vehicle.vehicle_name',
+
+  //         'driver.id',
+  //         'driver.firstName',
+  //         'driver.lastName',
+  //       ])
+  //       .where('daily_ride.driverId = :driverId', { driverId })
+  //       // CRITICAL: Check your enum value below
+  //       .andWhere('daily_ride.status = :status', {
+  //         status: DailyRideStatus.Active,
+  //       })
+  //       .getOne()
+  //   );
   // }
   async findActiveRideByDriverId(driverId: number): Promise<DailyRide | null> {
-    return (
-      this.dailyRidesRepository
-        .createQueryBuilder('daily_ride')
-        // 1. Join without selecting everything automatically
-        .leftJoin('daily_ride.ride', 'ride')
-        .leftJoin('daily_ride.vehicle', 'vehicle')
-        .leftJoin('daily_ride.driver', 'driver')
+    const entity = await this.dailyRidesRepository.findOne({
+      where: {
+        driver: { id: driverId },
+        status: DailyRideStatus.Active, // Ensure this matches your Enum
+      },
+      // Only load what is strictly needed to identify the ride
+      select: {
+        id: true,
+        status: true,
+        kind: true,
+        date: true,
+        ride: { id: true },
+      },
+      relations: ['ride'],
+    });
 
-        // 2. Select only the necessary fields
-        .select([
-          'daily_ride.id',
-          'daily_ride.status',
-          'daily_ride.kind',
-          'daily_ride.date',
-          'daily_ride.embark_time',
-          // DO NOT select daily_ride.route_data here
-
-          'ride.id',
-          'ride.status',
-
-          'vehicle.id',
-          'vehicle.registration_number',
-          'vehicle.vehicle_name',
-
-          'driver.id',
-          'driver.firstName',
-          'driver.lastName',
-        ])
-        .where('daily_ride.driverId = :driverId', { driverId })
-        // CRITICAL: Check your enum value below
-        .andWhere('daily_ride.status = :status', {
-          status: DailyRideStatus.Active,
-        })
-        .getOne()
-    );
+    return entity ? DailyRideMapper.toDomain(entity) : null;
   }
 
   async saveAll(rides: DailyRide[]): Promise<DailyRide[]> {

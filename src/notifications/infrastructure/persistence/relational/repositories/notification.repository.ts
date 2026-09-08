@@ -96,18 +96,18 @@ export class NotificationsRelationalRepository
     );
   }
 
-  async findByUserId(userId: number): Promise<Notification[]> {
+  async findByUserId(userId: number, limit = 25): Promise<Notification[]> {
     const entities = await this.notificationsRepository.find({
       where: { user: { id: userId } },
       relations: ['user'],
       order: { created_at: 'DESC' },
+      take: limit,
     });
 
     return entities.map((notification) =>
       NotificationMapper.toDomain(notification),
     );
   }
-
   async findUnreadByUserId(userId: number): Promise<Notification[]> {
     const entities = await this.notificationsRepository.find({
       where: {

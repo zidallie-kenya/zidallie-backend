@@ -30,6 +30,7 @@ export abstract class NotificationRepository {
 
   abstract findByUserId(
     userId: Notification['user']['id'],
+    limit?: number,
   ): Promise<Notification[]>;
 
   abstract findUnreadByUserId(

@@ -249,7 +249,6 @@ export class StudentsService {
   async findOrCreateForBooking(params: {
     parentId: number;
     name: string;
-    schoolId?: number | null;
     serviceType?: string | null;
     emergencyContactPhone?: string | null;
   }): Promise<Student> {
@@ -264,12 +263,6 @@ export class StudentsService {
     );
 
     if (exactMatch) {
-      if (params.schoolId && exactMatch.school?.id !== params.schoolId) {
-        const updated = await this.update(exactMatch.id, {
-          school: { id: params.schoolId } as School,
-        });
-        return updated ?? exactMatch;
-      }
       return exactMatch;
     }
 
@@ -301,9 +294,9 @@ export class StudentsService {
     const newStudent = await this.create({
       name: params.name.trim(),
       parent: { id: params.parentId } as User,
-      school: params.schoolId ? ({ id: params.schoolId } as School) : undefined,
       service_type: (params.serviceType ?? undefined) as any,
       phone_number: params.emergencyContactPhone ?? null,
+      // school intentionally omitted — not needed on the student record
       // gender intentionally omitted — not collected during booking
     } as CreateStudentDto);
 

@@ -860,8 +860,6 @@ export class TransportBookingService {
       );
     }
 
-    const school = booking.carpool_school || booking.bus_school || null;
-
     // Sequential on purpose: two children with the same name in the same
     // submission (twins, a typo) must not both run their "does this student
     // exist?" lookup before either has been created — that would create two
@@ -882,7 +880,6 @@ export class TransportBookingService {
       const student = await this.studentsService.findOrCreateForBooking({
         parentId,
         name: c.name,
-        schoolId: school?.id ?? null,
         serviceType: booking.service_type,
         emergencyContactPhone: c.emergency_contact_phone,
       });

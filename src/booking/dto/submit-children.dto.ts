@@ -1,5 +1,5 @@
 // submit-children.dto.ts
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsArray,
   IsEnum,
@@ -33,6 +33,7 @@ export class ChildDetailDto {
   emergency_contact_phone!: string;
 
   @IsOptional()
+  @Transform(({ value }) => (value === '' ? undefined : value))
   @IsEmail()
   emergency_contact_email?: string;
 }

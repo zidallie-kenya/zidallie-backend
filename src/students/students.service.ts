@@ -304,7 +304,7 @@ export class StudentsService {
       parent: { id: params.parentId } as User,
       service_type: (params.serviceType ?? undefined) as any,
       phone_number: params.emergencyContactPhone ?? null,
-      emergency_contact: params.emergencyContact ?? null,
+      emergency_contact: params.emergencyContactPhone ?? null,
       address,
       // school intentionally omitted — not needed on the student record
       // gender intentionally omitted — not collected during booking

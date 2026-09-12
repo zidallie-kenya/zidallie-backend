@@ -882,6 +882,9 @@ export class TransportBookingService {
         name: c.name,
         serviceType: booking.service_type,
         emergencyContactPhone: c.emergency_contact_phone,
+        emergencyContact: c.emergency_contact,
+        homeArea: booking.home_area,
+        region: booking.region,
       });
       // findOrCreateForBooking returns the domain Student, not a
       // StudentEntity — only the id is needed to set the FK on save.

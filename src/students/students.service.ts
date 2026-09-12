@@ -251,6 +251,9 @@ export class StudentsService {
     name: string;
     serviceType?: string | null;
     emergencyContactPhone?: string | null;
+    emergencyContact?: string | null;
+    homeArea?: string | null;
+    region?: string | null;
   }): Promise<Student> {
     const normalizedName = params.name.trim().toLowerCase();
     const normalizedPhone = this.normalizePhone(params.emergencyContactPhone);
@@ -291,11 +294,18 @@ export class StudentsService {
       return nameClose || phoneMatches;
     });
 
+    const address =
+      [params.homeArea, params.region]
+        .filter((part) => !!part && part.trim().length > 0)
+        .join(', ') || null;
+
     const newStudent = await this.create({
       name: params.name.trim(),
       parent: { id: params.parentId } as User,
       service_type: (params.serviceType ?? undefined) as any,
       phone_number: params.emergencyContactPhone ?? null,
+      emergency_contact: params.emergencyContact ?? null,
+      address,
       // school intentionally omitted — not needed on the student record
       // gender intentionally omitted — not collected during booking
     } as CreateStudentDto);
@@ -321,6 +331,81 @@ export class StudentsService {
 
     return newStudent;
   }
+  // async findOrCreateForBooking(params: {
+  //   parentId: number;
+  //   name: string;
+  //   serviceType?: string | null;
+  //   emergencyContactPhone?: string | null;
+  // }): Promise<Student> {
+  //   const normalizedName = params.name.trim().toLowerCase();
+  //   const normalizedPhone = this.normalizePhone(params.emergencyContactPhone);
+
+  //   const existing = await this.findByParentId(params.parentId);
+
+  //   // 1. Exact match — safe to auto-link.
+  //   const exactMatch = existing.find(
+  //     (s) => (s.name ?? '').trim().toLowerCase() === normalizedName,
+  //   );
+
+  //   if (exactMatch) {
+  //     return exactMatch;
+  //   }
+
+  //   // 2. No exact match — look for a fuzzy candidate to flag, but never
+  //   //    auto-link on this. A wrong auto-link silently mixes up two
+  //   //    children's records, which is worse than a duplicate row.
+  //   const fuzzyCandidate = existing.find((s) => {
+  //     const candidateName = (s.name ?? '').trim().toLowerCase();
+  //     const nameClose =
+  //       candidateName.length > 0 &&
+  //       this.levenshtein(normalizedName, candidateName) <= 2;
+
+  //     console.log(
+  //       `Comparing new student "${normalizedName}" with existing "${candidateName}": nameClose=${nameClose}`,
+  //     );
+
+  //     const candidatePhone = this.normalizePhone(s.phone_number);
+  //     const phoneMatches =
+  //       !!normalizedPhone &&
+  //       !!candidatePhone &&
+  //       normalizedPhone === candidatePhone;
+
+  //     console.log(
+  //       `Comparing new student phone "${normalizedPhone}" with existing "${candidatePhone}": phoneMatches=${phoneMatches}`,
+  //     );
+  //     return nameClose || phoneMatches;
+  //   });
+
+  //   const newStudent = await this.create({
+  //     name: params.name.trim(),
+  //     parent: { id: params.parentId } as User,
+  //     service_type: (params.serviceType ?? undefined) as any,
+  //     phone_number: params.emergencyContactPhone ?? null,
+  //     // school intentionally omitted — not needed on the student record
+  //     // gender intentionally omitted — not collected during booking
+  //   } as CreateStudentDto);
+
+  //   if (fuzzyCandidate) {
+  //     console.warn(
+  //       `Possible duplicate student: new id=${newStudent.id} ("${params.name}") ` +
+  //         `may be the same child as existing id=${fuzzyCandidate.id} ("${fuzzyCandidate.name}") ` +
+  //         `for parent ${params.parentId}. Flagging for admin review.`,
+  //     );
+
+  //     const flagged = await this.update(newStudent.id, {
+  //       meta: {
+  //         ...(newStudent.meta ?? {}),
+  //         possible_duplicate_of: fuzzyCandidate.id,
+  //         possible_duplicate_flagged_at: new Date().toISOString(),
+  //         possible_duplicate_resolved: false,
+  //       },
+  //     } as UpdateStudentDto);
+
+  //     return flagged ?? newStudent;
+  //   }
+
+  //   return newStudent;
+  // }
 
   /**
    * Admin-facing: list students flagged as possible duplicates that

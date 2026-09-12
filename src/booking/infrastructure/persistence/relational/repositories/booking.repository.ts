@@ -39,7 +39,7 @@ export class BookingRepository {
         'cluster',
         'cluster.bookings', // TypeORM handles nested relations like this
         'children',
-        'children,student',
+        'children.student',
         'deposits',
       ],
     });

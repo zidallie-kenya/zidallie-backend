@@ -34,6 +34,12 @@ export type UserMeta = {
     account_number: string | null;
     account_name: string | null;
   };
+  address: {
+    home_latitude: number | null;
+    home_longitude: number | null;
+    county: string | null;
+    neighborhood: string | null;
+  };
   county: string | null;
   neighborhood: string | null;
   notifications: {

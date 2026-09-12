@@ -109,6 +109,14 @@ export class UsersService {
       kind: createUserDto.kind,
       app_role: createUserDto.app_role,
       meta: createUserDto.meta ?? null,
+      address: createUserDto.meta?.address
+        ? {
+            home_latitude: createUserDto.meta.address.home_latitude ?? null,
+            home_longitude: createUserDto.meta.address.home_longitude ?? null,
+            county: createUserDto.meta.address.county ?? null,
+            neighborhood: createUserDto.meta.address.neighborhood ?? null,
+          }
+        : null,
       wallet_balance: createUserDto.wallet_balance ?? 0,
       is_kyc_verified: createUserDto.is_kyc_verified ?? false,
       name: createUserDto.name ?? null,
@@ -263,13 +271,31 @@ export class UsersService {
       };
     }
 
+    // Merge incoming meta (including address) with the existing stored meta,
+    // so a partial update (e.g. address only) doesn't wipe out other meta
+    // fields like notifications/payments.
+    let meta: User['meta'] | undefined = undefined;
+
+    if (updateUserDto.meta !== undefined) {
+      const existingUser = await this.usersRepository.findById(id);
+      meta = {
+        ...(existingUser?.meta ?? {}),
+        ...updateUserDto.meta,
+        address: {
+          ...(existingUser?.meta?.address ?? {}),
+          ...(updateUserDto.meta?.address ?? {}),
+        },
+      } as User['meta'];
+    }
+
     return this.usersRepository.update(id, {
       firstName: updateUserDto.firstName,
       lastName: updateUserDto.lastName,
       phone_number: updateUserDto.phone_number,
       push_token: updateUserDto.push_token,
       kind: updateUserDto.kind,
-      meta: updateUserDto.meta,
+      meta,
+      address: meta?.address,
       wallet_balance: updateUserDto.wallet_balance,
       is_kyc_verified: updateUserDto.is_kyc_verified,
       email,
@@ -341,5 +367,10 @@ export class UsersService {
 
   async findByPushToken(pushToken: string): Promise<User | null> {
     return this.usersRepository.findByPushToken(pushToken);
+  }
+
+  // users/users.service.ts
+  getEligibleDrivers(): Promise<User[]> {
+    return this.usersRepository.findEligibleDrivers();
   }
 }

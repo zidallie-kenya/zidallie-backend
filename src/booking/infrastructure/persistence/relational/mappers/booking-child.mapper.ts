@@ -1,3 +1,4 @@
+import { StudentMapper } from '../../../../../students/infrastructure/persistence/relational/mappers/student.mapper';
 import { BookingChild } from '../../../../domain/booking-child';
 import { BookingChildEntity } from '../entities/booking-child.entity';
 
@@ -7,6 +8,7 @@ export class BookingChildMapper {
     return new BookingChild({
       id: entity.id,
       booking_id: entity.booking?.id,
+      student: entity.student ? StudentMapper.toDomain(entity.student) : null,
       name: entity.name,
       grade_class: entity.grade_class,
       pickup_time: entity.pickup_time,
@@ -27,6 +29,10 @@ export class BookingChildMapper {
     entity.emergency_contact = domain.emergency_contact;
     entity.emergency_contact_phone = domain.emergency_contact_phone;
     entity.emergency_contact_email = domain.emergency_contact_email;
+
+    // Only attach the FK reference — don't push a full nested write through the relation
+    entity.student = domain.student ? ({ id: domain.student.id } as any) : null;
+
     return entity;
   }
 }

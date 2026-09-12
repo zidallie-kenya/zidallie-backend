@@ -53,4 +53,6 @@ export abstract class UserRepository {
   abstract findByPushToken(pushToken: string): Promise<User | null>;
 
   abstract clearEmailForDeletedUser(id): Promise<void>;
+
+  abstract findEligibleDrivers(): Promise<User[]>;
 }

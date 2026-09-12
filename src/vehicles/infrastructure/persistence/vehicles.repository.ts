@@ -58,4 +58,6 @@ export abstract class VehicleRepository {
   ): Promise<Vehicle | null>;
 
   abstract remove(id: Vehicle['id']): Promise<void>;
+
+  abstract resetAllAvailableSeats(): Promise<void>;
 }

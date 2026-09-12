@@ -271,4 +271,19 @@ export class VehiclesRelationalRepository implements VehicleRepository {
   async remove(id: Vehicle['id']): Promise<void> {
     await this.vehiclesRepository.softDelete(id);
   }
+
+  async resetAllAvailableSeats(): Promise<void> {
+    // Raw SQL bulk update — resets every vehicle's available_seats back to
+    // its seat_count. Scoped to Active + inspected vehicles, matching the
+    // same filter findAvailableVehicles() already uses, so a vehicle that's
+    // suspended or failed inspection doesn't get re-opened for booking just
+    // because a new term started.
+    await this.vehiclesRepository
+      .createQueryBuilder()
+      .update(VehicleEntity)
+      .set({ available_seats: () => 'seat_count' })
+      .where('status = :status', { status: 'Active' })
+      .andWhere('is_inspected = :inspected', { inspected: true })
+      .execute();
+  }
 }

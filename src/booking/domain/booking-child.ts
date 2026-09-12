@@ -1,6 +1,7 @@
 // booking-child.ts
 import { ApiProperty } from '@nestjs/swagger';
-import { Expose } from 'class-transformer';
+import { Expose, Type } from 'class-transformer';
+import { Student } from '../../students/domain/student'; // adjust path to your actual Student domain model
 
 export class BookingChild {
   @ApiProperty({ type: Number })
@@ -10,6 +11,11 @@ export class BookingChild {
   @ApiProperty({ type: Number })
   @Expose()
   booking_id!: number;
+
+  @ApiProperty({ type: () => Student, nullable: true })
+  @Expose()
+  @Type(() => Student)
+  student!: Student | null;
 
   @ApiProperty({ type: String })
   @Expose()

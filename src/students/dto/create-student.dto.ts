@@ -54,7 +54,7 @@ export class CreateStudentDto {
 
   @ApiProperty({ enum: Gender, example: Gender.Female })
   @IsEnum(Gender)
-  gender: Gender;
+  gender?: Gender;
 
   @ApiProperty({
     type: String,

@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource, MoreThanOrEqual, Repository } from 'typeorm';
-import { BookingEntity } from '../entities/booking.entity';
+import { DataSource, In, MoreThanOrEqual, Repository } from 'typeorm';
+import {
+  BookingEntity,
+  BookingStatus,
+  BookingTerm,
+} from '../entities/booking.entity';
 
 @Injectable()
 export class BookingRepository {
@@ -35,6 +39,7 @@ export class BookingRepository {
         'cluster',
         'cluster.bookings', // TypeORM handles nested relations like this
         'children',
+        'children,student',
         'deposits',
       ],
     });
@@ -85,5 +90,40 @@ export class BookingRepository {
 
   save(booking: BookingEntity): Promise<BookingEntity> {
     return this.repo.save(booking);
+  }
+
+  async findPendingByParentId(parentId: number): Promise<BookingEntity | null> {
+    return this.repo.findOne({
+      where: { parent: { id: parentId }, status: 'pending' },
+      order: { created_at: 'DESC' },
+      relations: [
+        'parent',
+        'carpool_school',
+        'bus_school',
+        'pickup_station',
+        'children',
+      ],
+    });
+  }
+
+  async findByTermAndStatuses(
+    term: BookingTerm,
+    statuses: BookingStatus[],
+  ): Promise<BookingEntity[]> {
+    return this.repo.find({
+      where: {
+        term,
+        status: In(statuses),
+      },
+      relations: [
+        'parent',
+        'children',
+        'children.student',
+        'carpool_school',
+        'bus_school',
+        'pickup_station',
+        'cluster',
+      ],
+    });
   }
 }

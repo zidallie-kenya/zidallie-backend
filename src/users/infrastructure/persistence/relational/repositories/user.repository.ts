@@ -116,6 +116,7 @@ export class UsersRelationalRepository implements UserRepository {
 
     return entity ? UserMapper.toDomain(entity) : null;
   }
+
   async update(id: User['id'], payload: Partial<User>): Promise<User> {
     const entity = await this.usersRepository.findOne({
       where: { id: Number(id) },
@@ -203,5 +204,19 @@ export class UsersRelationalRepository implements UserRepository {
       .set({ email: null })
       .where('id = :id', { id })
       .execute();
+  }
+
+  async findEligibleDrivers(): Promise<User[]> {
+    const entities = await this.usersRepository.find({
+      where: {
+        kind: 'Driver',
+        is_kyc_verified: true,
+        // status: { id: <active-status-id> } — once you confirm which
+        // StatusEntity row means "approved/active" for drivers
+      },
+      relations: ['vehicles'],
+    });
+
+    return entities.map((u) => UserMapper.toDomain(u));
   }
 }

@@ -25,6 +25,28 @@ export class PayoutDto {
   agreed_salary!: number;
 }
 
+export class AddressDto {
+  @ApiPropertyOptional({ type: Number, example: -1.286389, nullable: true })
+  @IsOptional()
+  @IsNumber()
+  home_latitude?: number | null;
+
+  @ApiPropertyOptional({ type: Number, example: 36.817223, nullable: true })
+  @IsOptional()
+  @IsNumber()
+  home_longitude?: number | null;
+
+  @ApiPropertyOptional({ type: String, example: 'Uasin Gishu', nullable: true })
+  @IsOptional()
+  @IsString()
+  county?: string | null;
+
+  @ApiPropertyOptional({ type: String, example: 'Kapsoya', nullable: true })
+  @IsOptional()
+  @IsString()
+  neighborhood?: string | null;
+}
+
 export class CreateUserDto {
   @ApiProperty({ example: 'test1@example.com', type: String })
   @Transform(lowerCaseTransformer)
@@ -91,6 +113,12 @@ export class CreateUserDto {
   @ValidateNested()
   @Type(() => UserMetaDto)
   meta?: UserMetaDto | null;
+
+  @ApiPropertyOptional({ type: () => AddressDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => AddressDto)
+  address?: AddressDto | null;
 
   @ApiPropertyOptional({ example: 0.0, type: Number })
   @IsOptional()

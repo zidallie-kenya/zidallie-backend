@@ -16,6 +16,7 @@ import { SchoolEntity } from '../schools/infrastructure/persistence/relational/e
 import { UserEntity } from '../users/infrastructure/persistence/relational/entities/user.entity';
 import { UserRepository } from '../users/infrastructure/persistence/user.repository';
 import { SchoolsService } from '../schools/schools.service';
+import { Gender } from '../utils/types/enums';
 
 @Injectable()
 export class StudentsService {
@@ -76,7 +77,7 @@ export class StudentsService {
         school,
         parent,
         profile_picture: createStudentDto.profile_picture ?? null,
-        gender: createStudentDto.gender,
+        gender: createStudentDto.gender ?? Gender.Female,
         address: createStudentDto.address ?? null,
         comments: createStudentDto.comments ?? null,
         meta: createStudentDto.meta ?? null,
@@ -152,6 +153,230 @@ export class StudentsService {
 
   findStudentsWithoutParent(): Promise<Student[]> {
     return this.studentsRepository.findStudentsWithoutParent();
+  }
+
+  /**
+   * Used by the booking flow to link (or create) the canonical student
+   * record for a booked child. Matches by parent + normalized name so the
+   * same child never ends up with two student rows. Callers that process
+   * multiple children from one booking MUST await this one at a time
+   * (not Promise.all) — see submitChildren in booking.service.ts — so that
+   * two same-named children in one submission don't race past each other's
+   * "does this already exist?" check.
+   */
+
+  // async findOrCreateForBooking(params: {
+  //   parentId: number;
+  //   name: string;
+  //   schoolId?: number | null;
+  //   serviceType?: string | null;
+  // }): Promise<Student> {
+  //   const normalizedName = params.name.trim().toLowerCase();
+
+  //   const existing = await this.findByParentId(params.parentId);
+  //   const match = existing.find(
+  //     (s) => (s.name ?? '').trim().toLowerCase() === normalizedName,
+  //   );
+
+  //   if (match) {
+  //     // Keep school in sync if it changed since the student was created
+  //     if (params.schoolId && match.school?.id !== params.schoolId) {
+  //       return this.update(match.id, {
+  //         school: { id: params.schoolId } as School,
+  //       }) as Promise<Student>;
+  //     }
+  //     return match;
+  //   }
+
+  //   return this.create({
+  //     name: params.name.trim(),
+  //     parent: { id: params.parentId } as User,
+  //     school: params.schoolId ? ({ id: params.schoolId } as School) : undefined,
+  //     service_type: (params.serviceType ?? undefined) as any,
+  //     gender: 'Female', // Default gender to Female
+  //   } as CreateStudentDto);
+  // }
+
+  /**
+   * Plain Levenshtein edit distance — small, dependency-free, fine for
+   * short human names.
+   */
+  private levenshtein(a: string, b: string): number {
+    const m = a.length;
+    const n = b.length;
+    if (m === 0) return n;
+    if (n === 0) return m;
+
+    const prev = new Array(n + 1);
+    const curr = new Array(n + 1);
+    for (let j = 0; j <= n; j++) prev[j] = j;
+
+    for (let i = 1; i <= m; i++) {
+      curr[0] = i;
+      for (let j = 1; j <= n; j++) {
+        const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+        curr[j] = Math.min(
+          prev[j] + 1, // deletion
+          curr[j - 1] + 1, // insertion
+          prev[j - 1] + cost, // substitution
+        );
+      }
+      for (let j = 0; j <= n; j++) prev[j] = curr[j];
+    }
+
+    return prev[n];
+  }
+
+  private normalizePhone(phone: string | null | undefined): string | null {
+    if (!phone) return null;
+    const digits = phone.replace(/\D/g, '');
+    if (!digits) return null;
+    // Normalize 07xx / 01xx / 7xx / 254xx variants down to the last 9 digits
+    // so "0712345678" and "254712345678" compare equal.
+    return digits.slice(-9);
+  }
+
+  /**
+   * Used by the booking flow to link (or create) the canonical student
+   * record for a booked child. Matches by parent + normalized name so the
+   * same child never ends up with two student rows on an exact match.
+   *
+   * Callers processing multiple children from one booking MUST await this
+   * one at a time (not Promise.all) — see submitChildren in
+   * booking.service.ts — so two same-named children in one submission don't
+   * race past each other's "does this already exist?" check.
+   */
+  async findOrCreateForBooking(params: {
+    parentId: number;
+    name: string;
+    schoolId?: number | null;
+    serviceType?: string | null;
+    emergencyContactPhone?: string | null;
+  }): Promise<Student> {
+    const normalizedName = params.name.trim().toLowerCase();
+    const normalizedPhone = this.normalizePhone(params.emergencyContactPhone);
+
+    const existing = await this.findByParentId(params.parentId);
+
+    // 1. Exact match — safe to auto-link.
+    const exactMatch = existing.find(
+      (s) => (s.name ?? '').trim().toLowerCase() === normalizedName,
+    );
+
+    if (exactMatch) {
+      if (params.schoolId && exactMatch.school?.id !== params.schoolId) {
+        const updated = await this.update(exactMatch.id, {
+          school: { id: params.schoolId } as School,
+        });
+        return updated ?? exactMatch;
+      }
+      return exactMatch;
+    }
+
+    // 2. No exact match — look for a fuzzy candidate to flag, but never
+    //    auto-link on this. A wrong auto-link silently mixes up two
+    //    children's records, which is worse than a duplicate row.
+    const fuzzyCandidate = existing.find((s) => {
+      const candidateName = (s.name ?? '').trim().toLowerCase();
+      const nameClose =
+        candidateName.length > 0 &&
+        this.levenshtein(normalizedName, candidateName) <= 2;
+
+      console.log(
+        `Comparing new student "${normalizedName}" with existing "${candidateName}": nameClose=${nameClose}`,
+      );
+
+      const candidatePhone = this.normalizePhone(s.phone_number);
+      const phoneMatches =
+        !!normalizedPhone &&
+        !!candidatePhone &&
+        normalizedPhone === candidatePhone;
+
+      console.log(
+        `Comparing new student phone "${normalizedPhone}" with existing "${candidatePhone}": phoneMatches=${phoneMatches}`,
+      );
+      return nameClose || phoneMatches;
+    });
+
+    const newStudent = await this.create({
+      name: params.name.trim(),
+      parent: { id: params.parentId } as User,
+      school: params.schoolId ? ({ id: params.schoolId } as School) : undefined,
+      service_type: (params.serviceType ?? undefined) as any,
+      phone_number: params.emergencyContactPhone ?? null,
+      // gender intentionally omitted — not collected during booking
+    } as CreateStudentDto);
+
+    if (fuzzyCandidate) {
+      console.warn(
+        `Possible duplicate student: new id=${newStudent.id} ("${params.name}") ` +
+          `may be the same child as existing id=${fuzzyCandidate.id} ("${fuzzyCandidate.name}") ` +
+          `for parent ${params.parentId}. Flagging for admin review.`,
+      );
+
+      const flagged = await this.update(newStudent.id, {
+        meta: {
+          ...(newStudent.meta ?? {}),
+          possible_duplicate_of: fuzzyCandidate.id,
+          possible_duplicate_flagged_at: new Date().toISOString(),
+          possible_duplicate_resolved: false,
+        },
+      } as UpdateStudentDto);
+
+      return flagged ?? newStudent;
+    }
+
+    return newStudent;
+  }
+
+  /**
+   * Admin-facing: list students flagged as possible duplicates that
+   * haven't been reviewed yet.
+   */
+  async findPossibleDuplicates(): Promise<
+    { student: Student; possibleDuplicateOfId: number }[]
+  > {
+    // Pulled via pagination helper since StudentRepository doesn't expose a
+    // raw "all students" query — adjust paginationOptions/limit as needed
+    // for your actual student volume, or add a dedicated repository method
+    // backed by a `meta @> '{"possible_duplicate_resolved": false}'` query
+    // if the table grows large enough that this becomes slow.
+    const all = await this.findManyWithPagination({
+      filterOptions: null,
+      sortOptions: null,
+      paginationOptions: { page: 1, limit: 1000 },
+    });
+
+    return all
+      .filter(
+        (s) =>
+          s.meta?.possible_duplicate_of != null &&
+          s.meta?.possible_duplicate_resolved !== true,
+      )
+      .map((s) => ({
+        student: s,
+        possibleDuplicateOfId: s.meta.possible_duplicate_of as number,
+      }));
+  }
+
+  /**
+   * Admin-facing: clear a flag once reviewed. This only marks the flag
+   * resolved — it does NOT merge the two student records (reassigning
+   * their rides, subscriptions, or other bookings). If the two turn out to
+   * genuinely be the same child, that merge is a separate, more involved
+   * operation — flag it and we can build that action once you confirm what
+   * "merge" should move.
+   */
+  async resolveDuplicateFlag(studentId: number): Promise<Student | null> {
+    const student = await this.findById(studentId);
+    if (!student) return null;
+
+    return this.update(studentId, {
+      meta: {
+        ...(student.meta ?? {}),
+        possible_duplicate_resolved: true,
+      },
+    } as UpdateStudentDto);
   }
 
   async update(

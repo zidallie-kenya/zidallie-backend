@@ -289,4 +289,8 @@ export class VehicleService {
 
     await this.vehicleRepository.remove(id);
   }
+
+  resetSeatsForTerm(): Promise<void> {
+    return this.vehicleRepository.resetAllAvailableSeats();
+  }
 }

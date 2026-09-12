@@ -6,6 +6,7 @@ import {
   ValidateNested,
   IsString,
   IsBoolean,
+  IsNumber,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -42,6 +43,29 @@ export class PaymentsDto {
   account_name?: string | null;
 }
 
+// 👇 Address DTO
+export class AddressDto {
+  @ApiProperty({ type: Number, nullable: true, example: -1.286389 })
+  @IsOptional()
+  @IsNumber()
+  home_latitude?: number | null;
+
+  @ApiProperty({ type: Number, nullable: true, example: 36.817223 })
+  @IsOptional()
+  @IsNumber()
+  home_longitude?: number | null;
+
+  @ApiProperty({ nullable: true, example: 'Uasin Gishu' })
+  @IsOptional()
+  @IsString()
+  county?: string | null;
+
+  @ApiProperty({ nullable: true, example: 'Kapsoya' })
+  @IsOptional()
+  @IsString()
+  neighborhood?: string | null;
+}
+
 // 👇 Notifications DTO
 export class NotificationsDto {
   @ApiProperty()
@@ -75,6 +99,12 @@ export class UserMetaDto {
   @ValidateNested()
   @Type(() => PaymentsDto)
   payments?: PaymentsDto;
+
+  @ApiProperty({ type: () => AddressDto, nullable: true })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => AddressDto)
+  address?: AddressDto | null;
 
   @ApiProperty({ nullable: true })
   @IsOptional()

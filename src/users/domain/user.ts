@@ -68,6 +68,25 @@ export class User {
   @Expose({ groups: ['me', 'admin'] })
   meta!: UserMetaDto | null;
 
+  @ApiProperty({
+    type: Object,
+    required: false,
+    nullable: true,
+    example: {
+      home_latitude: -1.286389,
+      home_longitude: 36.817223,
+      county: 'Uasin Gishu',
+      neighborhood: 'Kapsoya',
+    },
+  })
+  @Expose({ groups: ['me', 'admin'] })
+  address?: {
+    home_latitude: number | null;
+    home_longitude: number | null;
+    county: string | null;
+    neighborhood: string | null;
+  } | null;
+
   @ApiProperty({ type: Number, example: 250.0 })
   @Expose({ groups: ['me', 'admin'] })
   wallet_balance!: number;

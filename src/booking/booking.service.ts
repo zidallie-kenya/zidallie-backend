@@ -17,7 +17,10 @@ import { BusSchoolRepository } from './infrastructure/persistence/relational/rep
 import { PickupStationRepository } from './infrastructure/persistence/relational/repositories/pickup-station.repository';
 import { PricingRepository } from './infrastructure/persistence/relational/repositories/pricing.repository';
 import { ClusterRepository } from './infrastructure/persistence/relational/repositories/cluster.repository';
-import { BookingEntity } from './infrastructure/persistence/relational/entities/booking.entity';
+import {
+  BookingEntity,
+  BookingTerm,
+} from './infrastructure/persistence/relational/entities/booking.entity';
 import { BookingDepositEntity } from './infrastructure/persistence/relational/entities/booking-deposit.entity';
 import { ClusterEntity } from './infrastructure/persistence/relational/entities/cluster.entity';
 import { UsersService } from '../users/users.service';
@@ -477,6 +480,166 @@ export class TransportBookingService {
   // STEP 2: SUBMIT CHILD DETAILS
   // ─────────────────────────────────────────────
 
+  // async createBooking(parentId: number, dto: CreateBookingDto) {
+  //   let region: string | null = null;
+  //   let distanceKm: number | null = null;
+  //   let pricePerChild: number | null = null;
+
+  //   const user = await this.usersService.findById(parentId);
+  //   if (!user) {
+  //     throw new UnprocessableEntityException({
+  //       status: HttpStatus.UNPROCESSABLE_ENTITY,
+  //       errors: { email: 'A parent with this id does not exist' },
+  //     });
+  //   }
+
+  //   if (dto.service_type === 'carpool') {
+  //     if (
+  //       !dto.carpool_school_id ||
+  //       dto.home_lat == null ||
+  //       dto.home_lon == null
+  //     ) {
+  //       throw new BadRequestException(
+  //         'Carpool requires school_id, lat, and lon',
+  //       );
+  //     }
+
+  //     const school = await this.carpoolSchoolRepo.findById(
+  //       dto.carpool_school_id,
+  //     );
+  //     if (!school) throw new NotFoundException('Carpool school not found');
+
+  //     region = school.region;
+  //     const homeCoords = {
+  //       lat: Number(dto.home_lat),
+  //       lon: Number(dto.home_lon),
+  //     };
+  //     const schoolCoords =
+  //       school.latitude && school.longitude
+  //         ? { lat: Number(school.latitude), lon: Number(school.longitude) }
+  //         : await this.getCoordinates(
+  //             `${school.name}, ${region}, Nairobi, Kenya`,
+  //           );
+
+  //     if (!schoolCoords)
+  //       throw new BadRequestException(`Could not locate school ${school.name}`);
+
+  //     // GET ROAD DISTANCE
+  //     distanceKm = await this.getRoadDistance(homeCoords, schoolCoords);
+
+  //     // Fallback to Haversine if API fails
+  //     if (distanceKm === null) {
+  //       console.warn('Falling back to Haversine distance');
+  //       distanceKm = this.haversineDistance(homeCoords, schoolCoords);
+  //     }
+
+  //     console.log('Carpool road distance:', distanceKm);
+
+  //     // Pass distanceKm. For the database error, we ensure PricingRepo handles decimals
+  //     pricePerChild = await this.pricingRepo.getPrice(
+  //       region,
+  //       distanceKm,
+  //       'carpool',
+  //     );
+
+  //     console.log(pricePerChild);
+  //   } else {
+  //     // BUS LOGIC
+  //     if (!dto.bus_school_id || !dto.pickup_station_id) {
+  //       throw new BadRequestException(
+  //         'Bus service requires school and station',
+  //       );
+  //     }
+
+  //     const [busSchool, pickupStation] = await Promise.all([
+  //       this.busSchoolRepo.findById(dto.bus_school_id),
+  //       this.pickupStationRepo.findById(dto.pickup_station_id),
+  //     ]);
+
+  //     if (!busSchool || !pickupStation)
+  //       throw new NotFoundException('School or Station not found');
+
+  //     region = busSchool.region;
+  //     const stationCoords = {
+  //       lat: Number(pickupStation.latitude),
+  //       lon: Number(pickupStation.longitude),
+  //     };
+  //     const schoolCoords =
+  //       busSchool.latitude && busSchool.longitude
+  //         ? {
+  //             lat: Number(busSchool.latitude),
+  //             lon: Number(busSchool.longitude),
+  //           }
+  //         : await this.getCoordinates(
+  //             `${busSchool.name}, ${region}, Nairobi, Kenya`,
+  //           );
+
+  //     if (!schoolCoords)
+  //       throw new BadRequestException(
+  //         `Could not locate school ${busSchool.name}`,
+  //       );
+
+  //     // GET ROAD DISTANCE
+  //     distanceKm = await this.getRoadDistance(stationCoords, schoolCoords);
+
+  //     if (distanceKm === null) {
+  //       distanceKm = this.haversineDistance(stationCoords, schoolCoords);
+  //     }
+
+  //     console.log('Bus road distance:', distanceKm);
+  //     pricePerChild = await this.pricingRepo.getPrice(
+  //       region,
+  //       distanceKm,
+  //       'bus',
+  //     );
+  //   }
+
+  //   if (!pricePerChild) {
+  //     throw new BadRequestException(
+  //       'Distance out of service range for your area.',
+  //     );
+  //   }
+
+  //   if (dto.trip_type === 'one_way') {
+  //     pricePerChild = Math.round(pricePerChild * 0.7);
+  //   }
+
+  //   const totalPrice = pricePerChild * dto.children_count;
+  //   const depositAmount = DEPOSIT_PER_CHILD * dto.children_count;
+
+  //   const booking = await this.bookingRepo.create({
+  //     parent: { id: parentId } as any,
+  //     service_type: dto.service_type,
+  //     term: dto.term as any,
+  //     trip_type: dto.trip_type as any,
+  //     children_count: dto.children_count,
+  //     carpool_school: dto.carpool_school_id
+  //       ? ({ id: dto.carpool_school_id } as any)
+  //       : null,
+  //     home_area: dto.home_area ?? null,
+  //     home_lat: dto.home_lat ?? null,
+  //     home_lon: dto.home_lon ?? null,
+  //     bus_school: dto.bus_school_id ? ({ id: dto.bus_school_id } as any) : null,
+  //     pickup_station: dto.pickup_station_id
+  //       ? ({ id: dto.pickup_station_id } as any)
+  //       : null,
+  //     region,
+  //     distance_km: distanceKm,
+  //     price_per_child: pricePerChild,
+  //     total_price: totalPrice,
+  //     deposit_amount: depositAmount,
+  //     balance_amount: totalPrice - depositAmount,
+  //     is_waitlisted: true,
+  //     status: 'pending',
+  //   });
+
+  //   return {
+  //     ...booking,
+  //     booking_id: booking.id,
+  //     school: booking.bus_school || booking.carpool_school,
+  //   };
+  // }
+
   // async submitChildren(
   //   parentId: number,
   //   bookingId: number,
@@ -484,52 +647,36 @@ export class TransportBookingService {
   // ) {
   //   const booking = await this.bookingRepo.findById(bookingId);
   //   if (!booking) throw new NotFoundException('Booking not found');
+
   //   if (booking.parent.id !== parentId)
-  //     throw new BadRequestException(
-  //       'The provided parent id doesnt match the booking parent',
-  //     );
+  //     throw new BadRequestException('Unauthorized');
 
   //   if (dto.children.length !== booking.children_count) {
   //     throw new BadRequestException(
-  //       `Expected ${booking.children_count} child(ren), got ${dto.children.length}`,
+  //       `Expected ${booking.children_count} children`,
   //     );
   //   }
 
-  //   // Replace children
-  //   booking.children = dto.children.map(
-  //     (c) =>
-  //       ({
-  //         name: c.name,
-  //         grade_class: c.grade_class ?? null,
-  //         pickup_time: c.pickup_time ?? null,
-  //         dropoff_time: c.dropoff_time ?? null,
-  //         emergency_contact: c.emergency_contact,
-  //         emergency_contact_phone: c.emergency_contact_phone,
-  //         emergency_contact_email: c.emergency_contact_email ?? null,
-  //         booking,
-  //       }) as any,
-  //   );
+  //   // Map DTO to Entity objects
+  //   booking.children = dto.children.map((c) => {
+  //     const child = new BookingChildEntity();
+  //     child.name = c.name;
+  //     child.grade_class = c.grade_class ?? null;
+  //     child.pickup_time = c.pickup_time ?? null;
+  //     child.dropoff_time = c.dropoff_time ?? null;
+  //     child.emergency_contact = c.emergency_contact;
+  //     child.emergency_contact_phone = c.emergency_contact_phone;
+  //     // Fix: Convert empty string to null for the database
+  //     child.emergency_contact_email = c.emergency_contact_email?.trim() || null;
+  //     return child;
+  //   });
 
   //   booking.status = 'awaiting_cluster';
   //   booking.is_waitlisted = true;
-  //   booking.waitlist_started_at = new Date(); // Start the 15-day clock
+  //   booking.waitlist_started_at = new Date();
 
-  //   await this.bookingRepo.save(booking);
-
-  //   const data = {
-  //     booking_id: bookingId,
-  //     service: booking.service_type,
-  //     term_booked: booking.term,
-  //     school: booking.carpool_school || booking.bus_school,
-  //     home_pickup: booking.home_area,
-  //     bus_pickup_station: booking.pickup_station,
-  //     children: booking.children_count,
-  //     deposit_per_child: booking.deposit_amount,
-  //     deposit_total_amount:
-  //       (booking.deposit_amount || 3000) * booking.children_count,
-  //     total_amount: booking.total_price,
-  //   };
-  //   return { message: 'Children details saved', data };
+  //   // This will now save children IF cascade: true is set in BookingEntity
+  //   return await this.bookingRepo.save(booking);
   // }
 
   async createBooking(parentId: number, dto: CreateBookingDto) {
@@ -576,10 +723,8 @@ export class TransportBookingService {
       if (!schoolCoords)
         throw new BadRequestException(`Could not locate school ${school.name}`);
 
-      // GET ROAD DISTANCE
       distanceKm = await this.getRoadDistance(homeCoords, schoolCoords);
 
-      // Fallback to Haversine if API fails
       if (distanceKm === null) {
         console.warn('Falling back to Haversine distance');
         distanceKm = this.haversineDistance(homeCoords, schoolCoords);
@@ -587,7 +732,6 @@ export class TransportBookingService {
 
       console.log('Carpool road distance:', distanceKm);
 
-      // Pass distanceKm. For the database error, we ensure PricingRepo handles decimals
       pricePerChild = await this.pricingRepo.getPrice(
         region,
         distanceKm,
@@ -596,7 +740,6 @@ export class TransportBookingService {
 
       console.log(pricePerChild);
     } else {
-      // BUS LOGIC
       if (!dto.bus_school_id || !dto.pickup_station_id) {
         throw new BadRequestException(
           'Bus service requires school and station',
@@ -631,7 +774,6 @@ export class TransportBookingService {
           `Could not locate school ${busSchool.name}`,
         );
 
-      // GET ROAD DISTANCE
       distanceKm = await this.getRoadDistance(stationCoords, schoolCoords);
 
       if (distanceKm === null) {
@@ -659,7 +801,7 @@ export class TransportBookingService {
     const totalPrice = pricePerChild * dto.children_count;
     const depositAmount = DEPOSIT_PER_CHILD * dto.children_count;
 
-    const booking = await this.bookingRepo.create({
+    const bookingData: Partial<BookingEntity> = {
       parent: { id: parentId } as any,
       service_type: dto.service_type,
       term: dto.term as any,
@@ -683,7 +825,16 @@ export class TransportBookingService {
       balance_amount: totalPrice - depositAmount,
       is_waitlisted: true,
       status: 'pending',
-    });
+    };
+
+    // Reuse the parent's existing draft booking instead of inserting a new
+    // row every time the booking flow is re-entered (e.g. app closed mid-flow).
+    const existingDraft =
+      await this.bookingRepo.findPendingByParentId(parentId);
+
+    const booking = existingDraft
+      ? await this.bookingRepo.save(Object.assign(existingDraft, bookingData))
+      : await this.bookingRepo.create(bookingData);
 
     return {
       ...booking,
@@ -709,8 +860,15 @@ export class TransportBookingService {
       );
     }
 
-    // Map DTO to Entity objects
-    booking.children = dto.children.map((c) => {
+    const school = booking.carpool_school || booking.bus_school || null;
+
+    // Sequential on purpose: two children with the same name in the same
+    // submission (twins, a typo) must not both run their "does this student
+    // exist?" lookup before either has been created — that would create two
+    // duplicate student rows instead of reusing one.
+    const children: BookingChildEntity[] = [];
+
+    for (const c of dto.children) {
       const child = new BookingChildEntity();
       child.name = c.name;
       child.grade_class = c.grade_class ?? null;
@@ -720,8 +878,22 @@ export class TransportBookingService {
       child.emergency_contact_phone = c.emergency_contact_phone;
       // Fix: Convert empty string to null for the database
       child.emergency_contact_email = c.emergency_contact_email?.trim() || null;
-      return child;
-    });
+
+      const student = await this.studentsService.findOrCreateForBooking({
+        parentId,
+        name: c.name,
+        schoolId: school?.id ?? null,
+        serviceType: booking.service_type,
+        emergencyContactPhone: c.emergency_contact_phone,
+      });
+      // findOrCreateForBooking returns the domain Student, not a
+      // StudentEntity — only the id is needed to set the FK on save.
+      child.student = { id: student.id } as any;
+
+      children.push(child);
+    }
+
+    booking.children = children;
 
     booking.status = 'awaiting_cluster';
     booking.is_waitlisted = true;
@@ -730,6 +902,7 @@ export class TransportBookingService {
     // This will now save children IF cascade: true is set in BookingEntity
     return await this.bookingRepo.save(booking);
   }
+
   // ─────────────────────────────────────────────
   // STEP 3: INITIATE DEPOSIT PAYMENT
   // ─────────────────────────────────────────────
@@ -867,88 +1040,6 @@ export class TransportBookingService {
     }
   }
 
-  // async applyDiscountCode(
-  //   parentId: number,
-  //   bookingId: number,
-  //   dto: ApplyDiscountDto,
-  // ) {
-  //   const booking = await this.bookingRepo.findById(bookingId);
-  //   if (!booking) throw new NotFoundException('Booking not found');
-  //   if (booking.parent.id !== parentId) {
-  //     throw new BadRequestException('Unauthorized');
-  //   }
-
-  //   const totalPaid = Number(booking.total_paid || 0);
-  //   const depositAmount = Number(booking.deposit_amount || 0);
-  //   const balanceAmount = Number(booking.balance_amount || 0);
-
-  //   const baseAmount =
-  //     totalPaid >= depositAmount ? balanceAmount : depositAmount;
-
-  //   const code = (dto.code || '').trim().toUpperCase();
-
-  //   // Match by name instead of blindly grabbing the parent's first student —
-  //   // a booking can be for any of the parent's children.
-  //   const matchedStudents = await this.findMatchingStudents(parentId, booking);
-  //   const student = matchedStudents[0] ?? null;
-
-  //   console.log(`Matched student during discount, ${student.name}`);
-
-  //   const notApplicable = {
-  //     applicable: false,
-  //     message: 'This is not applicable for this account',
-  //     amount_due: baseAmount,
-  //   };
-
-  //   if (code === 'ZIDONEWAY') {
-  //     const discountedAmount = Math.round(baseAmount * 0.85);
-
-  //     if (matchedStudents.length) {
-  //       const expiry = new Date();
-  //       expiry.setDate(expiry.getDate() + 7);
-  //       await Promise.all(
-  //         matchedStudents.map((s) =>
-  //           this.studentsService.update(s.id, {
-  //             discount_code: 'ZIDONEWAY',
-  //             discount_code_expiry: expiry,
-  //           } as any),
-  //         ),
-  //       );
-  //     }
-
-  //     return {
-  //       applicable: true,
-  //       message: 'One-way discount applied.',
-  //       amount_due: discountedAmount,
-  //     };
-  //   }
-
-  //   if (code === 'ZIDSPECIAL') {
-  //     if (!student) return notApplicable;
-
-  //     const expiry = student.discount_code_expiry
-  //       ? new Date(student.discount_code_expiry)
-  //       : null;
-  //     const isExpired = !expiry || expiry.getTime() < Date.now();
-
-  //     console.log(isExpired);
-
-  //     if (isExpired) return notApplicable;
-  //     if (student.discount_code !== 'ZIDSPECIAL') return notApplicable;
-
-  //     const discountAmount = Number(student.discount_code_amount || 0);
-  //     const discountedAmount = Math.max(0, baseAmount - discountAmount);
-
-  //     return {
-  //       applicable: true,
-  //       message: `Special rate applied: KES ${discountAmount.toLocaleString()} off.`,
-  //       amount_due: discountedAmount,
-  //     };
-  //   }
-
-  //   return notApplicable;
-  // }
-
   async applyDiscountCode(
     parentId: number,
     bookingId: number,
@@ -1079,24 +1170,67 @@ export class TransportBookingService {
     return notApplicable;
   }
 
-  private async findMatchingStudents(parentId: number, booking: BookingEntity) {
-    const students = await this.studentsService.findByParentId(parentId);
-    if (!students?.length) return [];
+  // private async findMatchingStudents(parentId: number, booking: BookingEntity) {
+  //   const students = await this.studentsService.findByParentId(parentId);
+  //   if (!students?.length) return [];
 
-    const childNames = (booking.children ?? [])
-      .map((c) => c.name?.trim().toLowerCase())
-      .filter((n): n is string => !!n);
+  //   const childNames = (booking.children ?? [])
+  //     .map((c) => c.name?.trim().toLowerCase())
+  //     .filter((n): n is string => !!n);
 
-    if (!childNames.length) return [];
+  //   if (!childNames.length) return [];
 
-    return students.filter((s) =>
-      childNames.includes((s.name ?? '').trim().toLowerCase()),
-    );
-  }
+  //   return students.filter((s) =>
+  //     childNames.includes((s.name ?? '').trim().toLowerCase()),
+  //   );
+  // }
 
   // ─────────────────────────────────────────────
   // STEP 4: M-PESA CALLBACK → CLUSTER LOGIC
   // ─────────────────────────────────────────────
+
+  private async findMatchingStudents(parentId: number, booking: BookingEntity) {
+    const children = booking.children ?? [];
+    if (!children.length) return [];
+
+    // Prefer the FK — it's authoritative and was set at submitChildren time.
+    const linkedStudentIds = children
+      .map((c) => c.student?.id)
+      .filter((id): id is number => id != null);
+
+    // Fall back to name matching only for children that predate the
+    // student_id migration (or somehow never got linked).
+    const unlinkedChildren = children.filter((c) => c.student?.id == null);
+
+    const [linkedStudents, allParentStudents] = await Promise.all([
+      linkedStudentIds.length
+        ? this.studentsService.findByIds(linkedStudentIds)
+        : Promise.resolve([]),
+      unlinkedChildren.length
+        ? this.studentsService.findByParentId(parentId)
+        : Promise.resolve([]),
+    ]);
+
+    const nameMatchedStudents = unlinkedChildren.length
+      ? (() => {
+          const unlinkedNames = unlinkedChildren
+            .map((c) => c.name?.trim().toLowerCase())
+            .filter((n): n is string => !!n);
+
+          return allParentStudents.filter((s) =>
+            unlinkedNames.includes((s.name ?? '').trim().toLowerCase()),
+          );
+        })()
+      : [];
+
+    // Dedupe in case a student somehow shows up via both paths.
+    const seen = new Set<number>();
+    return [...linkedStudents, ...nameMatchedStudents].filter((s) => {
+      if (seen.has(s.id)) return false;
+      seen.add(s.id);
+      return true;
+    });
+  }
   async handleDepositCallback(receivedData: any) {
     const stkCallback = receivedData?.Body?.stkCallback;
     if (!stkCallback) {
@@ -1504,6 +1638,13 @@ export class TransportBookingService {
         created_at: b.created_at,
       };
     });
+  }
+
+  async getActiveBookingsForTerm(term: BookingTerm) {
+    return this.bookingRepo.findByTermAndStatuses(term, [
+      'deposit_paid',
+      'completed',
+    ]);
   }
 
   async getMyReceipts(parentId: number) {

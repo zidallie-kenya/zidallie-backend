@@ -18,6 +18,7 @@ export class UserMapper {
     domainEntity.push_token = raw.push_token;
     domainEntity.kind = raw.kind;
     domainEntity.meta = raw.meta;
+    domainEntity.address = raw.meta?.address ?? null;
     domainEntity.wallet_balance = raw.wallet_balance;
     domainEntity.is_kyc_verified = raw.is_kyc_verified;
     domainEntity.photo = raw.photo;
@@ -97,18 +98,42 @@ export class UserMapper {
       persistence.emailOtpExpires = domainEntity.emailOtpExpires;
     if (domainEntity.app_role !== undefined)
       persistence.app_role = domainEntity.app_role;
-    if (domainEntity.meta !== undefined && domainEntity.meta !== null) {
+    if (
+      (domainEntity.meta !== undefined && domainEntity.meta !== null) ||
+      (domainEntity.address !== undefined && domainEntity.address !== null)
+    ) {
       persistence.meta = {
-        county: domainEntity.meta.county ?? null,
-        neighborhood: domainEntity.meta.neighborhood ?? null,
-        tempRequestId: domainEntity.meta.tempRequestId ?? null,
-        tempPhoneNumber: domainEntity.meta.tempPhoneNumber ?? null,
-        kyc_submitted: domainEntity.meta.kyc_submitted ?? false,
+        county: domainEntity.meta?.county ?? null,
+        neighborhood: domainEntity.meta?.neighborhood ?? null,
+        tempRequestId: domainEntity.meta?.tempRequestId ?? null,
+        tempPhoneNumber: domainEntity.meta?.tempPhoneNumber ?? null,
+        kyc_submitted: domainEntity.meta?.kyc_submitted ?? false,
         sasapay_wallet_approval:
-          domainEntity.meta.sasapay_wallet_approval ?? false,
+          domainEntity.meta?.sasapay_wallet_approval ?? false,
         sasapay_onboarding_rejection_reason:
-          domainEntity.meta.sasapay_onboarding_rejection_reason ?? null,
-        notifications: domainEntity.meta.notifications
+          domainEntity.meta?.sasapay_onboarding_rejection_reason ?? null,
+        address: domainEntity.address
+          ? {
+              home_latitude: domainEntity.address.home_latitude ?? null,
+              home_longitude: domainEntity.address.home_longitude ?? null,
+              county: domainEntity.address.county ?? null,
+              neighborhood: domainEntity.address.neighborhood ?? null,
+            }
+          : domainEntity.meta?.address
+            ? {
+                home_latitude: domainEntity.meta.address.home_latitude ?? null,
+                home_longitude:
+                  domainEntity.meta.address.home_longitude ?? null,
+                county: domainEntity.meta.address.county ?? null,
+                neighborhood: domainEntity.meta.address.neighborhood ?? null,
+              }
+            : {
+                home_latitude: null,
+                home_longitude: null,
+                county: null,
+                neighborhood: null,
+              },
+        notifications: domainEntity.meta?.notifications
           ? {
               when_bus_leaves:
                 domainEntity.meta.notifications.when_bus_leaves ?? false,
@@ -133,7 +158,7 @@ export class UserMapper {
               when_bus_is_1km_away: false,
               when_bus_is_0_5km_away: false,
             },
-        payments: domainEntity.meta.payments
+        payments: domainEntity.meta?.payments
           ? {
               kind: domainEntity.meta.payments.kind ?? 'M-Pesa',
               bank: domainEntity.meta.payments.bank ?? null,

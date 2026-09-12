@@ -1,4 +1,3 @@
-// transport-booking-child.entity.ts
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -8,6 +7,7 @@ import {
   CreateDateColumn,
 } from 'typeorm';
 import { BookingEntity } from './booking.entity';
+import { StudentEntity } from '../../../../../students/infrastructure/persistence/relational/entities/student.entity';
 
 export enum EmergencyContactRole {
   CLASS_TEACHER = 'class_teacher',
@@ -26,6 +26,10 @@ export class BookingChildEntity {
   })
   @JoinColumn({ name: 'booking_id' })
   booking!: BookingEntity;
+
+  @ManyToOne(() => StudentEntity, { nullable: true })
+  @JoinColumn({ name: 'student_id' })
+  student!: StudentEntity | null;
 
   @Column({ type: 'varchar', length: 100 })
   name!: string;

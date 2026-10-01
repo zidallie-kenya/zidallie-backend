@@ -53,3 +53,4 @@ GOOGLE_CLIENT_SECRET=
 APPLE_APP_AUDIENCE=[]
 
 WORKER_HOST=redis://redis:6379/1
+REDIS_URL=redis://red-dald4tf40ujc73djmtag:6379

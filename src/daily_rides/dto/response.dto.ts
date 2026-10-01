@@ -1,52 +1,53 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { ServiceType } from '../../students/domain/student';
+import { DailyRideKind } from '../../utils/types/enums';
 
 export class VehicleInfoDto {
   @ApiProperty()
-  id: number;
+  id?: number;
 
   @ApiProperty()
-  registration_number: string;
+  registration_number?: string;
 
   @ApiProperty()
-  available_seats: number;
+  available_seats?: number;
 }
 
 export class StudentInfoDto {
   @ApiProperty()
-  id: number;
+  id?: number;
 
   @ApiProperty()
-  name: string;
+  name?: string;
 
   @ApiProperty()
-  address: string;
+  address?: string;
 
   @ApiProperty()
-  service_type: ServiceType;
+  service_type?: ServiceType;
 
   @ApiProperty()
-  daily_fee: number;
+  daily_fee?: number;
 }
 
 export class ParentInfoDto {
   @ApiProperty()
-  id: number;
+  id?: number;
 
   @ApiProperty()
-  email: string;
+  email?: string;
 
   @ApiProperty()
-  name: string;
+  name?: string;
 }
 
 // Create DTOs that match your actual PickupDropoffDto structure
 export class LocationPointDto {
   @ApiProperty()
-  lat: number;
+  lat?: number;
 
   @ApiProperty()
-  lng: number;
+  lng?: number;
 
   @ApiProperty()
   time?: string; // If you have time in your pickup/dropoff
@@ -54,54 +55,66 @@ export class LocationPointDto {
 
 export class ScheduleInfoDto {
   @ApiProperty({ type: LocationPointDto })
-  pickup: LocationPointDto;
+  pickup?: LocationPointDto;
 
   @ApiProperty({ type: LocationPointDto })
-  dropoff: LocationPointDto;
+  dropoff?: LocationPointDto;
 
   @ApiProperty()
-  kind: string;
+  kind?: string;
 }
 
 export class RideInfoDto {
   @ApiProperty()
-  id: number;
+  id?: number;
 
   @ApiProperty({ type: VehicleInfoDto })
-  vehicle: VehicleInfoDto;
+  vehicle?: VehicleInfoDto;
 
   @ApiProperty({ type: StudentInfoDto })
-  student: StudentInfoDto;
+  student?: StudentInfoDto;
 
   @ApiProperty({ type: ParentInfoDto })
-  parent: ParentInfoDto;
+  parent?: ParentInfoDto;
 
   @ApiProperty({ type: ScheduleInfoDto })
-  schedule: ScheduleInfoDto;
+  schedule?: ScheduleInfoDto;
 }
 
 export class MyRidesResponseDto {
   @ApiProperty()
-  id: number;
+  id?: number;
 
   @ApiProperty({ type: RideInfoDto })
-  ride: RideInfoDto;
+  ride?: RideInfoDto;
 
   @ApiProperty()
   status?: string;
 
-  @ApiProperty()
-  start_latitude: number | null;
+  @ApiProperty({ enum: DailyRideKind })
+  kind?: DailyRideKind;
 
   @ApiProperty()
-  start_longitude: number | null;
+  start_latitude?: number | null;
+
+  @ApiProperty()
+  start_longitude?: number | null;
 
   @ApiProperty()
   date?: Date;
 
   @ApiProperty()
-  start_time?: Date;
+  start_time?: Date | null;
 
   @ApiProperty()
   end_time?: Date;
+
+  @ApiProperty({ type: Date, nullable: true })
+  embark_time?: Date | null;
+
+  @ApiProperty({ type: Date, nullable: true })
+  disembark_time?: Date | null;
+
+  @ApiProperty({ type: String, nullable: true })
+  comments?: string | null;
 }

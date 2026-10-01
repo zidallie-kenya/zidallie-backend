@@ -20,33 +20,33 @@ enum Environment {
 class EnvironmentVariablesValidator {
   @IsEnum(Environment)
   @IsOptional()
-  NODE_ENV: Environment;
+  NODE_ENV?: Environment;
 
   @IsInt()
   @Min(0)
   @Max(65535)
   @IsOptional()
-  APP_PORT: number;
+  APP_PORT?: number;
 
   @IsUrl({ require_tld: false })
   @IsOptional()
-  FRONTEND_DOMAIN: string;
+  FRONTEND_DOMAIN?: string;
 
   @IsUrl({ require_tld: false })
   @IsOptional()
-  BACKEND_DOMAIN: string;
+  BACKEND_DOMAIN?: string;
 
   @IsString()
   @IsOptional()
-  API_PREFIX: string;
+  API_PREFIX?: string;
 
   @IsString()
   @IsOptional()
-  APP_FALLBACK_LANGUAGE: string;
+  APP_FALLBACK_LANGUAGE?: string;
 
   @IsString()
   @IsOptional()
-  APP_HEADER_LANGUAGE: string;
+  APP_HEADER_LANGUAGE?: string;
 }
 
 export default registerAs<AppConfig>('app', () => {

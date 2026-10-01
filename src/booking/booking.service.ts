@@ -129,8 +129,15 @@ export class TransportBookingService {
       0,
     );
 
+    // A private cluster holds a single booking, so one child is enough
+    const isPrivate =
+      liveBookings.length > 0 &&
+      liveBookings.every((b) => b.service_type === 'private');
+
+    const minChildren = isPrivate ? 1 : CLUSTER_MIN;
+
     cluster.seat_capacity = totalChildren;
-    cluster.is_active = totalChildren >= CLUSTER_MIN;
+    cluster.is_active = totalChildren >= minChildren;
     await this.clusterRepo.save(cluster);
 
     for (const b of liveBookings) {
@@ -691,8 +698,9 @@ export class TransportBookingService {
         errors: { email: 'A parent with this id does not exist' },
       });
     }
+    const isBus = dto.service_type === 'bus';
 
-    if (dto.service_type === 'carpool') {
+    if (!isBus) {
       if (
         !dto.carpool_school_id ||
         dto.home_lat == null ||
@@ -735,7 +743,7 @@ export class TransportBookingService {
       pricePerChild = await this.pricingRepo.getPrice(
         region,
         distanceKm,
-        'carpool',
+        dto.service_type,
       );
 
       console.log(pricePerChild);
@@ -825,6 +833,7 @@ export class TransportBookingService {
       balance_amount: totalPrice - depositAmount,
       is_waitlisted: true,
       status: 'pending',
+      year: new Date().getFullYear(),
     };
 
     // Reuse the parent's existing draft booking instead of inserting a new
@@ -1423,6 +1432,16 @@ export class TransportBookingService {
             await this.bookingRepo.save(booking);
           }
         }
+
+        if (snap.serviceType === 'bus') {
+          const booking = await this.bookingRepo.findById(snap.id);
+          if (booking) {
+            booking.is_waitlisted = false;
+            await this.bookingRepo.save(booking);
+          }
+        } else {
+          await this.runClusterLogic(snap.id); // carpool + private
+        }
       }
     } catch (error: any) {
       console.error('Error handling deposit callback:', error.message);
@@ -1438,13 +1457,19 @@ export class TransportBookingService {
     const booking = await this.bookingRepo.findById(bookingId);
     if (!booking) return;
 
-    if (booking.service_type !== 'carpool') {
+    if (booking.service_type === 'bus') {
       booking.is_waitlisted = false;
       await this.bookingRepo.save(booking);
       return;
     }
 
-    const cluster = await this.findOrCreateCluster(booking);
+    // Private: reuse this booking's own cluster if it already has one.
+    // Without this, the balance payment would create a second, orphaned cluster.
+    const cluster =
+      booking.service_type === 'private' && booking.cluster
+        ? booking.cluster
+        : await this.findOrCreateCluster(booking);
+
     booking.cluster = cluster;
     await this.bookingRepo.save(booking);
 
@@ -1457,6 +1482,14 @@ export class TransportBookingService {
     console.log(
       `Finding cluster for booking ${booking.id}, term: ${booking.term}`,
     );
+
+    if (booking.service_type === 'private') {
+      return this.clusterRepo.create({
+        term: booking.term,
+        zone: booking.region ?? 'General',
+        is_active: false, // recalculateClusterActivation flips it right after
+      });
+    }
 
     if (!booking.home_lat || !booking.home_lon) {
       return this.clusterRepo.create({
@@ -1488,6 +1521,7 @@ export class TransportBookingService {
 
       const anchor = liveBookings[0];
       if (!anchor) continue;
+      if (anchor.service_type === 'private') continue;
 
       const anchorCoords = {
         lat: Number(anchor.home_lat),
@@ -1508,62 +1542,6 @@ export class TransportBookingService {
       is_active: false,
     });
   }
-
-  // private async findOrCreateCluster(
-  //   booking: BookingEntity,
-  // ): Promise<ClusterEntity> {
-  //   console.log(
-  //     `Finding cluster for booking ${booking.id}, term: ${booking.term}`,
-  //   );
-
-  //   if (!booking.home_lat || !booking.home_lon) {
-  //     console.log('No coords — creating new cluster');
-
-  //     return this.clusterRepo.create({
-  //       term: booking.term,
-  //       zone: booking.region ?? 'General',
-  //     });
-  //   }
-
-  //   const newCoords = {
-  //     lat: Number(booking.home_lat),
-  //     lon: Number(booking.home_lon),
-  //   };
-
-  //   // 1. Search existing clusters for this term
-  //   const clusters = await this.clusterRepo.findByTerm(booking.term);
-
-  //   for (const cluster of clusters) {
-  //     if ((cluster.bookings?.length ?? 0) >= cluster.max_capacity) continue;
-
-  //     const anchor = cluster.bookings?.[0];
-  //     if (!anchor) continue;
-
-  //     const anchorCoords = {
-  //       lat: Number(anchor.home_lat),
-  //       lon: Number(anchor.home_lon),
-  //     };
-
-  //     // haversine_distance <= 2.0
-  //     const proximityOk =
-  //       this.haversineDistance(newCoords, anchorCoords) <= CLUSTER_RADIUS_KM;
-  //     if (!proximityOk) continue;
-
-  //     // Check school direction (only if carpool schools differ)
-  //     const sameDirectionOk = await this.isInSameDirection(booking, anchor);
-  //     if (sameDirectionOk) {
-  //       return cluster;
-  //     }
-  //   }
-
-  //   // No suitable cluster — create new one
-  //   console.log('creating new cluster');
-  //   return this.clusterRepo.create({
-  //     term: booking.term,
-  //     zone: booking.region ?? 'General',
-  //     is_active: false,
-  //   });
-  // }
 
   private async isInSameDirection(
     newBooking: BookingEntity,
@@ -1834,45 +1812,6 @@ export class TransportBookingService {
       return null;
     }
   }
-
-  // private async getRoadDistance(
-  //   origin: { lat: number; lon: number },
-  //   destination: { lat: number; lon: number },
-  // ): Promise<number | null> {
-  //   const apiKey = process.env.GOOGLE_MAPS_API_KEY;
-  //   if (!apiKey) return null;
-
-  //   try {
-  //     const response = await axios.get(
-  //       'https://maps.googleapis.com/maps/api/distancematrix/json',
-  //       {
-  //         params: {
-  //           origins: `${origin.lat},${origin.lon}`,
-  //           destinations: `${destination.lat},${destination.lon}`,
-  //           key: apiKey,
-  //         },
-  //       },
-  //     );
-
-  //     console.log(JSON.stringify(response.data, null, 2));
-
-  //     const element = response.data?.rows?.[0]?.elements?.[0];
-
-  //     if (element?.status === 'OK') {
-  //       // distance.value is in meters, convert to KM
-  //       return element.distance.value / 1000;
-  //     }
-
-  //     console.warn(
-  //       'Distance Matrix API returned non-OK status:',
-  //       element?.status,
-  //     );
-  //     return null;
-  //   } catch (error) {
-  //     console.log(error);
-  //     return null;
-  //   }
-  // }
 
   private toRad(deg: number) {
     return (deg * Math.PI) / 180;

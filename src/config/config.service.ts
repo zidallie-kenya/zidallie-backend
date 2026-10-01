@@ -18,9 +18,7 @@ export class AppConfigService {
 
   get redis() {
     const isProd = this.get<string>('NODE_ENV') === 'production';
-    const redisUrl = isProd
-      ? this.get<string>('REDIS_INTERNAL_URL')
-      : this.get<string>('REDIS_EXTERNAL_URL');
+    const redisUrl = isProd ? process.env.REDIS_URL! : 'redis://localhost:6379';
 
     if (!redisUrl) {
       throw new Error(
@@ -29,6 +27,7 @@ export class AppConfigService {
     }
 
     const url = new URL(redisUrl);
+    console.log(`[Redis] Connecting to Redis at ${url.href}`);
 
     return {
       host: url.hostname,

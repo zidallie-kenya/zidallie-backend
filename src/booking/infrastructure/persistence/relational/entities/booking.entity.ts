@@ -16,7 +16,7 @@ import { UserEntity } from '../../../../../users/infrastructure/persistence/rela
 import { BookingDepositEntity } from './booking-deposit.entity';
 import { BookingChildEntity } from './booking-child.entity';
 
-export type BookingServiceType = 'carpool' | 'bus';
+export type BookingServiceType = 'carpool' | 'bus' | 'private';
 export type BookingTerm = 'dec-jan' | 'apr-may' | 'aug-sept';
 export type BookingTripType = 'one_way' | 'two_way';
 export type BookingStatus =
@@ -118,6 +118,9 @@ export class BookingEntity {
 
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   total_paid!: number;
+
+  @Column({ type: 'decimal', nullable: true })
+  year?: number | null;
 
   @Column({ type: 'timestamp', nullable: true })
   waitlist_started_at!: Date | null;

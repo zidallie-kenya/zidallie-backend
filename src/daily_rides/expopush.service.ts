@@ -36,7 +36,9 @@ export class ExpoPushService {
     // Ensure array
     const tokens = Array.isArray(pushTokens) ? pushTokens : [pushTokens];
 
-    console.log('=== PUSH NOTIFICATION DEBUG ===');
+    console.log(
+      `=== PUSH NOTIFICATION DEBUG === FOR USERID: ${options?.userId}`,
+    );
     console.log('Received tokens:', tokens);
 
     // Filter only valid expo push tokens
@@ -47,7 +49,10 @@ export class ExpoPushService {
     );
 
     if (validTokens.length === 0) {
-      this.logger.warn('No valid Expo push tokens found');
+      this.logger.warn(
+        'No valid Expo push tokens found for userId:',
+        options?.userId,
+      );
       console.log('❌ NO VALID TOKENS - stopping here');
       return;
     }

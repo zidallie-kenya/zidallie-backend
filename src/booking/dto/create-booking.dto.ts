@@ -1,8 +1,8 @@
 import { IsEnum, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 
 export class CreateBookingDto {
-  @IsEnum(['carpool', 'bus'])
-  service_type!: 'carpool' | 'bus';
+  @IsEnum(['carpool', 'bus', 'private'])
+  service_type!: 'carpool' | 'bus' | 'private';
 
   @IsEnum(['dec-jan', 'apr-may', 'aug-sept'])
   term!: string;

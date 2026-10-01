@@ -105,6 +105,10 @@ export class Booking {
   @Expose()
   total_paid!: number;
 
+  @ApiProperty({ type: Number, nullable: true })
+  @Expose()
+  year!: number | null;
+
   @ApiProperty({ type: Date, nullable: true })
   @Expose()
   waitlist_started_at!: Date | null;
